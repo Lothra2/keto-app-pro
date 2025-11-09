@@ -1,0 +1,77 @@
+Estructura original del APP
+
+keto-pro-app/
+│
+├── App.js                        
+├── app.json                      
+├── package.json                  
+├── babel.config.js               
+│
+├── assets/                       
+│   ├── icon.png
+│   ├── splash.png
+│   └── adaptive-icon.png
+│
+├── src/
+│   ├── api/
+│   │   ├── aiService.js          # Llamadas a tu backend/Grok
+│   │   └── config.js             # URLs y constantes de API
+│   │
+│   ├── components/
+│   │   ├── shared/               # Componentes reutilizables
+│   │   │   ├── Button.js
+│   │   │   ├── Card.js
+│   │   │   └── LoadingSpinner.js
+│   │   ├── meals/                
+│   │   │   ├── MealCard.js       
+│   │   │   ├── MealList.js       
+│   │   │   └── CalorieBar.js     
+│   │   ├── workout/
+│   │   │   ├── WorkoutCard.js    
+│   │   │   └── ExerciseItem.js   
+│   │   └── progress/
+│   │       ├── WeekSelector.js   
+│   │       └── DayPills.js       
+│   │
+│   ├── context/
+│   │   ├── AppContext.js         # Estado global
+│   │   └── ThemeContext.js       # Tema dark/light
+│   │
+│   ├── screens/
+│   │   ├── auth/
+│   │   │   └── WelcomeScreen.js  
+│   │   ├── main/
+│   │   │   ├── HomeScreen.js     
+│   │   │   ├── DayScreen.js      
+│   │   │   ├── ShoppingScreen.js 
+│   │   │   ├── ProgressScreen.js 
+│   │   │   └── SettingsScreen.js 
+│   │   └── modals/
+│   │       ├── MealGeneratorModal.js  # Modal para generar comida IA
+│   │       └── WorkoutModal.js        # Modal para entreno IA
+│   │
+│   ├── navigation/
+│   │   ├── AppNavigator.js       
+│   │   └── TabNavigator.js       # Bottom tabs
+│   │
+│   ├── storage/
+│   │   ├── storage.js            # AsyncStorage wrapper
+│   │   └── constants.js          # Keys de localStorage
+│   │
+│   ├── utils/
+│   │   ├── calculations.js       # BMR, body fat, macros
+│   │   ├── dateHelpers.js        # Manejo de fechas
+│   │   └── validation.js         # Validaciones
+│   │
+│   ├── data/
+│   │   ├── basePlan.js           # Tu plan base de 14 días
+│   │   ├── tips.js               # Tips localizados
+│   │   └── workouts.js           # Workouts localizados
+│   │
+│   └── theme/
+│       ├── colors.js             
+│       ├── spacing.js            
+│       ├── typography.js         
+│       └── index.js              # Tema unificado
+│
+└── README.md
