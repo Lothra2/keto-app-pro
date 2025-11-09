@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Keto Pro App 🥑</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f766e" />
+
+    <!-- Fuente -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Favicon -->
+    <link rel="icon" href="icon.png" type="image/png" />
+  </head>
+
+  <body data-theme="dark">
+    <!-- Splash inicial -->
+    <div id="splash-screen" class="splash">
+      <div class="splash-logo">
+        <div class="splash-icon">🥑</div>
+        <h1>Keto Pro App</h1>
+        <p>Tu plan keto personalizado</p>
+        <div class="splash-bar">
+          <span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <h1 id="mainTitle">Keto Pro App 🥑</h1>
+        <p class="sub" id="subTitle">Personalizado</p>
+      </div>
+
+      <!-- Toggle de tema -->
+      <label class="toggle" title="Tema claro/oscuro">
+        <input type="checkbox" id="themeToggle" />
+        <span class="ball"></span>
+      </label>
+    </header>
+
+    <!-- Hero / Tip -->
+    <div class="hero">
+      <div class="tip" id="tipBox">
+        🥤 Recuerda tomar agua con sal.
+      </div>
+    </div>
+
+    <!-- Tabs superiores -->
+    <div class="tabs">
+      <button class="tab active" data-tab="menu">Menú</button>
+      <button class="tab" data-tab="compras">Compras</button>
+      <button class="tab" data-tab="progreso">Progreso</button>
+      <button class="tab" data-tab="ajustes">Ajustes</button>
+    </div>
+
+    <!-- ========= MENÚ ========= -->
+    <div class="container" id="menu">
+      <!-- Progreso -->
+      <div class="progress-summary">
+        <span id="progressText">0 de 14 días</span>
+        <div class="progress-line">
+          <span id="progressBar"></span>
+        </div>
+      </div>
+
+      <!-- Motivación general -->
+      <div id="motivation" class="motivation-box" style="display: none"></div>
+
+      <!-- Acciones IA globales -->
+      <div
+        class="ai-global-actions"
+        style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1rem;"
+      >
+        <!-- generar semana -->
+        <button
+          class="ia-btn ghost"
+          id="aiGenerateWeekBtn"
+          onclick="generateWeekWithAI()"
+        >
+          Generar semana con IA 🤖
+        </button>
+
+        <!-- generar día usando el día y semana que están en localStorage -->
+        <button
+          class="ia-btn ghost"
+          id="aiGenerateDayBtn"
+          onclick="(function(){const d = Number(localStorage.getItem('keto14-rick-sel-day')) || 0; const w = Number(localStorage.getItem('keto14-rick-sel-week')) || (Math.floor(d/7)+1); if (typeof generateFullDayAI === 'function') { generateFullDayAI(d, w); }})();"
+        >
+          Generar día con IA 📅
+        </button>
+
+        <!-- revisión IA de la semana -->
+        <button class="ia-btn ghost" id="aiWeeklyReviewBtn">
+          Revisar semana con IA 📊
+        </button>
+      </div>
+
+      <!-- Selector de semanas -->
+      <div class="week-switch" id="weekSwitch"></div>
+
+      <!-- Pastillas de días -->
+      <div class="day-floating" id="dayFloating"></div>
+
+      <!-- Resumen IA de la semana -->
+      <div id="aiWeekSummary" class="ai-week-review" style="display:none"></div>
+
+      <!-- Aquí se renderiza el día seleccionado -->
+      <div id="menuDays"></div>
+    </div>
+
+    <!-- ========= COMPRAS ========= -->
+    <div class="container" id="compras" style="display: none"></div>
+
+    <!-- ========= PROGRESO ========= -->
+    <div class="container" id="progreso" style="display: none"></div>
+
+    <!-- ========= AJUSTES ========= -->
+    <div class="container" id="ajustes" style="display: none">
+      <!-- Nombre -->
+      <div class="list-row">
+        <strong>Nombre</strong>
+        <p class="small">Se mostrará arriba y en algunos mensajes.</p>
+        <input id="settingsName" placeholder="Tu nombre" />
+        <button class="save-btn" onclick="applySettingsName()">
+          Actualizar nombre
+        </button>
+      </div>
+
+      <!-- Idioma -->
+      <div class="list-row">
+        <strong>Idioma / Language</strong>
+        <p class="small">Elige el idioma para las sugerencias de IA.</p>
+        <select id="appLang" onchange="changeAppLang()">
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+
+      <!-- Género -->
+      <div class="list-row">
+        <strong>Género</strong>
+        <p class="small">Lo usamos para ajustar calorías y estimar % de grasa.</p>
+        <select id="genderSelect" onchange="changeGender()">
+          <option value="male">Hombre</option>
+          <option value="female">Mujer</option>
+        </select>
+      </div>
+
+      <!-- Intensidad entreno -->
+      <div class="list-row">
+        <strong>Intensidad del entreno IA</strong>
+        <p class="small">Define cuán exigentes serán los ejercicios generados por IA.</p>
+        <select id="workoutIntensity" onchange="changeWorkoutIntensity()">
+          <option value="soft">Suave / Ligero</option>
+          <option value="medium" selected>Medio / Balanceado</option>
+          <option value="hard">Alto / Intenso</option>
+        </select>
+      </div>
+
+      <!-- Duración plan -->
+      <div class="list-row">
+        <strong>Duración del plan</strong>
+        <p class="small">
+          Elige entre 2 y 4 semanas. Si eliges más de 2, se reutiliza el plan base.
+        </p>
+        <select id="planWeeks" onchange="changePlanWeeks()">
+          <option value="2">2 semanas (14 días)</option>
+          <option value="3">3 semanas (21 días)</option>
+          <option value="4">4 semanas (28 días)</option>
+        </select>
+      </div>
+
+      <!-- Fecha de inicio -->
+      <div class="list-row">
+        <strong>Fecha de inicio</strong>
+        <p class="small">La usamos para calcular el día actual del plan.</p>
+        <input type="date" id="startDateInput" onchange="changeStartDate()" />
+      </div>
+
+      <!-- Vista -->
+      <div class="list-row">
+        <strong>Vista</strong>
+        <p class="small">Si activas vista diaria, solo se mostrará el día actual.</p>
+        <select id="dailyView" onchange="changeDailyView()">
+          <option value="0">Mostrar por semana</option>
+          <option value="1">Solo día actual</option>
+        </select>
+      </div>
+
+      <!-- Color -->
+      <div class="list-row">
+        <strong>Color del plan</strong>
+        <p class="small">Cambia el color principal de la app.</p>
+        <select id="primaryColor" onchange="changePrimaryColor()">
+          <option value="#0f766e">Verde Keto</option>
+          <option value="#9333ea">Morado</option>
+          <option value="#f97316">Naranja</option>
+          <option value="#0ea5e9">Cian</option>
+        </select>
+      </div>
+
+      <!-- Agua diaria -->
+      <div class="list-row">
+        <strong>Agua diaria</strong>
+        <p class="small">
+          Define tu meta de agua por día en ml. Se usa en cada día del plan.
+        </p>
+        <input
+          id="waterGoalInput"
+          type="number"
+          placeholder="Ej. 2400"
+          min="1000"
+          step="100"
+        />
+        <button class="save-btn" onclick="saveWaterGoal()">
+          Guardar meta de agua
+        </button>
+      </div>
+
+      <!-- Preferencias IA -->
+      <div class="list-row">
+        <strong>Preferencias de comidas (IA)</strong>
+        <p class="small">
+          La IA usará esto para desayuno IA, almuerzo IA, cena IA y día completo IA.
+        </p>
+        <input
+          id="likeFoods"
+          placeholder="Me gusta / I like (pollo, res, huevos)"
+        />
+        <input
+          id="dislikeFoods"
+          placeholder="No me gusta / I dislike (camarón, salmón)"
+        />
+        <button class="save-btn" onclick="saveFoodPrefs()">
+          Guardar preferencias
+        </button>
+      </div>
+
+      <!-- API acceso -->
+      <div class="list-row">
+        <strong>Acceso API seguro</strong>
+        <p class="small">
+          Usuario y clave que se envían al endpoint de Netlify para usar tu IA.
+        </p>
+        <input id="apiUser" placeholder="Usuario" />
+        <input id="apiPass" placeholder="Clave / Token" />
+        <button class="save-btn" onclick="saveApiAccess()">
+          Guardar acceso
+        </button>
+      </div>
+
+      <!-- Reset -->
+      <div class="list-row">
+        <strong>Reiniciar todo</strong>
+        <p class="small">Esto borra tu nombre, progreso, fechas y días completados.</p>
+        <button class="save-btn danger" onclick="resetAll()">
+          Borrar todo
+        </button>
+      </div>
+
+      <!-- Info -->
+      <div class="list-row">
+        <strong>Agregar a pantalla de inicio</strong>
+        <p class="small">
+          En iPhone o Android abre el menú de compartir y elige
+          “Agregar a pantalla de inicio”.
+        </p>
+      </div>
+    </div>
+
+    <!-- ========= Bottom Nav ========= -->
+    <div class="bottom-nav">
+      <button class="bottom-btn active" data-tab="menu">
+        🍽
+        <span>Menú</span>
+      </button>
+
+      <button class="bottom-btn" data-tab="compras">
+        🛒
+        <span>Compras</span>
+      </button>
+
+      <button class="bottom-btn" data-tab="progreso">
+        📈
+        <span>Progreso</span>
+      </button>
+
+      <button class="bottom-btn" data-tab="ajustes">
+        ⚙️
+        <span>Ajustes</span>
+      </button>
+    </div>
+
+    <!-- ========= Modal Nombre ========= -->
+    <div class="modal-backdrop" id="nameModal">
+      <div class="modal">
+        <h2>¿Cuál es tu nombre?</h2>
+        <p>Lo mostraremos en el encabezado.</p>
+        <input id="name1" placeholder="Tu nombre" />
+        <button onclick="saveNameFromModal()">Guardar</button>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="appToast" class="toast">Guardado ✅</div>
+
+    <!-- JS principal -->
+    <script src="script.js"></script>
+  </body>
+</html>
