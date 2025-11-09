@@ -116,6 +116,26 @@ export async function saveWorkoutData(dayIndex, workout) {
   return await storage.setJSON(DYNAMIC_KEYS.AI_WORKOUT + dayIndex, workout);
 }
 
+// Revisión del día por IA
+export async function getDayReview(dayIndex) {
+  const storage = new Storage();
+  const raw = await storage.get(DYNAMIC_KEYS.AI_REVIEW + dayIndex, null);
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    return raw;
+  }
+}
+
+export async function saveDayReview(dayIndex, review) {
+  const storage = new Storage();
+  const value = typeof review === 'string' ? review : JSON.stringify(review);
+  return await storage.set(DYNAMIC_KEYS.AI_REVIEW + dayIndex, value);
+}
+
 // Calorías del día
 export async function getCalorieState(dayIndex, defaultGoal = 1600) {
   const storage = new Storage();

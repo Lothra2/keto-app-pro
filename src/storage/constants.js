@@ -26,6 +26,7 @@ export const DYNAMIC_KEYS = {
   AI_DAY: `${STORAGE_PREFIX}ai-day-`,
   AI_WORKOUT: `${STORAGE_PREFIX}ai-workout-`,
   AI_WEEK: `${STORAGE_PREFIX}ai-week-`,
+  AI_REVIEW: `${STORAGE_PREFIX}ai-review-`,
   CAL: `${STORAGE_PREFIX}cal-`,
   PROGRESS: `${STORAGE_PREFIX}prog-`,
   WATER: `${STORAGE_PREFIX}water-`,

@@ -17,8 +17,8 @@ export const useApp = () => {
 export const AppProvider = ({ children }) => {
   // Estado principal
   const [user, setUser] = useState({ name: '', startDate: null });
-  const [currentDay, setCurrentDay] = useState(0);
-  const [currentWeek, setCurrentWeek] = useState(1);
+  const [currentDay, setCurrentDayState] = useState(0);
+  const [currentWeek, setCurrentWeekState] = useState(1);
   const [planWeeks, setPlanWeeks] = useState(2);
   const [gender, setGender] = useState('male');
   const [language, setLanguage] = useState('es');
@@ -68,7 +68,9 @@ export const AppProvider = ({ children }) => {
         KEYS.START_WEIGHT,
         KEYS.AGE,
         KEYS.WATER_GOAL,
-        KEYS.WORKOUT_INTENSITY
+        KEYS.WORKOUT_INTENSITY,
+        KEYS.SELECTED_DAY,
+        KEYS.SELECTED_WEEK
       ];
 
       const entries = await AsyncStorage.multiGet(keysToLoad);
@@ -117,12 +119,33 @@ export const AppProvider = ({ children }) => {
       const plan = buildPlan(weeksValue, genderValue);
       setDerivedPlan(plan);
 
-      // Calcular día actual si hay fecha de inicio
-      if (savedStartDate) {
-        const dayIndex = calculateCurrentDay(savedStartDate, plan.length);
-        setCurrentDay(dayIndex);
-        setCurrentWeek(Math.floor(dayIndex / 7) + 1);
+      const savedSelectedDay = values[KEYS.SELECTED_DAY];
+      const savedSelectedWeek = values[KEYS.SELECTED_WEEK];
+
+      let initialDay = 0;
+      if (savedSelectedDay !== undefined && savedSelectedDay !== null) {
+        const parsedDay = Number(savedSelectedDay);
+        if (!Number.isNaN(parsedDay)) {
+          initialDay = Math.min(Math.max(parsedDay, 0), Math.max(plan.length - 1, 0));
+        }
+      } else if (savedStartDate) {
+        initialDay = calculateCurrentDay(savedStartDate, plan.length);
       }
+
+      let initialWeek = 1;
+      if (savedSelectedWeek !== undefined && savedSelectedWeek !== null) {
+        const parsedWeek = Number(savedSelectedWeek);
+        if (!Number.isNaN(parsedWeek)) {
+          initialWeek = parsedWeek;
+        }
+      } else {
+        initialWeek = Math.floor(initialDay / 7) + 1;
+      }
+
+      initialWeek = Math.min(Math.max(initialWeek, 1), weeksValue);
+
+      setCurrentDayState(initialDay);
+      setCurrentWeekState(initialWeek);
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
@@ -217,14 +240,32 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const updateCurrentDay = (dayIndex) => {
+    const maxIndex = Math.max(derivedPlan.length - 1, 0);
+    const clamped = Math.min(Math.max(dayIndex, 0), maxIndex);
+    setCurrentDayState(clamped);
+    storage.set(KEYS.SELECTED_DAY, clamped);
+
+    const computedWeek = Math.floor(clamped / 7) + 1;
+    setCurrentWeekState(computedWeek);
+    storage.set(KEYS.SELECTED_WEEK, computedWeek);
+  };
+
+  const updateCurrentWeek = (weekNumber) => {
+    const totalWeeks = Math.max(Math.ceil(derivedPlan.length / 7), 1);
+    const clamped = Math.min(Math.max(weekNumber, 1), totalWeeks);
+    setCurrentWeekState(clamped);
+    storage.set(KEYS.SELECTED_WEEK, clamped);
+  };
+
   const resetApp = async () => {
     try {
       await storage.clearAppData();
 
       // Reset state
       setUser({ name: '', startDate: null });
-      setCurrentDay(0);
-      setCurrentWeek(1);
+      setCurrentDayState(0);
+      setCurrentWeekState(1);
       setPlanWeeks(2);
       setGender('male');
       setLanguage('es');
@@ -250,8 +291,8 @@ export const AppProvider = ({ children }) => {
     apiCredentials,
     metrics,
     loading,
-    setCurrentDay,
-    setCurrentWeek,
+    setCurrentDay: updateCurrentDay,
+    setCurrentWeek: updateCurrentWeek,
     updateUser,
     updateSettings,
     updateFoodPrefs,

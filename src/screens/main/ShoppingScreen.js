@@ -5,12 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
-import { getShoppingList, saveShoppingList } from '../../storage/storage';
+import { getDayData, getShoppingList, saveShoppingList } from '../../storage/storage';
 import aiService from '../../api/aiService';
+import { mergePlanDay, buildWeekAiPayload } from '../../utils/plan';
 
 const ShoppingScreen = () => {
   const {
@@ -40,20 +42,46 @@ const ShoppingScreen = () => {
   };
 
   const handleGenerateAIList = async () => {
+    if (!apiCredentials.user || !apiCredentials.pass) {
+      Alert.alert(
+        language === 'en' ? 'Missing credentials' : 'Faltan credenciales',
+        language === 'en'
+          ? 'Add your Grok credentials in settings to use AI.'
+          : 'Agrega tus credenciales de Grok en ajustes para usar la IA.'
+      );
+      return;
+    }
+
     setLoading(true);
     try {
-      // Aquí implementarías la lógica para generar lista con IA
-      // Similar a tu función improveShoppingWithAI
       const startIdx = (currentWeek - 1) * 7;
       const endIdx = Math.min(currentWeek * 7, derivedPlan.length);
+      const days = [];
 
-      // Placeholder - implementa según tu lógica
-      const list = `Generando lista para semana ${currentWeek}...\n\nProteínas:\n- Pollo 1kg\n- Salmón 500g\n- Huevos 1 docena\n\nVegetales:\n- Brócoli 500g\n- Aguacate 4 unidades`;
+      for (let index = startIdx; index < endIdx; index++) {
+        const base = derivedPlan[index];
+        const stored = await getDayData(index);
+        days.push(mergePlanDay(base, stored || {}));
+      }
+
+      const payload = buildWeekAiPayload(days);
+      const list = await aiService.generateShoppingList({
+        weekNumber: currentWeek,
+        days: payload,
+        language,
+        credentials: apiCredentials
+      });
 
       setAiList(list);
       await saveShoppingList(currentWeek, list);
     } catch (error) {
       console.error('Error generando lista:', error);
+      Alert.alert(
+        language === 'en' ? 'AI error' : 'Error con IA',
+        language === 'en'
+          ? 'We could not generate the list. Try later.'
+          : 'No pudimos generar la lista. Intenta más tarde.'
+      );
     } finally {
       setLoading(false);
     }

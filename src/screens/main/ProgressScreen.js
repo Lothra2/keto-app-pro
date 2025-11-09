@@ -24,7 +24,7 @@ import {
   calculateBMI,
   getBMICategory
 } from '../../utils/calculations';
-import Storage, { KEYS } from '../../storage/storage';
+import storage, { KEYS } from '../../storage/storage';
 
 const ProgressScreen = () => {
   const {
@@ -36,7 +36,6 @@ const ProgressScreen = () => {
 
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
-  const storage = new Storage();
 
   const [completedDays, setCompletedDays] = useState(0);
   const [showBaseDataModal, setShowBaseDataModal] = useState(false);

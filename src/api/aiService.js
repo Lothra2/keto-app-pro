@@ -81,13 +81,13 @@ class AIService {
   /**
    * Genera entreno con IA
    */
-  async generateWorkout({ 
-    dayIndex, 
-    weekNumber, 
-    intensity, 
-    language, 
+  async generateWorkout({
+    dayIndex,
+    weekNumber,
+    intensity,
+    language,
     credentials,
-    userStats 
+    userStats
   }) {
     const { user, pass } = credentials;
     const { height, weight, age } = userStats;
@@ -124,6 +124,73 @@ class AIService {
       return this.parseWorkoutResponse(response.data, language);
     } catch (error) {
       console.error('Error generating workout:', error);
+      throw error;
+    }
+  }
+
+  async generateWeekReview({ weekNumber, days, language, credentials }) {
+    const { user, pass } = credentials;
+    const safeDays = Array.isArray(days) ? days : [];
+
+    const prompt = language === 'en'
+      ? `You will receive a 7-day keto plan. Analyze consistency, days that deviated, and 1 recommendation for next week. Return exactly 3 short sections: 1) Consistency, 2) Deviations, 3) Recommendation. Here is the week: ${JSON.stringify(safeDays)}`
+      : `Vas a recibir un plan keto de 7 días. Analiza: 1) qué tan consistente fue, 2) qué días se desviaron, 3) una recomendación para la siguiente semana. Devuélvelo en 3 secciones cortas con título. Semana: ${JSON.stringify(safeDays)}`;
+
+    try {
+      const response = await this.client.post('', {
+        mode: 'review-week',
+        user,
+        pass,
+        lang: language,
+        prompt
+      });
+
+      if (!response.data.ok) {
+        throw new Error(response.data.error || 'AI did not respond');
+      }
+
+      const raw = (response.data.text || '').replace(/\*/g, '').replace(/###\s*/g, '').trim();
+      const items = raw
+        .split(/\n+/)
+        .map(item => item.trim())
+        .filter(Boolean)
+        .slice(0, 4);
+
+      return {
+        items,
+        raw
+      };
+    } catch (error) {
+      console.error('Error generating week review:', error);
+      throw error;
+    }
+  }
+
+  async generateShoppingList({ weekNumber, days, language, credentials }) {
+    const { user, pass } = credentials;
+    const safeDays = Array.isArray(days) ? days : [];
+
+    const prompt = language === 'en'
+      ? `You will receive 7 keto days with ingredients and quantities. Condense all ingredients into 1 clean shopping list in English, grouped by sections (Protein, Veggies, Dairy/Fats, Pantry/Other). Merge similar items and sum quantities approximately. Keep it short. Here is the week: ${JSON.stringify(safeDays)}`
+      : `Recibirás 7 días keto con ingredientes y cantidades. Condénsalos en 1 sola lista de compras en español, agrupada por secciones (Proteínas, Verduras, Lácteos/Grasas, Despensa/Otros). Une ítems parecidos y suma cantidades aproximadas. Sé breve. Semana: ${JSON.stringify(safeDays)}`;
+
+    try {
+      const response = await this.client.post('', {
+        mode: 'shopping-week',
+        user,
+        pass,
+        lang: language,
+        prompt,
+        week: weekNumber
+      });
+
+      if (!response.data.ok) {
+        throw new Error(response.data.error || 'AI did not respond');
+      }
+
+      return (response.data.text || '').replace(/\*/g, '').trim();
+    } catch (error) {
+      console.error('Error generating shopping list:', error);
       throw error;
     }
   }
