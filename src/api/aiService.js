@@ -4,7 +4,12 @@ import { getApiConfig } from './config';
 class AIService {
   constructor() {
     const config = getApiConfig();
-    this.client = axios.create(config);
+    this.client = axios.create({
+      baseURL: config.baseURL,
+      timeout: config.timeout,
+      headers: config.headers
+    });
+    this.endpoint = config.endpointPath || '/';
   }
 
   /**
@@ -27,7 +32,7 @@ class AIService {
       : `Genera 1 ${mealName} keto manteniendo cerca de ${kcal} kcal. Prefiere: ${like}. Evita: ${dislike}. Responde SOLO en JSON con las claves: "nombre" (nombre corto del plato), "ingredientes" (array de strings tipo "150 g pollo", "40 g brócoli", "1/2 aguacate"), "descripcion" (frase muy corta).`;
 
     try {
-      const response = await this.client.post('', {
+      const response = await this.client.post(this.endpoint, {
         prompt,
         user,
         pass,
@@ -65,7 +70,7 @@ class AIService {
     };
 
     try {
-      const response = await this.client.post('', payload);
+      const response = await this.client.post(this.endpoint, payload);
 
       if (!response.data.ok) {
         throw new Error(response.data.error || 'AI did not respond');
@@ -109,7 +114,7 @@ class AIService {
       : `Devuelve un JSON con campo "ejercicios" para el día ${dayIndex + 1} (semana ${weekNumber}) de un entreno ${intensityMap[intensity]}. Debe ser SOLO con peso corporal, sin equipos. Datos usuario: estatura ${height} cm, peso ${weight} kg, edad ${age}. Cada ítem: {"nombre": nombre corto, "series": "3 x 12" o tiempo, "descripcion": tip muy corto}. Español.`;
 
     try {
-      const response = await this.client.post('', {
+      const response = await this.client.post(this.endpoint, {
         mode: 'workout-day',
         user,
         pass,
@@ -137,7 +142,7 @@ class AIService {
       : `Vas a recibir un plan keto de 7 días. Analiza: 1) qué tan consistente fue, 2) qué días se desviaron, 3) una recomendación para la siguiente semana. Devuélvelo en 3 secciones cortas con título. Semana: ${JSON.stringify(safeDays)}`;
 
     try {
-      const response = await this.client.post('', {
+    const response = await this.client.post(this.endpoint, {
         mode: 'review-week',
         user,
         pass,
@@ -175,7 +180,7 @@ class AIService {
       : `Recibirás 7 días keto con ingredientes y cantidades. Condénsalos en 1 sola lista de compras en español, agrupada por secciones (Proteínas, Verduras, Lácteos/Grasas, Despensa/Otros). Une ítems parecidos y suma cantidades aproximadas. Sé breve. Semana: ${JSON.stringify(safeDays)}`;
 
     try {
-      const response = await this.client.post('', {
+      const response = await this.client.post(this.endpoint, {
         mode: 'shopping-week',
         user,
         pass,
@@ -206,7 +211,7 @@ class AIService {
       : `Estás revisando un día keto. El usuario tiene: desayuno "${dayData.desayuno?.nombre}", almuerzo "${dayData.almuerzo?.nombre}", cena "${dayData.cena?.nombre}". Meta calórica: ${dayData.kcal}. Responde en 3 bullets: (1) si está muy graso, (2) si la proteína está ok, (3) 1 tip corto.`;
 
     try {
-      const response = await this.client.post('', {
+      const response = await this.client.post(this.endpoint, {
         mode: 'review-day',
         user,
         pass,

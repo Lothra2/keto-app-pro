@@ -459,7 +459,11 @@ const HomeScreen = ({ navigation }) => {
 
   if (!dayData) {
     return (
-      <View style={[styles.container, styles.center]}>\n        <Text style={styles.loadingText}>Cargando…</Text>\n      </View>
+      <View style={[styles.container, styles.center]}>
+        <Text style={styles.loadingText}>
+          {language === 'en' ? 'Loading…' : 'Cargando…'}
+        </Text>
+      </View>
     );
   }
 

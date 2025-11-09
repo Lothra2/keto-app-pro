@@ -14,9 +14,12 @@ This project is the Expo reimplementation of the Keto Pro web experience. It reu
    ```
 3. **Configure the AI endpoint**
    * The mobile build now resolves the Netlify proxy automatically. If no environment variables are provided it falls back to `https://keto-pro-app.netlify.app/.netlify/functions/grok`.
-   * Override the base URL or timeout via environment variables before starting Expo:
+   * Override the endpoint pieces or timeout via environment variables before starting Expo:
      ```bash
      export EXPO_PUBLIC_API_URL="https://your-api.example.com/.netlify/functions/grok"
+     # or split host/path if you already have a Netlify site configured
+     export EXPO_PUBLIC_API_HOST="https://your-api.example.com"
+     export EXPO_PUBLIC_API_PATH="/.netlify/functions/grok"
      export EXPO_PUBLIC_API_TIMEOUT=45000
      ```
    * When running `netlify dev` locally you can reuse the Expo LAN host automatically by exposing the port (defaults to `8888`):
