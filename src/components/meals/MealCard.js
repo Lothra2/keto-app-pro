@@ -57,14 +57,14 @@ const MealCard = ({
       {/* Body */}
       {mealData?.nombre && (
         <View style={styles.body}>
-          <Text style={styles.mealName}>
-            {mealData.nombre}
+          <View style={styles.nameRow}>
+            <Text style={styles.mealName}>{mealData.nombre}</Text>
             {hasAIData && (
               <View style={styles.aiBadge}>
-                <Text style={styles.aiBadgeText}> IA</Text>
+                <Text style={styles.aiBadgeText}>IA</Text>
               </View>
             )}
-          </Text>
+          </View>
         </View>
       )}
 
@@ -150,6 +150,11 @@ const getStyles = (theme) => StyleSheet.create({
   },
   body: {
     marginBottom: theme.spacing.xs,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
   mealName: {
     ...theme.typography.bodySmall,

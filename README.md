@@ -19,12 +19,19 @@ This project is the Expo reimplementation of the Keto Pro web experience. It reu
      export EXPO_PUBLIC_API_URL="https://your-api.example.com/.netlify/functions/grok"
      export EXPO_PUBLIC_API_TIMEOUT=45000
      ```
-   * You can also define a reusable host in `app.json` so it is bundled with the binary:
+   * When running `netlify dev` locally you can reuse the Expo LAN host automatically by exposing the port (defaults to `8888`):
+     ```bash
+     export EXPO_PUBLIC_NETLIFY_PORT=8888
+     # optional if you tunnel with https (defaults to http)
+     export EXPO_PUBLIC_NETLIFY_SCHEME=https
+     ```
+   * For production builds you can persist the host or full site URL inside `app.json`:
      ```json
      {
        "expo": {
          "extra": {
-           "apiHost": "https://your-api.example.com"
+           "apiHost": "https://your-api.example.com",
+           "netlifySiteUrl": "https://your-site.netlify.app"
          }
        }
      }

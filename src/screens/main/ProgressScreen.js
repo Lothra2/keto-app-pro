@@ -319,7 +319,7 @@ const ProgressScreen = () => {
         <Text style={styles.sectionTitle}>
           {language === 'en' ? 'Daily Progress' : 'Progreso Diario'}
         </Text>
-        {derivedPlan.slice(0, 5).map((day, index) => {
+        {derivedPlan.map((day, index) => {
           const hasData = progressByDay.find(p => p.dayIndex === index);
           return (
             <TouchableOpacity
