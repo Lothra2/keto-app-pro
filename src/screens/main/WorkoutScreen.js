@@ -47,6 +47,43 @@ const WorkoutScreen = ({ route, navigation }) => {
   const selectedIntensity = metrics.workoutIntensity || 'medium';
 
   const totalDays = derivedPlan.length || 14;
+  const clampDay = (day) => Math.min(Math.max(day ?? 0, 0), Math.max(totalDays - 1, 0));
+
+  const initialDay = clampDay(
+    typeof focusDay === 'number'
+      ? focusDay
+      : typeof dayIndex === 'number'
+      ? dayIndex
+      : currentDay
+  );
+
+  const [activeDay, setActiveDay] = useState(initialDay);
+  const safeActiveDay = clampDay(activeDay);
+  const week = weekNumber || Math.floor(safeActiveDay / 7) + 1;
+
+  const clampDayIndex = useCallback(
+    (dayValue = 0) => {
+      const parsed = Number.isFinite(dayValue) ? dayValue : Number(dayValue) || 0;
+      const maxIndex = Math.max(totalDays - 1, 0);
+      return Math.min(Math.max(parsed, 0), maxIndex);
+    },
+    [totalDays]
+  );
+
+  const safeActiveDay = clampDayIndex(typeof currentDay === 'number' ? currentDay : 0);
+  const week = Math.floor(safeActiveDay / 7) + 1;
+
+  const clampDayIndex = useCallback(
+    (dayValue = 0) => {
+      const parsed = Number.isFinite(dayValue) ? dayValue : Number(dayValue) || 0;
+      const maxIndex = Math.max(totalDays - 1, 0);
+      return Math.min(Math.max(parsed, 0), maxIndex);
+    },
+    [totalDays]
+  );
+
+  const activeDayIndex = clampDayIndex(typeof currentDay === 'number' ? currentDay : 0);
+  const week = Math.floor(activeDayIndex / 7) + 1;
 
   const clampToPlanRange = useCallback(
     (value) => clampDayIndex(value, totalDays),
