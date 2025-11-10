@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 
-const ExerciseItem = ({ exercise }) => {
+const ExerciseItem = ({ exercise, onPress }) => {
   const { theme: themeMode, language } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
@@ -25,7 +25,12 @@ const ExerciseItem = ({ exercise }) => {
   ].filter(Boolean);
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={[styles.container, onPress && styles.containerPressable]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      disabled={!onPress}
+    >
       <View style={styles.header}>
         <Text style={styles.name}>{exercise.nombre || exercise.name}</Text>
         {exercise.series ? (
@@ -42,7 +47,12 @@ const ExerciseItem = ({ exercise }) => {
           ))}
         </View>
       ) : null}
-    </View>
+      {onPress ? (
+        <Text style={styles.detailHint}>
+          {language === 'en' ? 'Tap for detailed tips' : 'Toca para ver detalles'}
+        </Text>
+      ) : null}
+    </TouchableOpacity>
   );
 };
 
@@ -52,6 +62,10 @@ const getStyles = (theme) =>
       backgroundColor: theme.colors.cardSoft,
       borderRadius: theme.radius.md,
       padding: theme.spacing.md
+    },
+    containerPressable: {
+      borderWidth: 1,
+      borderColor: theme.colors.border
     },
     header: {
       flexDirection: 'row',
@@ -84,6 +98,12 @@ const getStyles = (theme) =>
       color: theme.colors.textMuted,
       flex: 1,
       lineHeight: 18
+    },
+    detailHint: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      marginTop: theme.spacing.xs,
+      fontWeight: '600'
     }
   });
 
