@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -29,15 +29,66 @@ const ShoppingScreen = () => {
 
   const [aiList, setAiList] = useState('');
   const [loading, setLoading] = useState(false);
+  const [aiSections, setAiSections] = useState([]);
+
+  const parseAiList = useCallback((text) => {
+    if (!text) return [];
+
+    const lines = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const sections = [];
+    let current = null;
+
+    const pushSection = (title) => {
+      current = { title, items: [] };
+      sections.push(current);
+    };
+
+    lines.forEach((line) => {
+      const headingMatch = line.match(/^([^•]+):$/);
+      if (headingMatch) {
+        pushSection(headingMatch[1]);
+        return;
+      }
+
+      if (line.startsWith('•')) {
+        const cleaned = line.replace(/^•\s*/, '').trim();
+        if (!current) {
+          pushSection(language === 'en' ? 'Items' : 'Artículos');
+        }
+        current.items.push(cleaned);
+        return;
+      }
+
+      if (!current) {
+        pushSection(language === 'en' ? 'Notes' : 'Notas');
+      }
+      current.items.push(line);
+    });
+
+    return sections.filter((section) => section.items.length);
+  }, [language]);
 
   useEffect(() => {
     loadSavedList();
   }, [currentWeek]);
 
+  useEffect(() => {
+    if (aiList) {
+      setAiSections(parseAiList(aiList));
+    } else {
+      setAiSections([]);
+    }
+  }, [aiList, parseAiList]);
+
   const loadSavedList = async () => {
     const saved = await getShoppingList(currentWeek);
     if (saved) {
       setAiList(saved);
+      setAiSections(parseAiList(saved));
     }
   };
 
@@ -73,6 +124,7 @@ const ShoppingScreen = () => {
       });
 
       setAiList(list);
+      setAiSections(parseAiList(list));
       await saveShoppingList(currentWeek, list);
     } catch (error) {
       console.error('Error generando lista:', error);
@@ -136,7 +188,23 @@ const ShoppingScreen = () => {
           <Text style={styles.aiListTitle}>
             {language === 'en' ? 'AI Shopping List' : 'Lista IA'}
           </Text>
-          <Text style={styles.aiListText}>{aiList}</Text>
+          {aiSections.length ? (
+            <View style={styles.aiListSections}>
+              {aiSections.map((section, sectionIndex) => (
+                <View key={`${section.title}-${sectionIndex}`} style={styles.aiListSection}>
+                  <Text style={styles.aiListSectionTitle}>{section.title}</Text>
+                  {section.items.map((item, itemIndex) => (
+                    <View key={`${item}-${itemIndex}`} style={styles.aiListItem}>
+                      <Text style={styles.aiListBullet}>•</Text>
+                      <Text style={styles.aiListItemText}>{item}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.aiListText}>{aiList}</Text>
+          )}
         </View>
       ) : null}
 
@@ -201,6 +269,33 @@ const getStyles = (theme) => StyleSheet.create({
     ...theme.typography.h3,
     color: theme.colors.text,
     marginBottom: theme.spacing.sm
+  },
+  aiListSections: {
+    gap: theme.spacing.md
+  },
+  aiListSection: {
+    gap: theme.spacing.xs
+  },
+  aiListSectionTitle: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '600'
+  },
+  aiListItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8
+  },
+  aiListBullet: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    lineHeight: 18
+  },
+  aiListItemText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    flex: 1,
+    lineHeight: 18
   },
   aiListText: {
     ...theme.typography.bodySmall,
