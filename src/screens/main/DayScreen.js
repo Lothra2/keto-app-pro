@@ -125,7 +125,7 @@ const DayScreen = ({ navigation }) => {
   const meals = [
     {
       key: 'desayuno',
-      title: language === 'en' ? '🍳 Breakfast' : '🍳 Desayuno',
+      title: language === 'en' ? 'Breakfast' : 'Desayuno',
       icon: '🍳',
       data: dayData.desayuno,
       isCompleted: mealStates.desayuno,
@@ -133,7 +133,7 @@ const DayScreen = ({ navigation }) => {
     },
     {
       key: 'snackAM',
-      title: language === 'en' ? '⏰ Snack AM' : '⏰ Snack AM',
+      title: language === 'en' ? 'Snack AM' : 'Snack AM',
       icon: '⏰',
       data: dayData.snackAM,
       isCompleted: mealStates.snackAM,
@@ -141,7 +141,7 @@ const DayScreen = ({ navigation }) => {
     },
     {
       key: 'almuerzo',
-      title: language === 'en' ? '🥗 Lunch' : '🥗 Almuerzo',
+      title: language === 'en' ? 'Lunch' : 'Almuerzo',
       icon: '🥗',
       data: dayData.almuerzo,
       isCompleted: mealStates.almuerzo,
@@ -149,7 +149,7 @@ const DayScreen = ({ navigation }) => {
     },
     {
       key: 'snackPM',
-      title: language === 'en' ? '🥜 Snack PM' : '🥜 Snack PM',
+      title: language === 'en' ? 'Snack PM' : 'Snack PM',
       icon: '🥜',
       data: dayData.snackPM,
       isCompleted: mealStates.snackPM,
@@ -157,7 +157,7 @@ const DayScreen = ({ navigation }) => {
     },
     {
       key: 'cena',
-      title: language === 'en' ? '🍖 Dinner' : '🍖 Cena',
+      title: language === 'en' ? 'Dinner' : 'Cena',
       icon: '🍖',
       data: dayData.cena,
       isCompleted: mealStates.cena,

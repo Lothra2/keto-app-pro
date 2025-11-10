@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 const DEFAULT_TIMEOUT = Number(process.env.EXPO_PUBLIC_API_TIMEOUT || 30000);
 const DEFAULT_FUNCTION_PATH = '/.netlify/functions/grok';
 const RELATIVE_FALLBACK = '/.netlify/functions/grok';
-const DEFAULT_NETLIFY = 'https://keto-pro-app.netlify.app/.netlify/functions/grok';
+const DEFAULT_NETLIFY = 'https://keto-plan-ai.netlify.app/.netlify/functions/grok';
 
 const getExtras = () => {
   const expoConfig = Constants.expoConfig || {};
@@ -144,7 +144,7 @@ const resolveEndpoint = () => {
 
   return {
     url: DEFAULT_NETLIFY,
-    baseURL: 'https://keto-pro-app.netlify.app',
+    baseURL: 'https://keto-plan-ai.netlify.app',
     path: DEFAULT_FUNCTION_PATH
   };
 };
