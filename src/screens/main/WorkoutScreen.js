@@ -67,6 +67,18 @@ const WorkoutScreen = ({ route, navigation }) => {
   const safeActiveDay = clampDayIndex(typeof currentDay === 'number' ? currentDay : 0);
   const week = Math.floor(safeActiveDay / 7) + 1;
 
+  const clampDayIndex = useCallback(
+    (dayValue = 0) => {
+      const parsed = Number.isFinite(dayValue) ? dayValue : Number(dayValue) || 0;
+      const maxIndex = Math.max(totalDays - 1, 0);
+      return Math.min(Math.max(parsed, 0), maxIndex);
+    },
+    [totalDays]
+  );
+
+  const activeDayIndex = clampDayIndex(typeof currentDay === 'number' ? currentDay : 0);
+  const week = Math.floor(activeDayIndex / 7) + 1;
+
   useEffect(() => {
     const clamped = clampDayIndex(typeof currentDay === 'number' ? currentDay : 0);
     if (clamped !== currentDay) {
@@ -85,19 +97,19 @@ const WorkoutScreen = ({ route, navigation }) => {
     if (incomingDay === null) return;
 
     const clamped = clampDayIndex(incomingDay);
-    if (clamped !== safeActiveDay) {
+    if (clamped !== activeDayIndex) {
       setCurrentDay(clamped);
     }
-  }, [focusDay, dayIndex, clampDayIndex, safeActiveDay, setCurrentDay]);
+  }, [focusDay, dayIndex, clampDayIndex, activeDayIndex, setCurrentDay]);
 
   useEffect(() => {
-    navigation.setParams({ focusDay: safeActiveDay, weekNumber: week });
-  }, [navigation, safeActiveDay, week]);
+    navigation.setParams({ focusDay: activeDayIndex, weekNumber: week });
+  }, [navigation, activeDayIndex, week]);
 
   const loadWorkout = useCallback(async () => {
-    const saved = await getWorkoutData(safeActiveDay);
+    const saved = await getWorkoutData(activeDayIndex);
     setWorkout(Array.isArray(saved) ? saved : []);
-  }, [safeActiveDay]);
+  }, [activeDayIndex]);
 
   useEffect(() => {
     loadWorkout();
@@ -114,7 +126,7 @@ const WorkoutScreen = ({ route, navigation }) => {
     setLoadingMessage(language === 'en' ? 'Creating your workout…' : 'Creando tu entreno…');
     try {
       const exercises = await aiService.generateWorkout({
-        dayIndex: safeActiveDay,
+        dayIndex: activeDayIndex,
         weekNumber: week,
         intensity: selectedIntensity,
         language,
@@ -127,7 +139,7 @@ const WorkoutScreen = ({ route, navigation }) => {
       });
 
       setWorkout(exercises);
-      await saveWorkoutData(safeActiveDay, exercises);
+      await saveWorkoutData(activeDayIndex, exercises);
     } catch (error) {
       console.error('Error generating workout:', error);
       alert(language === 'en' ? 'Error generating workout' : 'Error generando entreno');
@@ -146,7 +158,7 @@ const WorkoutScreen = ({ route, navigation }) => {
 
     setLoading(true);
     setLoadingType('week');
-    const startOfWeek = Math.floor(safeActiveDay / 7) * 7;
+    const startOfWeek = Math.floor(activeDayIndex / 7) * 7;
     const endOfWeek = Math.min(startOfWeek + 7, totalDays);
     try {
       for (let day = startOfWeek; day < endOfWeek; day += 1) {
@@ -169,7 +181,7 @@ const WorkoutScreen = ({ route, navigation }) => {
           }
         });
         await saveWorkoutData(day, exercises);
-        if (day === safeActiveDay) {
+        if (day === activeDayIndex) {
           setWorkout(exercises);
         }
       }
@@ -192,12 +204,12 @@ const WorkoutScreen = ({ route, navigation }) => {
   const closeExerciseDetail = () => setDetailExercise(null);
 
   const localPlan = useMemo(() => {
-    return getWorkoutForDay(language, week, safeActiveDay % 7);
-  }, [language, week, safeActiveDay]);
+    return getWorkoutForDay(language, week, activeDayIndex % 7);
+  }, [language, week, activeDayIndex]);
 
   const referenceExercises = useMemo(() => {
     if (!localPlan || !Array.isArray(localPlan.days)) return [];
-    const todayIndex = safeActiveDay % localPlan.days.length;
+    const todayIndex = activeDayIndex % localPlan.days.length;
     return localPlan.days.map((item, index) => ({
       nombre: item,
       descripcion:
@@ -213,15 +225,15 @@ const WorkoutScreen = ({ route, navigation }) => {
             : 'Termina con estiramientos suaves y respiración profunda.'
           : ''
     }));
-  }, [localPlan, safeActiveDay, language]);
+  }, [localPlan, activeDayIndex, language]);
 
-  const dayLabel = language === 'en' ? `Day ${safeActiveDay + 1}` : `Día ${safeActiveDay + 1}`;
+  const dayLabel = language === 'en' ? `Day ${activeDayIndex + 1}` : `Día ${activeDayIndex + 1}`;
   const weekLabel = language === 'en' ? `Week ${week}` : `Semana ${week}`;
   const intensityLabel = intensityLabels[selectedIntensity] || intensityLabels.medium;
 
   const handleChangeDay = (direction) => {
-    const next = clampDayIndex(safeActiveDay + direction);
-    if (next !== safeActiveDay) {
+    const next = clampDayIndex(activeDayIndex + direction);
+    if (next !== activeDayIndex) {
       setCurrentDay(next);
     }
   };
@@ -291,16 +303,16 @@ const WorkoutScreen = ({ route, navigation }) => {
         <View style={styles.dayControls}>
         <TouchableOpacity
           onPress={() => handleChangeDay(-1)}
-          style={[styles.dayButton, safeActiveDay === 0 && styles.dayButtonDisabled]}
-          disabled={safeActiveDay === 0}
+          style={[styles.dayButton, activeDayIndex === 0 && styles.dayButtonDisabled]}
+          disabled={activeDayIndex === 0}
         >
           <Text style={styles.dayButtonText}>−</Text>
         </TouchableOpacity>
         <Text style={styles.dayBadge}>{dayLabel}</Text>
         <TouchableOpacity
           onPress={() => handleChangeDay(1)}
-          style={[styles.dayButton, safeActiveDay >= totalDays - 1 && styles.dayButtonDisabled]}
-          disabled={safeActiveDay >= totalDays - 1}
+          style={[styles.dayButton, activeDayIndex >= totalDays - 1 && styles.dayButtonDisabled]}
+          disabled={activeDayIndex >= totalDays - 1}
         >
           <Text style={styles.dayButtonText}>+</Text>
         </TouchableOpacity>
