@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
@@ -11,7 +11,7 @@ import { getWorkoutForDay } from '../../data/workouts';
 import Card from '../../components/shared/Card';
 
 const WorkoutScreen = ({ route, navigation }) => {
-  const { dayIndex, weekNumber, focusDay } = route.params || {};
+  const { dayIndex, focusDay } = route.params || {};
   const {
     theme: themeMode,
     language,
@@ -77,18 +77,53 @@ const WorkoutScreen = ({ route, navigation }) => {
     }
   }, [currentDay, safeActiveDay, totalDays]);
 
+  const clampDay = useCallback(
+    (dayValue = 0) => {
+      const parsed = Number.isFinite(dayValue) ? dayValue : Number(dayValue) || 0;
+      const maxIndex = Math.max(totalDays - 1, 0);
+      return Math.min(Math.max(parsed, 0), maxIndex);
+    },
+    [totalDays]
+  );
+
+  const safeActiveDay = clampDay(typeof currentDay === 'number' ? currentDay : 0);
+  const week = Math.floor(safeActiveDay / 7) + 1;
+
+  useEffect(() => {
+    const clamped = clampDay(typeof currentDay === 'number' ? currentDay : 0);
+    if (clamped !== currentDay) {
+      setCurrentDay(clamped);
+    }
+  }, [currentDay, clampDay, setCurrentDay]);
+
+  useEffect(() => {
+    const incomingDay =
+      typeof focusDay === 'number'
+        ? focusDay
+        : typeof dayIndex === 'number'
+        ? dayIndex
+        : null;
+
+    if (incomingDay === null) return;
+
+    const clamped = clampDay(incomingDay);
+    if (clamped !== safeActiveDay) {
+      setCurrentDay(clamped);
+    }
+  }, [focusDay, dayIndex, clampDay, safeActiveDay, setCurrentDay]);
+
   useEffect(() => {
     navigation.setParams({ focusDay: safeActiveDay, weekNumber: week });
   }, [navigation, safeActiveDay, week]);
 
-  useEffect(() => {
-    loadWorkout();
-  }, [safeActiveDay]);
-
-  const loadWorkout = async () => {
+  const loadWorkout = useCallback(async () => {
     const saved = await getWorkoutData(safeActiveDay);
     setWorkout(Array.isArray(saved) ? saved : []);
-  };
+  }, [safeActiveDay]);
+
+  useEffect(() => {
+    loadWorkout();
+  }, [loadWorkout]);
 
   const handleGenerateWorkout = async () => {
     if (!apiCredentials.user || !apiCredentials.pass) {
@@ -209,7 +244,6 @@ const WorkoutScreen = ({ route, navigation }) => {
   const handleChangeDay = (direction) => {
     const next = clampDay(safeActiveDay + direction);
     if (next !== safeActiveDay) {
-      setActiveDay(next);
       setCurrentDay(next);
     }
   };
