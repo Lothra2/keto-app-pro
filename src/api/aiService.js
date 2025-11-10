@@ -1,23 +1,12 @@
-import axios from 'axios';
-import { getApiConfig } from './config';
+import callNetlifyAI from './netlifyClient';
 
 class AIService {
-  constructor() {
-    const config = getApiConfig();
-    this.client = axios.create({
-      baseURL: config.baseURL,
-      timeout: config.timeout,
-      headers: config.headers
-    });
-    this.endpoint = config.endpointPath || '/';
-  }
-
   /**
    * Genera una comida usando IA
    */
   async generateMeal({ mealType, kcal, language, preferences, credentials }) {
-    const { like, dislike } = preferences;
-    const { user, pass } = credentials;
+    const { like, dislike } = preferences || {};
+    const { user, pass } = credentials || {};
 
     const mealNames = {
       desayuno: { es: 'desayuno', en: 'breakfast' },
@@ -32,19 +21,17 @@ class AIService {
       : `Genera 1 ${mealName} keto manteniendo cerca de ${kcal} kcal. Prefiere: ${like}. Evita: ${dislike}. Responde SOLO en JSON con las claves: "nombre" (nombre corto del plato), "ingredientes" (array de strings tipo "150 g pollo", "40 g brócoli", "1/2 aguacate"), "descripcion" (frase muy corta).`;
 
     try {
-      const response = await this.client.post(this.endpoint, {
+      const data = await callNetlifyAI({
         prompt,
         user,
         pass,
         mode: mealType,
-        lang: language
+        lang: language,
+        kcal,
+        prefs: { like, dislike }
       });
 
-      if (!response.data.ok) {
-        throw new Error(response.data.error || 'AI did not respond');
-      }
-
-      return this.parseMealResponse(response.data);
+      return this.parseMealResponse(data);
     } catch (error) {
       console.error('Error generating meal:', error);
       throw error;
@@ -55,28 +42,22 @@ class AIService {
    * Genera un día completo con IA
    */
   async generateFullDay({ dayIndex, kcal, language, preferences, credentials, username }) {
-    const { like, dislike } = preferences;
-    const { user, pass } = credentials;
-
-    const payload = {
-      mode: 'full-day',
-      lang: language,
-      user,
-      pass,
-      kcal,
-      prefs: { like, dislike },
-      dayIndex: dayIndex + 1,
-      username
-    };
+    const { like, dislike } = preferences || {};
+    const { user, pass } = credentials || {};
 
     try {
-      const response = await this.client.post(this.endpoint, payload);
+      const data = await callNetlifyAI({
+        mode: 'full-day',
+        lang: language,
+        user,
+        pass,
+        kcal,
+        prefs: { like, dislike },
+        dayIndex: dayIndex + 1,
+        username
+      });
 
-      if (!response.data.ok) {
-        throw new Error(response.data.error || 'AI did not respond');
-      }
-
-      return this.parseFullDayResponse(response.data);
+      return this.parseFullDayResponse(data);
     } catch (error) {
       console.error('Error generating full day:', error);
       throw error;
@@ -94,8 +75,8 @@ class AIService {
     credentials,
     userStats
   }) {
-    const { user, pass } = credentials;
-    const { height, weight, age } = userStats;
+    const { user, pass } = credentials || {};
+    const { height, weight, age } = userStats || {};
 
     const intensityMap = {
       soft: language === 'en'
@@ -114,7 +95,7 @@ class AIService {
       : `Devuelve un JSON con campo "ejercicios" para el día ${dayIndex + 1} (semana ${weekNumber}) de un entreno ${intensityMap[intensity]}. Debe ser SOLO con peso corporal, sin equipos. Datos usuario: estatura ${height} cm, peso ${weight} kg, edad ${age}. Cada ítem: {"nombre": nombre corto, "series": "3 x 12" o tiempo, "descripcion": tip muy corto}. Español.`;
 
     try {
-      const response = await this.client.post(this.endpoint, {
+      const data = await callNetlifyAI({
         mode: 'workout-day',
         user,
         pass,
@@ -122,11 +103,7 @@ class AIService {
         prompt
       });
 
-      if (!response.data.ok) {
-        throw new Error(response.data.error || 'AI did not respond');
-      }
-
-      return this.parseWorkoutResponse(response.data, language);
+      return this.parseWorkoutResponse(data, language);
     } catch (error) {
       console.error('Error generating workout:', error);
       throw error;
@@ -134,7 +111,7 @@ class AIService {
   }
 
   async generateWeekReview({ weekNumber, days, language, credentials }) {
-    const { user, pass } = credentials;
+    const { user, pass } = credentials || {};
     const safeDays = Array.isArray(days) ? days : [];
 
     const prompt = language === 'en'
@@ -142,7 +119,7 @@ class AIService {
       : `Vas a recibir un plan keto de 7 días. Analiza: 1) qué tan consistente fue, 2) qué días se desviaron, 3) una recomendación para la siguiente semana. Devuélvelo en 3 secciones cortas con título. Semana: ${JSON.stringify(safeDays)}`;
 
     try {
-    const response = await this.client.post(this.endpoint, {
+      const data = await callNetlifyAI({
         mode: 'review-week',
         user,
         pass,
@@ -150,11 +127,7 @@ class AIService {
         prompt
       });
 
-      if (!response.data.ok) {
-        throw new Error(response.data.error || 'AI did not respond');
-      }
-
-      const raw = (response.data.text || '').replace(/\*/g, '').replace(/###\s*/g, '').trim();
+      const raw = (data.text || '').replace(/\*/g, '').replace(/###\s*/g, '').trim();
       const items = raw
         .split(/\n+/)
         .map(item => item.trim())
@@ -172,7 +145,7 @@ class AIService {
   }
 
   async generateShoppingList({ weekNumber, days, language, credentials }) {
-    const { user, pass } = credentials;
+    const { user, pass } = credentials || {};
     const safeDays = Array.isArray(days) ? days : [];
 
     const prompt = language === 'en'
@@ -180,7 +153,7 @@ class AIService {
       : `Recibirás 7 días keto con ingredientes y cantidades. Condénsalos en 1 sola lista de compras en español, agrupada por secciones (Proteínas, Verduras, Lácteos/Grasas, Despensa/Otros). Une ítems parecidos y suma cantidades aproximadas. Sé breve. Semana: ${JSON.stringify(safeDays)}`;
 
     try {
-      const response = await this.client.post(this.endpoint, {
+      const data = await callNetlifyAI({
         mode: 'shopping-week',
         user,
         pass,
@@ -189,11 +162,7 @@ class AIService {
         week: weekNumber
       });
 
-      if (!response.data.ok) {
-        throw new Error(response.data.error || 'AI did not respond');
-      }
-
-      return (response.data.text || '').replace(/\*/g, '').trim();
+      return (data.text || '').replace(/\*/g, '').trim();
     } catch (error) {
       console.error('Error generating shopping list:', error);
       throw error;
@@ -204,14 +173,14 @@ class AIService {
    * Revisa un día con IA
    */
   async reviewDay({ dayData, language, credentials }) {
-    const { user, pass } = credentials;
+    const { user, pass } = credentials || {};
 
     const prompt = language === 'en'
       ? `You are reviewing a keto day. User has: breakfast "${dayData.desayuno?.nombre}", lunch "${dayData.almuerzo?.nombre}", dinner "${dayData.cena?.nombre}". Calories target: ${dayData.kcal}. Tell in 3 bullet points: (1) is it too fatty?, (2) is protein ok?, (3) 1 small tip. Keep it short.`
       : `Estás revisando un día keto. El usuario tiene: desayuno "${dayData.desayuno?.nombre}", almuerzo "${dayData.almuerzo?.nombre}", cena "${dayData.cena?.nombre}". Meta calórica: ${dayData.kcal}. Responde en 3 bullets: (1) si está muy graso, (2) si la proteína está ok, (3) 1 tip corto.`;
 
     try {
-      const response = await this.client.post(this.endpoint, {
+      const data = await callNetlifyAI({
         mode: 'review-day',
         user,
         pass,
@@ -219,11 +188,7 @@ class AIService {
         prompt
       });
 
-      if (!response.data.ok) {
-        throw new Error(response.data.error || 'AI did not respond');
-      }
-
-      return this.parseReviewResponse(response.data.text, language);
+      return this.parseReviewResponse(data.text, language);
     } catch (error) {
       console.error('Error reviewing day:', error);
       throw error;
