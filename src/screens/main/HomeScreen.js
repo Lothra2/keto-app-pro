@@ -37,6 +37,7 @@ import { getWorkoutForDay } from '../../data/workouts';
 import aiService from '../../api/aiService';
 import { calculateConsumedCalories, calculateDynamicMacros } from '../../utils/calculations';
 import { mergePlanDay, MEAL_KEYS, buildWeekAiPayload } from '../../utils/plan';
+import { getDayDisplayName, sanitizeReviewBullet, stripMarkdownHeadings } from '../../utils/labels';
 
 const defaultMealState = {
   desayuno: false,
@@ -80,12 +81,12 @@ const normalizeDayReview = (value, language = 'es') => {
         if (typeof item === 'string') {
           return {
             label: language === 'en' ? `Note ${index + 1}` : `Nota ${index + 1}`,
-            text: item
+            text: sanitizeReviewBullet(item)
           };
         }
         if (item && typeof item === 'object') {
           const label = item.label || (language === 'en' ? `Note ${index + 1}` : `Nota ${index + 1}`);
-          return { label, text: item.text || '' };
+          return { label, text: sanitizeReviewBullet(item.text || '') };
         }
         return null;
       })
@@ -103,7 +104,7 @@ const normalizeDayReview = (value, language = 'es') => {
       .filter(Boolean)
       .map((text, index) => ({
         label: language === 'en' ? `Note ${index + 1}` : `Nota ${index + 1}`,
-        text
+        text: sanitizeReviewBullet(text)
       }));
   }
 
@@ -116,8 +117,8 @@ const normalizeWeekReview = (value, language = 'es') => {
   if (Array.isArray(value)) {
     return value
       .map((item) => {
-        if (typeof item === 'string') return item;
-        if (item && typeof item === 'object') return item.text || '';
+        if (typeof item === 'string') return stripMarkdownHeadings(item);
+        if (item && typeof item === 'object') return stripMarkdownHeadings(item.text || '');
         return '';
       })
       .filter(Boolean);
@@ -134,7 +135,7 @@ const normalizeWeekReview = (value, language = 'es') => {
     } catch (error) {
       return value
         .split(/\n+/)
-        .map((text) => text.trim())
+        .map((text) => stripMarkdownHeadings(text))
         .filter(Boolean);
     }
   }
@@ -153,7 +154,8 @@ const HomeScreen = ({ navigation }) => {
     setCurrentDay,
     setCurrentWeek,
     apiCredentials,
-    metrics
+    metrics,
+    notifyProgressUpdate
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -165,6 +167,7 @@ const HomeScreen = ({ navigation }) => {
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [waterInfo, setWaterInfo] = useState({ goal: metrics.waterGoal || 2400, ml: 0 });
   const [extras, setExtras] = useState([]);
+  const [extrasExpanded, setExtrasExpanded] = useState(false);
   const [dayReview, setDayReview] = useState(null);
   const [weekReview, setWeekReview] = useState(null);
   const [showWeekReview, setShowWeekReview] = useState(false);
@@ -193,7 +196,11 @@ const HomeScreen = ({ navigation }) => {
       const stored = await getDayData(currentDay);
 
       const merged = mergePlanDay(baseDay, stored || {});
-      merged.dia = merged.dia || `Día ${currentDay + 1}`;
+      merged.dia = getDayDisplayName({
+        label: merged.dia,
+        index: currentDay,
+        language
+      });
       setDayData(merged);
 
       const calState = await getCalorieState(currentDay, merged.kcal || baseDay.kcal || 1600);
@@ -223,7 +230,9 @@ const HomeScreen = ({ navigation }) => {
       const savedWeekReview = await getWeekReview(Math.floor(currentDay / 7) + 1);
       setWeekReview(normalizeWeekReview(savedWeekReview, language));
 
-      setExtras(collectExtrasFromAI(stored));
+      const extractedExtras = collectExtrasFromAI(stored);
+      setExtras(extractedExtras);
+      setExtrasExpanded(false);
     } catch (error) {
       console.error('Error loading day data:', error);
     }
@@ -273,6 +282,7 @@ const HomeScreen = ({ navigation }) => {
       goal: water.goal || metrics.waterGoal || 2400,
       ml: water.ml || 0
     });
+    notifyProgressUpdate();
   };
 
   const handleResetWater = async () => {
@@ -282,6 +292,7 @@ const HomeScreen = ({ navigation }) => {
       goal: water.goal || metrics.waterGoal || 2400,
       ml: water.ml || 0
     });
+    notifyProgressUpdate();
   };
 
   const handleGenerateAI = (mealKey) => {
@@ -393,6 +404,7 @@ const HomeScreen = ({ navigation }) => {
   const handleToggleDayComplete = async () => {
     await setDayCompleted(currentDay, !isDone);
     setIsDone((prev) => !prev);
+    notifyProgressUpdate();
   };
 
   const handleWeekChange = (week) => {
@@ -546,24 +558,33 @@ const HomeScreen = ({ navigation }) => {
 
       {extras.length ? (
         <Card style={styles.extrasCard}>
-          <View style={styles.extrasHeader}>
-            <Text style={styles.sectionTitle}>
-              {language === 'en' ? 'AI extras for today' : 'Extras IA para hoy'}
-            </Text>
-            <Text style={styles.extrasHint}>
-              {language === 'en'
-                ? 'Auto-generated from your AI meals'
-                : 'Generados automáticamente desde tus comidas IA'}
-            </Text>
-          </View>
-          <View style={styles.extrasGrid}>
-            {extras.map((item, index) => (
-              <View key={`${item}-${index}`} style={styles.extraPill}>
-                <Text style={styles.extraIcon}>✨</Text>
-                <Text style={styles.extraText}>{item}</Text>
-              </View>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={styles.extrasHeaderRow}
+            onPress={() => setExtrasExpanded(prev => !prev)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.extrasHeaderText}>
+              <Text style={styles.sectionTitle}>
+                {language === 'en' ? 'AI extras for today' : 'Extras IA para hoy'}
+              </Text>
+              <Text style={styles.extrasHint}>
+                {language === 'en'
+                  ? 'Quick reminders from your AI meals'
+                  : 'Recordatorios rápidos de tus comidas IA'}
+              </Text>
+            </View>
+            <Text style={styles.extrasToggle}>{extrasExpanded ? '−' : '+'}</Text>
+          </TouchableOpacity>
+          {extrasExpanded ? (
+            <View style={styles.extrasList}>
+              {extras.map((item, index) => (
+                <View key={`${item}-${index}`} style={styles.extraRow}>
+                  <Text style={styles.extraBullet}>•</Text>
+                  <Text style={styles.extraText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </Card>
       ) : null}
 
@@ -852,12 +873,38 @@ const createStyles = (theme) =>
     extrasCard: {
       gap: theme.spacing.sm
     },
-    extrasHeader: {
+    extrasHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: theme.spacing.sm
+    },
+    extrasHeaderText: {
+      flex: 1,
       gap: 4
     },
     extrasHint: {
       ...theme.typography.caption,
       color: theme.colors.textMuted
+    },
+    extrasToggle: {
+      ...theme.typography.h1,
+      color: theme.colors.primary,
+      lineHeight: 24
+    },
+    extrasList: {
+      marginTop: theme.spacing.sm,
+      gap: theme.spacing.xs
+    },
+    extraRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8
+    },
+    extraBullet: {
+      color: theme.colors.primary,
+      fontSize: 14,
+      lineHeight: 20
     },
     sectionTitle: {
       ...theme.typography.h3,
@@ -867,30 +914,10 @@ const createStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted
     },
-    extrasGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: theme.spacing.sm
-    },
-    extraPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      backgroundColor: theme.colors.cardSoft,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: theme.radius.full,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    extraIcon: {
-      fontSize: 14
-    },
     extraText: {
       ...theme.typography.caption,
       color: theme.colors.text,
-      maxWidth: 180,
-      flexShrink: 1,
+      flex: 1,
       lineHeight: 18
     },
     workoutCard: {

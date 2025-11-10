@@ -2,9 +2,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { getDayDisplayName } from '../../utils/labels';
 
 const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
-  const { theme: themeMode } = useApp();
+  const { theme: themeMode, language } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
 
@@ -29,7 +30,7 @@ const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
             onPress={() => onDaySelect(dayIndex)}
           >
             <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-              {day.dia}
+              {getDayDisplayName({ label: day.dia, index: dayIndex, language })}
             </Text>
           </TouchableOpacity>
         );

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { hasLeadingEmoji } from '../../utils/labels';
 
 const MealCard = ({
   title,
@@ -13,7 +14,7 @@ const MealCard = ({
   showAIButton = false,
   readOnly = false
 }) => {
-  const { theme: themeMode } = useApp();
+  const { theme: themeMode, language } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
 
@@ -27,14 +28,19 @@ const MealCard = ({
       .filter(Boolean);
   }, [mealData?.qty]);
 
-  const noteText = mealData?.note || mealData?.descripcion || '';
+  const noteText =
+    mealData?.note ||
+    mealData?.descripcion ||
+    (hasAIData ? (language === 'en' ? 'Generated with AI' : 'Generado con IA') : '');
+
+  const showIcon = icon && !hasLeadingEmoji(mealData?.nombre || '');
 
   return (
     <View style={[styles.container, isCompleted && styles.containerCompleted]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.icon}>{icon}</Text>
+          {showIcon ? <Text style={styles.icon}>{icon}</Text> : null}
           <View style={styles.titleContainer}>
             <Text style={styles.title}>{title}</Text>
           </View>

@@ -117,6 +117,8 @@ const WorkoutModal = ({ route, navigation }) => {
             descripcion: dayText,
             series: ''
           }))}
+          collapsible
+          initiallyCollapsed
         />
 
         <View style={styles.intensityBox}>

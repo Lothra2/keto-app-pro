@@ -37,6 +37,7 @@ export const AppProvider = ({ children }) => {
     waterGoal: 2400,
     workoutIntensity: 'medium'
   });
+  const [progressVersion, setProgressVersion] = useState(0);
 
   const { mode: themeMode, setMode: setThemeMode } = useThemeContext();
 
@@ -240,6 +241,10 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const notifyProgressUpdate = () => {
+    setProgressVersion(prev => prev + 1);
+  };
+
   const updateCurrentDay = (dayIndex) => {
     const maxIndex = Math.max(derivedPlan.length - 1, 0);
     const clamped = Math.min(Math.max(dayIndex, 0), maxIndex);
@@ -273,6 +278,7 @@ export const AppProvider = ({ children }) => {
       setFoodPrefs({ like: '', dislike: '' });
       setApiCredentials({ user: '', pass: '' });
       setMetrics({ height: '', startWeight: '', age: '', waterGoal: 2400, workoutIntensity: 'medium' });
+      setProgressVersion(0);
     } catch (error) {
       console.error('Error reseteando app:', error);
     }
@@ -290,6 +296,7 @@ export const AppProvider = ({ children }) => {
     foodPrefs,
     apiCredentials,
     metrics,
+    progressVersion,
     loading,
     setCurrentDay: updateCurrentDay,
     setCurrentWeek: updateCurrentWeek,
@@ -298,6 +305,7 @@ export const AppProvider = ({ children }) => {
     updateFoodPrefs,
     updateApiCredentials,
     updateMetrics,
+    notifyProgressUpdate,
     resetApp
   };
 

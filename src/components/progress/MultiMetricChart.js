@@ -65,7 +65,8 @@ const MultiMetricChart = ({
   metrics = [],
   height = 220,
   width = screenWidth - 48,
-  theme
+  theme,
+  language = 'es'
 }) => {
   const padding = 20;
   const innerWidth = Math.max(width, data.length > 1 ? data.length * 56 : width);
@@ -128,11 +129,15 @@ const MultiMetricChart = ({
   }, [metrics, data, padding, usableHeight, xStep, usableWidth]);
 
   if (!data.length || !scaledMetrics.length) {
+    const emptyTitle = language === 'en' ? 'No data yet' : 'No hay datos aún';
+    const emptySubtitle = language === 'en'
+      ? 'Track your weight, energy or body fat to unlock this chart.'
+      : 'Registra peso, energía o % de grasa para activar esta gráfica.';
     return (
       <View style={[styles.emptyState, { backgroundColor: theme?.colors?.bgSoft || '#f3f4f6' }]}>
-        <Text style={[styles.emptyTitle, { color: theme?.colors?.textMuted || '#64748b' }]}>No hay datos aún</Text>
+        <Text style={[styles.emptyTitle, { color: theme?.colors?.textMuted || '#64748b' }]}>{emptyTitle}</Text>
         <Text style={[styles.emptySubtitle, { color: theme?.colors?.textMuted || '#64748b' }]}>
-          Agrega tu peso, energía y medidas para ver tu progreso.
+          {emptySubtitle}
         </Text>
       </View>
     );

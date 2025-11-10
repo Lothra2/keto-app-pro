@@ -23,6 +23,7 @@ import {
   setDayCompleted
 } from '../../storage/storage';
 import { calculateConsumedCalories } from '../../utils/calculations';
+import { getDayDisplayName } from '../../utils/labels';
 
 const DayScreen = ({ navigation }) => {
   const {
@@ -32,7 +33,8 @@ const DayScreen = ({ navigation }) => {
     setCurrentDay,
     currentWeek,
     setCurrentWeek,
-    derivedPlan
+    derivedPlan,
+    notifyProgressUpdate
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -46,7 +48,7 @@ const DayScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadDayData();
-  }, [currentDay]);
+  }, [currentDay, language]);
 
   const loadDayData = async () => {
     const baseDay = derivedPlan[currentDay];
@@ -54,9 +56,14 @@ const DayScreen = ({ navigation }) => {
     
     const merged = {
       ...baseDay,
-      ...stored,
-      dia: baseDay?.dia || `Día ${currentDay + 1}`
+      ...stored
     };
+
+    merged.dia = getDayDisplayName({
+      label: merged.dia || baseDay?.dia,
+      index: currentDay,
+      language
+    });
     
     setDayData(merged);
 
@@ -93,17 +100,20 @@ const DayScreen = ({ navigation }) => {
     await addWater(currentDay, ml);
     const water = await getWaterState(currentDay);
     setWaterInfo(water);
+    notifyProgressUpdate();
   };
 
   const handleResetWater = async () => {
     await resetWater(currentDay, 0);
     const water = await getWaterState(currentDay);
     setWaterInfo(water);
+    notifyProgressUpdate();
   };
 
   const handleToggleDayComplete = async () => {
     await setDayCompleted(currentDay, !isDone);
     setIsDone(!isDone);
+    notifyProgressUpdate();
   };
 
   const handleWeekChange = (week) => {

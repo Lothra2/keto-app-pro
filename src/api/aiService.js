@@ -1,4 +1,5 @@
 import callNetlifyAI from './netlifyClient';
+import { stripMarkdownHeadings, sanitizeReviewBullet } from '../utils/labels';
 
 class AIService {
   /**
@@ -31,7 +32,7 @@ class AIService {
         prefs: { like, dislike }
       });
 
-      return this.parseMealResponse(data);
+      return this.parseMealResponse(data, language);
     } catch (error) {
       console.error('Error generating meal:', error);
       throw error;
@@ -57,7 +58,7 @@ class AIService {
         username
       });
 
-      return this.parseFullDayResponse(data);
+      return this.parseFullDayResponse(data, language);
     } catch (error) {
       console.error('Error generating full day:', error);
       throw error;
@@ -162,7 +163,16 @@ class AIService {
         week: weekNumber
       });
 
-      return (data.text || '').replace(/\*/g, '').trim();
+      const raw = (data.text || '').replace(/\*/g, '').replace(/\r/g, '\n').trim();
+      const cleaned = stripMarkdownHeadings(raw)
+        .split('\n')
+        .map((line) => {
+          if (!line.trim()) return '';
+          return line.replace(/^[-•]\s*/g, '• ').trim();
+        })
+        .filter(Boolean)
+        .join('\n');
+      return cleaned;
     } catch (error) {
       console.error('Error generating shopping list:', error);
       throw error;
@@ -196,7 +206,7 @@ class AIService {
   }
 
   // Helpers para parsear respuestas
-  parseMealResponse(data) {
+  parseMealResponse(data, language = 'es') {
     let parsed = null;
 
     if (data.structured) {
@@ -219,19 +229,21 @@ class AIService {
       throw new Error('Could not parse meal response');
     }
 
+    const defaultNote = language === 'en' ? 'Generated with AI' : 'Generado con IA';
+
     return {
       nombre: parsed.nombre || parsed.name || '',
-      qty: Array.isArray(parsed.ingredientes) 
+      qty: Array.isArray(parsed.ingredientes)
         ? parsed.ingredientes.join(', ')
         : Array.isArray(parsed.ingredients)
         ? parsed.ingredients.join(', ')
         : '',
-      note: parsed.descripcion || parsed.description || parsed.desc || '',
+      note: parsed.descripcion || parsed.description || parsed.desc || defaultNote,
       isAI: true
     };
   }
 
-  parseFullDayResponse(data) {
+  parseFullDayResponse(data, language = 'es') {
     let structured = null;
 
     if (data.structured) {
@@ -260,9 +272,8 @@ class AIService {
           base.qty = base.ingredients.join(', ');
         }
       }
-      if (!base.note) {
-        base.note = base.descripcion || base.description || base.desc || '';
-      }
+      const defaultNote = language === 'en' ? 'Generated with AI' : 'Generado con IA';
+      base.note = base.note || base.descripcion || base.description || base.desc || defaultNote;
 
       return { ...base, isAI: true };
     };
@@ -298,15 +309,28 @@ class AIService {
       }
     }
 
-    return workouts.map(w => ({
-      nombre: w.nombre || w.name || '',
-      series: w.series || w.reps || (language === 'en' ? '3 sets' : '3 series'),
-      descripcion: w.descripcion || w.desc || ''
-    })).slice(0, 6);
+    return workouts
+      .map((w) => {
+        const rest = w.descanso || w.rest || w.restTime || w.resting || '';
+        const detail = w.detalle || w.detalles || w.detail || w.how || '';
+        const duration = w.duracion || w.tiempo || w.duration || '';
+        const notes = w.notas || w.notes || '';
+
+        return {
+          nombre: w.nombre || w.name || '',
+          series: w.series || w.reps || (language === 'en' ? '3 sets' : '3 series'),
+          descripcion: w.descripcion || w.desc || '',
+          detalle: detail,
+          descanso: rest,
+          duracion: duration,
+          notas: notes
+        };
+      })
+      .slice(0, 8);
   }
 
   parseReviewResponse(text, language) {
-    const clean = (text || '').replace(/\*/g, '').trim();
+    const clean = stripMarkdownHeadings((text || '').replace(/\*/g, '').trim());
     let parts = clean.split(/\n| - |\u2022/g).map(t => t.trim()).filter(Boolean);
     parts = parts.slice(0, 3);
 
@@ -320,7 +344,7 @@ class AIService {
 
     return parts.map((txt, i) => ({
       label: labels[i] || (language === 'en' ? 'Note' : 'Nota'),
-      text: txt
+      text: sanitizeReviewBullet(txt)
     }));
   }
 }
