@@ -55,29 +55,7 @@ const WorkoutScreen = ({ route, navigation }) => {
   const safeActiveDay = clampDay(activeDay);
   const week = weekNumber || Math.floor(safeActiveDay / 7) + 1;
 
-  useEffect(() => {
-    if (typeof focusDay === 'number') {
-      const clamped = clampDay(focusDay);
-      setActiveDay(clamped);
-      setCurrentDay(clamped);
-    }
-  }, [focusDay, totalDays, setCurrentDay]);
-
-  useEffect(() => {
-    if (typeof dayIndex === 'number') {
-      const clamped = clampDay(dayIndex);
-      setActiveDay(clamped);
-      setCurrentDay(clamped);
-    }
-  }, [dayIndex, totalDays, setCurrentDay]);
-
-  useEffect(() => {
-    if (currentDay !== safeActiveDay) {
-      setActiveDay(clampDay(currentDay));
-    }
-  }, [currentDay, safeActiveDay, totalDays]);
-
-  const clampDay = useCallback(
+  const clampDayIndex = useCallback(
     (dayValue = 0) => {
       const parsed = Number.isFinite(dayValue) ? dayValue : Number(dayValue) || 0;
       const maxIndex = Math.max(totalDays - 1, 0);
@@ -86,15 +64,15 @@ const WorkoutScreen = ({ route, navigation }) => {
     [totalDays]
   );
 
-  const safeActiveDay = clampDay(typeof currentDay === 'number' ? currentDay : 0);
+  const safeActiveDay = clampDayIndex(typeof currentDay === 'number' ? currentDay : 0);
   const week = Math.floor(safeActiveDay / 7) + 1;
 
   useEffect(() => {
-    const clamped = clampDay(typeof currentDay === 'number' ? currentDay : 0);
+    const clamped = clampDayIndex(typeof currentDay === 'number' ? currentDay : 0);
     if (clamped !== currentDay) {
       setCurrentDay(clamped);
     }
-  }, [currentDay, clampDay, setCurrentDay]);
+  }, [currentDay, clampDayIndex, setCurrentDay]);
 
   useEffect(() => {
     const incomingDay =
@@ -106,11 +84,11 @@ const WorkoutScreen = ({ route, navigation }) => {
 
     if (incomingDay === null) return;
 
-    const clamped = clampDay(incomingDay);
+    const clamped = clampDayIndex(incomingDay);
     if (clamped !== safeActiveDay) {
       setCurrentDay(clamped);
     }
-  }, [focusDay, dayIndex, clampDay, safeActiveDay, setCurrentDay]);
+  }, [focusDay, dayIndex, clampDayIndex, safeActiveDay, setCurrentDay]);
 
   useEffect(() => {
     navigation.setParams({ focusDay: safeActiveDay, weekNumber: week });
@@ -242,7 +220,7 @@ const WorkoutScreen = ({ route, navigation }) => {
   const intensityLabel = intensityLabels[selectedIntensity] || intensityLabels.medium;
 
   const handleChangeDay = (direction) => {
-    const next = clampDay(safeActiveDay + direction);
+    const next = clampDayIndex(safeActiveDay + direction);
     if (next !== safeActiveDay) {
       setCurrentDay(next);
     }

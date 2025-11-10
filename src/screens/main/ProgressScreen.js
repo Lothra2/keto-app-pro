@@ -469,6 +469,22 @@ const ProgressScreen = () => {
       }));
   }, [progressByDay, language, derivedPlan]);
 
+  const exerciseHistory = useMemo(() => {
+    return progressByDay
+      .filter((entry) => entry.burnedKcal && entry.burnedKcal > 0)
+      .map((entry) => ({
+        label: getDayTag(entry.dayIndex, language),
+        kcal: Math.round(entry.burnedKcal),
+        name:
+          entry.displayName ||
+          getDayDisplayName({
+            label: derivedPlan[entry.dayIndex]?.dia,
+            index: entry.dayIndex,
+            language
+          })
+      }));
+  }, [progressByDay, language, derivedPlan]);
+
   const calorieHistory = useMemo(
     () =>
       progressByDay
