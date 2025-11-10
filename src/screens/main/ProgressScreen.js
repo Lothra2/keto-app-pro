@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
@@ -67,12 +68,135 @@ const ProgressScreen = () => {
   });
 
   const [hydration, setHydration] = useState({ daysWithWater: 0, totalMl: 0 });
+  const [exerciseSummary, setExerciseSummary] = useState({ daysLogged: 0, totalKcal: 0 });
+
+  const planLength = derivedPlan.length;
+  const heroGradientColors = theme.mode === 'dark'
+    ? ['rgba(15,118,110,0.85)', 'rgba(15,23,42,0.95)']
+    : ['rgba(20,184,166,0.92)', theme.colors.primary];
+
+  const averageWater = useMemo(() => {
+    if (!planLength || !hydration.totalMl) return null;
+    return Math.round(hydration.totalMl / planLength);
+  }, [hydration.totalMl, planLength]);
+
+  const heroStats = useMemo(() => {
+    const stats = [];
+    const totalDays = planLength || 0;
+    const completedValue = totalDays ? `${completedDays}` : '0';
+    const completedCaption = totalDays
+      ? language === 'en'
+        ? `of ${totalDays} days`
+        : `de ${totalDays} días`
+      : language === 'en'
+      ? 'Log your first day'
+      : 'Registra tu primer día';
+
+    stats.push({
+      key: 'progress',
+      label: language === 'en' ? 'Completed' : 'Completados',
+      value: completedValue,
+      caption: completedCaption
+    });
+
+    if (bodyFat) {
+      stats.push({
+        key: 'bodyFat',
+        label: language === 'en' ? 'Body fat' : '% grasa',
+        value: `${Number(bodyFat).toFixed(1)}%`,
+        caption: language === 'en' ? 'Estimated today' : 'Estimado actual'
+      });
+    } else if (bmi) {
+      stats.push({
+        key: 'bmi',
+        label: 'BMI',
+        value: Number(bmi).toFixed(1),
+        caption: bmiCategory || (language === 'en' ? 'Body mass index' : 'Índice de masa')
+      });
+    } else if (hasBaseData && startWeight) {
+      stats.push({
+        key: 'startWeight',
+        label: language === 'en' ? 'Start weight' : 'Peso inicial',
+        value: `${startWeight} kg`,
+        caption: language === 'en' ? 'Baseline' : 'Desde inicio'
+      });
+    } else {
+      stats.push({
+        key: 'hydrationDays',
+        label: language === 'en' ? 'Hydration' : 'Hidratación',
+        value: `${hydration.daysWithWater}`,
+        caption: language === 'en' ? 'Days on target' : 'Días en meta'
+      });
+    }
+
+    if (exerciseSummary.totalKcal) {
+      stats.push({
+        key: 'burn',
+        label: language === 'en' ? 'Workout burn' : 'Calorías entreno',
+        value: `${exerciseSummary.totalKcal} kcal`,
+        caption: language === 'en' ? 'Total logged' : 'Total registradas'
+      });
+    } else if (averageWater) {
+      stats.push({
+        key: 'avgWater',
+        label: language === 'en' ? 'Avg water' : 'Agua promedio',
+        value: `${averageWater} ml`,
+        caption: language === 'en' ? 'per day' : 'por día'
+      });
+    } else if (bmr) {
+      stats.push({
+        key: 'bmr',
+        label: 'BMR',
+        value: `${Math.round(bmr)} kcal`,
+        caption: language === 'en' ? 'Resting burn' : 'Quema en reposo'
+      });
+    } else {
+      const adherence = totalDays ? Math.round((completedDays / totalDays) * 100) : 0;
+      stats.push({
+        key: 'consistency',
+        label: language === 'en' ? 'Consistency' : 'Consistencia',
+        value: `${Math.max(0, adherence)}%`,
+        caption: language === 'en' ? 'of plan logged' : 'del plan registrado'
+      });
+    }
+
+    return stats.slice(0, 3);
+  }, [
+    averageWater,
+    bmi,
+    bmiCategory,
+    bodyFat,
+    bmr,
+    completedDays,
+    exerciseSummary.totalKcal,
+    hasBaseData,
+    hydration.daysWithWater,
+    language,
+    planLength,
+    startWeight
+  ]);
+  const heroTitle = language === 'en' ? '📈 Progress overview' : '📈 Resumen de progreso';
+  const heroSubtitle = language === 'en'
+    ? 'Keep logging your check-ins to unlock more insights.'
+    : 'Sigue registrando tus avances para desbloquear más insights.';
 
   const calculateStats = useCallback(
     (h, w, a) => {
-      const bf = estimateBodyFat(h, w, a, gender);
-      const bmrVal = calculateBMR(h, w, a, gender !== 'female');
-      const bmiVal = calculateBMI(h, w);
+      const heightNumber = Number(h);
+      const weightNumber = Number(w);
+      const ageNumber = Number(a);
+
+      if (!heightNumber || !weightNumber || !ageNumber) {
+        setBodyFat(null);
+        setBmr(null);
+        setBmi(null);
+        setBmiCategory(null);
+        return;
+      }
+
+      const bf = estimateBodyFat(heightNumber, weightNumber, ageNumber, gender);
+      const bmrVal = calculateBMR(heightNumber, weightNumber, ageNumber, gender !== 'female');
+      const bmiVal = calculateBMI(heightNumber, weightNumber);
       const category = getBMICategory(bmiVal, language);
 
       setBodyFat(bf);
@@ -87,6 +211,8 @@ const ProgressScreen = () => {
     const data = [];
     const baseHeight = Number(baseMetrics.height || height);
     const baseAge = Number(baseMetrics.age || age);
+    let daysWithExercise = 0;
+    let totalExerciseKcal = 0;
 
     for (let i = 0; i < derivedPlan.length; i++) {
       const dayProgress = await getProgressData(i);
@@ -108,6 +234,12 @@ const ProgressScreen = () => {
         baseHeight && baseAge && pesoNumber
           ? estimateBodyFat(baseHeight, pesoNumber, baseAge, gender)
           : null;
+      const burnedKcal = dayProgress.exkcal ? Number(dayProgress.exkcal) : 0;
+
+      if (burnedKcal > 0) {
+        daysWithExercise += 1;
+        totalExerciseKcal += burnedKcal;
+      }
 
       data.push({
         dayIndex: i,
@@ -119,11 +251,16 @@ const ProgressScreen = () => {
         water: water.ml,
         waterGoal: water.goal,
         calGoal: calorieState.goal || derivedPlan[i]?.kcal || 1600,
-        calConsumed: consumedCalories
+        calConsumed: consumedCalories,
+        burnedKcal
       });
     }
 
     setProgressByDay(data);
+    setExerciseSummary({
+      daysLogged: daysWithExercise,
+      totalKcal: Math.round(totalExerciseKcal)
+    });
   }, [age, derivedPlan, gender, height, language]);
 
   const hydrationStats = useCallback(async () => {
@@ -220,8 +357,8 @@ const ProgressScreen = () => {
       setShowDayModal(false);
       await loadAllProgress({ height, age });
 
-      if (dayForm.peso && height && age) {
-        calculateStats(height, dayForm.peso, age);
+      if (height && startWeight && age) {
+        calculateStats(height, startWeight, age);
       }
     }
   };
@@ -285,7 +422,8 @@ const ProgressScreen = () => {
         key: 'weight',
         label: language === 'en' ? 'Weight (kg)' : 'Peso (kg)',
         color: theme.colors.primary,
-        formatter: (value) => `${value.toFixed(1)} kg`
+        formatter: (value) => `${value.toFixed(1)} kg`,
+        chartType: 'bar'
       },
       {
         key: 'bodyFat',
@@ -315,6 +453,22 @@ const ProgressScreen = () => {
     [progressByDay, language]
   );
 
+  const exerciseHistory = useMemo(() => {
+    return progressByDay
+      .filter((entry) => entry.burnedKcal && entry.burnedKcal > 0)
+      .map((entry) => ({
+        label: getDayTag(entry.dayIndex, language),
+        kcal: Math.round(entry.burnedKcal),
+        name:
+          entry.displayName ||
+          getDayDisplayName({
+            label: derivedPlan[entry.dayIndex]?.dia,
+            index: entry.dayIndex,
+            language
+          })
+      }));
+  }, [progressByDay, language, derivedPlan]);
+
   const calorieHistory = useMemo(
     () =>
       progressByDay
@@ -339,23 +493,52 @@ const ProgressScreen = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          {language === 'en' ? '📈 Progress' : '📈 Progreso'}
-        </Text>
-        <Text style={styles.subtitle}>
-          {language === 'en' 
-            ? `${completedDays} of ${derivedPlan.length} days completed`
-            : `${completedDays} de ${derivedPlan.length} días completados`}
-        </Text>
-      </View>
+      <LinearGradient
+        colors={heroGradientColors}
+        style={styles.heroCard}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.heroHeader}>
+          <Text style={styles.heroTitle}>{heroTitle}</Text>
+          <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+        </View>
+        <View style={styles.heroStatsRow}>
+          {heroStats.map((stat) => (
+            <View key={stat.key} style={styles.heroStat}>
+              <Text style={styles.heroStatValue}>{stat.value}</Text>
+              <Text style={styles.heroStatLabel}>{stat.label}</Text>
+              {stat.caption ? (
+                <Text style={styles.heroStatCaption}>{stat.caption}</Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      </LinearGradient>
 
       {/* Base Data */}
       {hasBaseData ? (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            {language === 'en' ? 'Base Data' : 'Datos Base'}
-          </Text>
+          <View style={styles.sectionHeaderRow}>
+            <View>
+              <Text style={styles.cardTitle}>
+                {language === 'en' ? 'Base data' : 'Datos base'}
+              </Text>
+              <Text style={styles.cardSubtitle}>
+                {language === 'en'
+                  ? 'Your plan calculations always respect these values.'
+                  : 'Tus cálculos del plan siempre usan estos valores base.'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.sectionAction}
+              onPress={() => setShowBaseDataModal(true)}
+            >
+              <Text style={styles.sectionActionText}>
+                {language === 'en' ? 'Edit' : 'Editar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>{language === 'en' ? 'Height' : 'Estatura'}</Text>
@@ -380,16 +563,9 @@ const ProgressScreen = () => {
               <Text style={styles.calculatedStat}>BMI: {bmi} ({bmiCategory})</Text>
             </View>
           )}
-          
-          <TouchableOpacity 
-            style={styles.editButton}
-            onPress={() => setShowBaseDataModal(true)}
-          >
-            <Text style={styles.editButtonText}>{language === 'en' ? 'Edit' : 'Editar'}</Text>
-          </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addBaseDataButton}
           onPress={() => setShowBaseDataModal(true)}
         >
@@ -468,13 +644,75 @@ const ProgressScreen = () => {
               );
             })}
           </View>
-      </View>
-    )}
+        </View>
+      )}
 
-    {calorieHistory.length > 0 && (
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          {language === 'en' ? 'Calorie adherence trend' : 'Tendencia de calorías'}
+      {exerciseSummary.daysLogged > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {language === 'en' ? '🔥 Activity impact' : '🔥 Impacto de actividad'}
+          </Text>
+          <Text style={styles.statText}>
+            {language === 'en'
+              ? `${exerciseSummary.daysLogged} active days logged`
+              : `${exerciseSummary.daysLogged} días con actividad registrada`}
+          </Text>
+          <Text style={styles.statText}>
+            {language === 'en'
+              ? `${exerciseSummary.totalKcal} kcal burned in total`
+              : `${exerciseSummary.totalKcal} kcal quemadas en total`}
+          </Text>
+          {exerciseSummary.daysLogged ? (
+            <Text style={styles.statHighlight}>
+              {language === 'en'
+                ? `${Math.round(exerciseSummary.totalKcal / exerciseSummary.daysLogged)} kcal average on active days`
+                : `${Math.round(exerciseSummary.totalKcal / exerciseSummary.daysLogged)} kcal promedio en días activos`}
+            </Text>
+          ) : null}
+        </View>
+      )}
+
+      {exerciseHistory.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {language === 'en' ? 'Daily workout burn' : 'Quema diaria de entreno'}
+          </Text>
+          <View style={styles.exerciseBars}>
+            {(() => {
+              const maxBurn = Math.max(...exerciseHistory.map((item) => item.kcal), 1);
+              return exerciseHistory.map((item) => {
+                const heightPercent = Math.max(10, Math.round((item.kcal / maxBurn) * 100));
+                return (
+                  <View key={item.label} style={styles.exerciseBarItem}>
+                    <View style={styles.exerciseBarTrack}>
+                      <View
+                        style={[
+                          styles.exerciseBarFill,
+                          {
+                            height: `${heightPercent}%`
+                          }
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.exerciseLabel}>{item.label}</Text>
+                    <Text style={styles.exerciseValue}>{item.kcal} kcal</Text>
+                  </View>
+                );
+              });
+            })()}
+          </View>
+          <Text style={styles.exerciseCaption}>
+            {language === 'en'
+              ? 'Log your training calories to compare effort across the week.'
+              : 'Registra las calorías de tus entrenos para comparar el esfuerzo en la semana.'}
+          </Text>
+        </View>
+      )}
+
+      {calorieHistory.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {language === 'en' ? 'Calorie adherence trend' : 'Tendencia de calorías'}
         </Text>
         <View style={styles.calorieList}>
           {calorieHistory.map((item) => {
@@ -671,6 +909,18 @@ const ProgressScreen = () => {
               onChangeText={(text) => setDayForm({...dayForm, energia: text})}
             />
             <TextInput
+              style={styles.input}
+              placeholder={
+                language === 'en'
+                  ? 'Workout calories burned'
+                  : 'Kcal quemadas en ejercicio'
+              }
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="numeric"
+              value={dayForm.exkcal}
+              onChangeText={(text) => setDayForm({...dayForm, exkcal: text})}
+            />
+            <TextInput
               style={[styles.input, styles.textArea]}
               placeholder={language === 'en' ? 'Notes' : 'Notas'}
               placeholderTextColor={theme.colors.textMuted}
@@ -701,291 +951,417 @@ const ProgressScreen = () => {
   );
 };
 
-const getStyles = (theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.bg
-  },
-  content: {
-    padding: theme.spacing.lg,
-    paddingBottom: 100
-  },
-  header: {
-    marginBottom: theme.spacing.lg
-  },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
-    marginBottom: 4
-  },
-  subtitle: {
-    ...theme.typography.body,
-    color: theme.colors.textMuted
-  },
-  card: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md
-  },
-  cardTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center'
-  },
-  statLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textMuted,
-    marginBottom: 4
-  },
-  statValue: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    fontWeight: '600'
-  },
-  calculatedStats: {
-    backgroundColor: theme.colors.bgSoft,
-    borderRadius: theme.radius.sm,
-    padding: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-    gap: 4
-  },
-  calculatedStat: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.text
-  },
-  statText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    marginBottom: 4
-  },
-  editButton: {
-    backgroundColor: theme.colors.bgSoft,
-    borderRadius: theme.radius.sm,
-    padding: theme.spacing.sm,
-    alignItems: 'center',
-    marginTop: theme.spacing.sm
-  },
-  editButtonText: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.text,
-    fontWeight: '600'
-  },
-  addBaseDataButton: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    borderStyle: 'dashed',
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-    marginBottom: theme.spacing.md
-  },
-  addBaseDataText: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    fontWeight: '600'
-  },
-  chartCard: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md
-  },
-  chartCaption: {
-    ...theme.typography.caption,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: theme.spacing.sm
-  },
-  section: {
-    marginTop: theme.spacing.md
-  },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm
-  },
-  dayCard: {
-    backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm
-  },
-  dayCardWithData: {
-    borderColor: theme.colors.primary,
-    backgroundColor: 'rgba(15,118,110,0.05)'
-  },
-  dayTitle: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    fontWeight: '600',
-    marginBottom: 4
-  },
-  dayMetricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8
-  },
-  dayMetric: {
-    ...theme.typography.caption,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.bgSoft,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: theme.radius.full,
-    overflow: 'hidden'
-  },
-  dayDataEmpty: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.textMuted,
-    fontStyle: 'italic'
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: theme.spacing.lg
-  },
-  modalContent: {
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg
-  },
-  modalTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
-    textAlign: 'center'
-  },
-  input: {
-    backgroundColor: theme.colors.bgSoft,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.sm,
-    padding: theme.spacing.md,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-    ...theme.typography.body
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top'
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md
-  },
-  modalButton: {
-    flex: 1,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    alignItems: 'center'
-  },
-  modalButtonSecondary: {
-    backgroundColor: theme.colors.bgSoft
-  },
-  modalButtonText: {
-    ...theme.typography.body,
-    color: '#fff',
-    fontWeight: '600'
-  },
-  calorieList: {
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.md
-  },
-  calorieRow: {
-    gap: 6
-  },
-  calorieHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  calorieLabel: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.text,
-    fontWeight: '600'
-  },
-  calorieMeta: {
-    ...theme.typography.caption,
-    color: theme.colors.textMuted
-  },
-  calorieBarTrack: {
-    height: 8,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.bgSoft,
-    overflow: 'hidden',
-    position: 'relative'
-  },
-  calorieBarFill: {
-    height: '100%',
-    borderRadius: theme.radius.full
-  },
-  calorieTargetMarker: {
-    position: 'absolute',
-    left: '100%',
-    marginLeft: -1,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: theme.colors.border
-  },
-  calorieStatus: {
-    ...theme.typography.caption,
-    color: theme.colors.textMuted
-  },
-  hydrationBars: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'flex-start',
-    flexWrap: 'wrap'
-  },
-  hydrationBarItem: {
-    alignItems: 'center',
-    width: 56
-  },
-  hydrationBarTrack: {
-    width: 22,
-    height: 120,
-    borderRadius: 999,
-    backgroundColor: theme.colors.bgSoft,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginBottom: 6
-  },
-  hydrationBarFill: {
-    width: '100%',
-    borderRadius: 999
-  },
-  hydrationLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text,
-    fontWeight: '600'
-  },
-  hydrationValue: {
-    ...theme.typography.caption,
-    color: theme.colors.textMuted
-  }
-});
+const getStyles = (theme) => {
+  const borderColor = theme.mode === 'dark' ? 'rgba(148,163,184,0.18)' : 'rgba(15,23,42,0.08)';
+  const baseCardShadow = {
+    shadowColor: theme.mode === 'dark' ? '#000' : '#0f172a',
+    shadowOpacity: theme.mode === 'dark' ? 0.35 : 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: theme.mode === 'dark' ? 8 : 5
+  };
+  const heroShadow = {
+    shadowColor: theme.mode === 'dark' ? '#000' : '#0f172a',
+    shadowOpacity: theme.mode === 'dark' ? 0.45 : 0.12,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: theme.mode === 'dark' ? 10 : 7
+  };
+  const heroStatBg = theme.mode === 'dark' ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.18)';
+  const sectionActionBg = theme.mode === 'dark' ? 'rgba(15,118,110,0.35)' : theme.colors.primarySoft;
+  const sectionActionText = theme.mode === 'dark' ? '#d1fae5' : theme.colors.primary;
+  const calculatedBg = theme.mode === 'dark' ? 'rgba(15,118,110,0.12)' : 'rgba(20,184,166,0.12)';
+  const trackBg = theme.colors.bgSoft;
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.bg
+    },
+    content: {
+      padding: theme.spacing.lg,
+      paddingBottom: theme.spacing.xxl
+    },
+    heroCard: {
+      borderRadius: theme.radius.xl,
+      padding: theme.spacing.xl,
+      marginBottom: theme.spacing.xl,
+      overflow: 'hidden',
+      ...heroShadow
+    },
+    heroHeader: {
+      gap: theme.spacing.sm
+    },
+    heroTitle: {
+      ...theme.typography.h1,
+      color: '#f8fafc'
+    },
+    heroSubtitle: {
+      ...theme.typography.body,
+      color: 'rgba(248,250,252,0.8)',
+      maxWidth: '90%'
+    },
+    heroStatsRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.lg
+    },
+    heroStat: {
+      flex: 1,
+      backgroundColor: heroStatBg,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md
+    },
+    heroStatValue: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: '#f8fafc'
+    },
+    heroStatLabel: {
+      ...theme.typography.caption,
+      color: 'rgba(248,250,252,0.85)',
+      textTransform: 'uppercase',
+      letterSpacing: 0.6
+    },
+    heroStatCaption: {
+      ...theme.typography.bodySmall,
+      color: 'rgba(248,250,252,0.75)',
+      marginTop: 4
+    },
+    card: {
+      backgroundColor: theme.colors.card,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor,
+      ...baseCardShadow
+    },
+    cardTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.xs,
+      fontSize: 19
+    },
+    cardSubtitle: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted
+    },
+    statsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.md
+    },
+    statItem: {
+      flex: 1,
+      alignItems: 'flex-start',
+      backgroundColor: trackBg,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.sm
+    },
+    statLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 4,
+      textTransform: 'uppercase'
+    },
+    statValue: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '700'
+    },
+    calculatedStats: {
+      backgroundColor: calculatedBg,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      marginTop: theme.spacing.sm,
+      gap: 6
+    },
+    calculatedStat: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.text
+    },
+    statText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      marginBottom: 4
+    },
+    statHighlight: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.primary,
+      fontWeight: '700'
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.md
+    },
+    sectionAction: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 8,
+      backgroundColor: sectionActionBg,
+      borderRadius: theme.radius.full
+    },
+    sectionActionText: {
+      ...theme.typography.bodySmall,
+      color: sectionActionText,
+      fontWeight: '600'
+    },
+    addBaseDataButton: {
+      backgroundColor: theme.colors.card,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      borderStyle: 'dashed',
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg
+    },
+    addBaseDataText: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      fontWeight: '600',
+      textAlign: 'center'
+    },
+    chartCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      paddingBottom: theme.spacing.xl,
+      marginBottom: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor,
+      ...baseCardShadow
+    },
+    chartCaption: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      textAlign: 'center',
+      marginTop: theme.spacing.sm
+    },
+    section: {
+      marginTop: theme.spacing.lg
+    },
+    sectionTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.sm
+    },
+    hydrationBars: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.md
+    },
+    hydrationBarItem: {
+      flex: 1,
+      alignItems: 'center'
+    },
+    hydrationBarTrack: {
+      width: '100%',
+      height: 120,
+      borderRadius: theme.radius.md,
+      backgroundColor: trackBg,
+      overflow: 'hidden',
+      justifyContent: 'flex-end',
+      borderWidth: 1,
+      borderColor
+    },
+    hydrationBarFill: {
+      width: '100%',
+      borderRadius: theme.radius.md
+    },
+    hydrationLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: 6
+    },
+    hydrationValue: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.text,
+      fontWeight: '600'
+    },
+    exerciseBars: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.md
+    },
+    exerciseBarItem: {
+      flex: 1,
+      alignItems: 'center'
+    },
+    exerciseBarTrack: {
+      width: '100%',
+      height: 140,
+      borderRadius: theme.radius.md,
+      backgroundColor: trackBg,
+      overflow: 'hidden',
+      justifyContent: 'flex-end',
+      borderWidth: 1,
+      borderColor
+    },
+    exerciseBarFill: {
+      width: '100%',
+      borderRadius: theme.radius.md,
+      backgroundColor: 'rgba(239,68,68,0.8)'
+    },
+    exerciseLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: 6
+    },
+    exerciseValue: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.text,
+      fontWeight: '600'
+    },
+    exerciseCaption: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: theme.spacing.sm
+    },
+    calorieList: {
+      marginTop: theme.spacing.md,
+      gap: theme.spacing.md
+    },
+    calorieRow: {
+      gap: 8,
+      backgroundColor: trackBg,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md
+    },
+    calorieHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    },
+    calorieLabel: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '600'
+    },
+    calorieMeta: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted
+    },
+    calorieBarTrack: {
+      height: 10,
+      borderRadius: theme.radius.full,
+      backgroundColor: trackBg,
+      overflow: 'hidden',
+      marginTop: 6,
+      position: 'relative'
+    },
+    calorieBarFill: {
+      height: '100%',
+      borderRadius: theme.radius.full
+    },
+    calorieTargetMarker: {
+      position: 'absolute',
+      left: '100%',
+      marginLeft: -1,
+      top: -4,
+      width: 2,
+      height: 18,
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.radius.full
+    },
+    calorieStatus: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
+    dayCard: {
+      backgroundColor: theme.colors.card,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor
+    },
+    dayCardWithData: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.mode === 'dark' ? 'rgba(15,118,110,0.18)' : 'rgba(15,118,110,0.08)'
+    },
+    dayTitle: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '600',
+      marginBottom: 6
+    },
+    dayMetricsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8
+    },
+    dayMetric: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+      backgroundColor: trackBg,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: theme.radius.full
+    },
+    dayDataEmpty: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      fontStyle: 'italic'
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      padding: theme.spacing.lg
+    },
+    modalContent: {
+      backgroundColor: theme.colors.card,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg
+    },
+    modalTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.md,
+      textAlign: 'center'
+    },
+    input: {
+      backgroundColor: trackBg,
+      borderWidth: 1,
+      borderColor,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.sm,
+      ...theme.typography.body
+    },
+    textArea: {
+      height: 80,
+      textAlignVertical: 'top'
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.md
+    },
+    modalButton: {
+      flex: 1,
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      alignItems: 'center'
+    },
+    modalButtonSecondary: {
+      backgroundColor: trackBg
+    },
+    modalButtonText: {
+      ...theme.typography.body,
+      color: '#fff',
+      fontWeight: '600'
+    }
+  });
+};
 
 export default ProgressScreen;

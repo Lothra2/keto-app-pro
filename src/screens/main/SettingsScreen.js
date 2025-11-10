@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Switch,
   Alert
 } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 
@@ -37,7 +38,20 @@ const SettingsScreen = ({ navigation }) => {
   const [dislikeFoods, setDislikeFoods] = useState(foodPrefs.dislike || '');
   const [apiUser, setApiUser] = useState(apiCredentials.user || '');
   const [apiPass, setApiPass] = useState(apiCredentials.pass || '');
-  const [waterGoal, setWaterGoal] = useState('2400');
+
+  useEffect(() => {
+    setName(user.name || '');
+  }, [user?.name]);
+
+  useEffect(() => {
+    setLikeFoods(foodPrefs.like || '');
+    setDislikeFoods(foodPrefs.dislike || '');
+  }, [foodPrefs.like, foodPrefs.dislike]);
+
+  useEffect(() => {
+    setApiUser(apiCredentials.user || '');
+    setApiPass(apiCredentials.pass || '');
+  }, [apiCredentials.user, apiCredentials.pass]);
 
   const handleSaveName = async () => {
     if (name.trim()) {
@@ -97,9 +111,25 @@ const SettingsScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             await resetApp();
+            setName('');
+            setLikeFoods('');
+            setDislikeFoods('');
+            setApiUser('');
+            setApiPass('');
+
             Alert.alert(
               language === 'en' ? 'Done' : 'Listo',
               language === 'en' ? 'App reset successfully' : 'App reiniciada correctamente'
+            );
+
+            const stackNavigator = navigation.getParent();
+            const rootNavigation = stackNavigator?.getParent?.() ?? stackNavigator;
+
+            rootNavigation?.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }]
+              })
             );
           }
         }
