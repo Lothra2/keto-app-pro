@@ -4,21 +4,22 @@ import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 
 const WelcomeScreen = ({ navigation }) => {
-  const { user, theme: themeMode, language } = useApp();
+  const { user, theme: themeMode, language, isOnboarded } = useApp();
   const theme = getTheme(themeMode);
 
   useEffect(() => {
+    const target = isOnboarded ? 'Main' : 'Onboarding';
     const timer = setTimeout(() => {
-      navigation.replace('Main');
-    }, 2000);
+      navigation.replace(target);
+    }, 1200);
 
-    if (user.name) {
+    if (isOnboarded && user.name) {
       clearTimeout(timer);
       navigation.replace('Main');
     }
 
     return () => clearTimeout(timer);
-  }, [user.name, navigation]);
+  }, [isOnboarded, user.name, navigation]);
 
   return (
     <View style={[styles.welcomeContainer, { backgroundColor: theme.colors.bg }]}>

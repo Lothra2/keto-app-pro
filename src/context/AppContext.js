@@ -38,6 +38,7 @@ export const AppProvider = ({ children }) => {
     workoutIntensity: 'medium'
   });
   const [progressVersion, setProgressVersion] = useState(0);
+  const [isOnboarded, setIsOnboarded] = useState(false);
 
   const { mode: themeMode, setMode: setThemeMode } = useThemeContext();
 
@@ -154,6 +155,13 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    const hasName = Boolean(user?.name?.trim());
+    const { height: h, startWeight: w, age: a } = metrics || {};
+    const hasMetrics = Boolean(h && w && a);
+    setIsOnboarded(hasName && hasMetrics);
+  }, [user, metrics]);
+
   const calculateCurrentDay = (startDate, planLength = derivedPlan.length) => {
     const start = new Date(startDate);
     const today = new Date();
@@ -245,6 +253,10 @@ export const AppProvider = ({ children }) => {
     setProgressVersion(prev => prev + 1);
   };
 
+  const completeOnboarding = () => {
+    setIsOnboarded(true);
+  };
+
   const updateCurrentDay = (dayIndex) => {
     const maxIndex = Math.max(derivedPlan.length - 1, 0);
     const clamped = Math.min(Math.max(dayIndex, 0), maxIndex);
@@ -279,6 +291,7 @@ export const AppProvider = ({ children }) => {
       setApiCredentials({ user: '', pass: '' });
       setMetrics({ height: '', startWeight: '', age: '', waterGoal: 2400, workoutIntensity: 'medium' });
       setProgressVersion(0);
+      setIsOnboarded(false);
     } catch (error) {
       console.error('Error reseteando app:', error);
     }
@@ -297,6 +310,7 @@ export const AppProvider = ({ children }) => {
     apiCredentials,
     metrics,
     progressVersion,
+    isOnboarded,
     loading,
     setCurrentDay: updateCurrentDay,
     setCurrentWeek: updateCurrentWeek,
@@ -306,6 +320,7 @@ export const AppProvider = ({ children }) => {
     updateApiCredentials,
     updateMetrics,
     notifyProgressUpdate,
+    completeOnboarding,
     resetApp
   };
 

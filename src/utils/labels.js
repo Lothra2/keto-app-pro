@@ -33,7 +33,7 @@ export const getDayTag = (index = 0, language = 'es') => {
 
 export const sanitizeReviewBullet = (text = '') => {
   return text
-    .replace(/^[-•\s]+/, '')
+    .replace(/^[\-\u2013\u2014•\s]+/, '')
     .replace(/^\d+\.\s*/, '')
     .trim();
 };

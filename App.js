@@ -9,6 +9,7 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import { getTheme } from './src/theme';
 import MainNavigator from './src/navigation/AppNavigator';
 import WelcomeScreen from './src/screens/auth/WelcomeScreen';
+import OnboardingScreen from './src/screens/auth/OnboardingScreen';
 import LoadingSpinner from './src/components/shared/LoadingSpinner';
 
 const Stack = createStackNavigator();
@@ -35,6 +36,7 @@ const RootNavigator = () => {
         <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Main" component={MainNavigator} />
         </Stack.Navigator>
       </NavigationContainer>

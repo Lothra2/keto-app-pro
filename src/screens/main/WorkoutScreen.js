@@ -1,11 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity
-} from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { getWorkoutData, saveWorkoutData } from '../../storage/storage';
@@ -13,15 +7,18 @@ import aiService from '../../api/aiService';
 import WorkoutCard from '../../components/workout/WorkoutCard';
 import Button from '../../components/shared/Button';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import { getWorkoutForDay } from '../../data/workouts';
 
 const WorkoutScreen = ({ route, navigation }) => {
-  const { dayIndex, weekNumber } = route.params || {};
+  const { dayIndex, weekNumber, focusDay } = route.params || {};
   const {
     theme: themeMode,
     language,
     currentDay,
     apiCredentials,
-    metrics
+    metrics,
+    derivedPlan,
+    setCurrentDay
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -29,15 +26,22 @@ const WorkoutScreen = ({ route, navigation }) => {
 
   const [workout, setWorkout] = useState([]);
   const [loading, setLoading] = useState(false);
-  const day = dayIndex !== undefined ? dayIndex : currentDay;
-  const week = weekNumber || Math.floor(day / 7) + 1;
+  const computedDay =
+    dayIndex !== undefined ? dayIndex : focusDay !== undefined ? focusDay : currentDay;
+  const [activeDay, setActiveDay] = useState(computedDay);
+  const week = weekNumber || Math.floor(activeDay / 7) + 1;
+  const totalDays = derivedPlan.length || 14;
+
+  useEffect(() => {
+    setActiveDay(computedDay);
+  }, [computedDay]);
 
   useEffect(() => {
     loadWorkout();
-  }, [day]);
+  }, [activeDay]);
 
   const loadWorkout = async () => {
-    const saved = await getWorkoutData(day);
+    const saved = await getWorkoutData(activeDay);
     if (saved && Array.isArray(saved)) {
       setWorkout(saved);
     }
@@ -47,7 +51,7 @@ const WorkoutScreen = ({ route, navigation }) => {
     setLoading(true);
     try {
       const exercises = await aiService.generateWorkout({
-        dayIndex: day,
+        dayIndex: activeDay,
         weekNumber: week,
         intensity: metrics.workoutIntensity || 'medium',
         language,
@@ -60,7 +64,7 @@ const WorkoutScreen = ({ route, navigation }) => {
       });
 
       setWorkout(exercises);
-      await saveWorkoutData(day, exercises);
+      await saveWorkoutData(activeDay, exercises);
     } catch (error) {
       console.error('Error generating workout:', error);
       alert(language === 'en' ? 'Error generating workout' : 'Error generando entreno');
@@ -69,19 +73,76 @@ const WorkoutScreen = ({ route, navigation }) => {
     }
   };
 
+  useEffect(() => {
+    setCurrentDay(activeDay);
+    navigation.setParams({ focusDay: activeDay, weekNumber: week });
+  }, [activeDay, setCurrentDay, navigation, week]);
+
+  const localPlan = useMemo(() => {
+    return getWorkoutForDay(language, week, activeDay % 7);
+  }, [language, week, activeDay]);
+
+  const referenceExercises = useMemo(() => {
+    if (!localPlan || !Array.isArray(localPlan.days)) return [];
+    const todayIndex = activeDay % localPlan.days.length;
+    return localPlan.days.map((item, index) => ({
+      nombre: item,
+      descripcion:
+        index === todayIndex
+          ? language === 'en'
+            ? 'Suggested focus for today'
+            : 'Enfoque sugerido para hoy'
+          : '',
+      notas:
+        index === todayIndex
+          ? language === 'en'
+            ? 'Finish with light stretching and deep breathing.'
+            : 'Termina con estiramientos suaves y respiración profunda.'
+          : ''
+    }));
+  }, [localPlan, activeDay, language]);
+
+  const dayLabel = language === 'en' ? `Day ${activeDay + 1}` : `Día ${activeDay + 1}`;
+  const weekLabel = language === 'en' ? `Week ${week}` : `Semana ${week}`;
+  const intensityLabels = {
+    soft: language === 'en' ? 'Light' : 'Suave',
+    medium: language === 'en' ? 'Medium' : 'Media',
+    hard: language === 'en' ? 'Intense' : 'Intensa'
+  };
+  const intensityLabel = intensityLabels[metrics.workoutIntensity] || intensityLabels.medium;
+
+  const handleChangeDay = (direction) => {
+    const next = Math.min(Math.max(activeDay + direction, 0), Math.max(totalDays - 1, 0));
+    if (next !== activeDay) {
+      setActiveDay(next);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← {language === 'en' ? 'Back' : 'Volver'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>
-          {language === 'en' ? '🏋️ Workout' : '🏋️ Entrenamiento'}
-        </Text>
+      <View style={[styles.header, { backgroundColor: theme.colors.card }]}> 
+        <Text style={styles.title}>{language === 'en' ? '🏋️ Workouts' : '🏋️ Entrenos'}</Text>
+        <Text style={styles.subtitle}>{weekLabel} · {dayLabel}</Text>
         <Text style={styles.subtitle}>
-          {language === 'en' ? `Day ${day + 1}` : `Día ${day + 1}`}
+          {language === 'en' ? `Intensity: ${intensityLabel}` : `Intensidad: ${intensityLabel}`}
         </Text>
+        <View style={styles.dayControls}>
+          <TouchableOpacity
+            onPress={() => handleChangeDay(-1)}
+            style={[styles.dayButton, activeDay === 0 && styles.dayButtonDisabled]}
+            disabled={activeDay === 0}
+          >
+            <Text style={styles.dayButtonText}>−</Text>
+          </TouchableOpacity>
+          <Text style={styles.dayBadge}>{dayLabel}</Text>
+          <TouchableOpacity
+            onPress={() => handleChangeDay(1)}
+            style={[styles.dayButton, activeDay >= totalDays - 1 && styles.dayButtonDisabled]}
+            disabled={activeDay >= totalDays - 1}
+          >
+            <Text style={styles.dayButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -99,9 +160,19 @@ const WorkoutScreen = ({ route, navigation }) => {
 
         <WorkoutCard
           title={language === 'en' ? 'Workout plan' : 'Plan de entrenamiento'}
-          focus={language === 'en' ? `Day ${day + 1}` : `Día ${day + 1}`}
+          focus={dayLabel}
           exercises={workout}
         />
+
+        {referenceExercises.length ? (
+          <WorkoutCard
+            title={language === 'en' ? 'Local reference' : 'Referencia local'}
+            focus={localPlan.focus}
+            exercises={referenceExercises}
+            collapsible
+            initiallyCollapsed
+          />
+        ) : null}
 
         {!workout.length ? (
           <View style={styles.emptyState}>
@@ -124,15 +195,9 @@ const getStyles = (theme) => StyleSheet.create({
   },
   header: {
     padding: theme.spacing.lg,
-    paddingTop: theme.spacing.xl + 20,
-    backgroundColor: theme.colors.card,
+    paddingTop: theme.spacing.xl,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border
-  },
-  backButton: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.sm
   },
   title: {
     ...theme.typography.h1,
@@ -142,6 +207,36 @@ const getStyles = (theme) => StyleSheet.create({
   subtitle: {
     ...theme.typography.body,
     color: theme.colors.textMuted
+  },
+  dayControls: {
+    marginTop: theme.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md
+  },
+  dayButton: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  dayButtonDisabled: {
+    backgroundColor: theme.colors.primarySoft
+  },
+  dayButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700'
+  },
+  dayBadge: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.cardSoft,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs
   },
   content: {
     padding: theme.spacing.lg,

@@ -557,7 +557,7 @@ const HomeScreen = ({ navigation }) => {
       </Card>
 
       {extras.length ? (
-        <Card style={styles.extrasCard}>
+        <Card style={styles.extrasCard} outlined>
           <TouchableOpacity
             style={styles.extrasHeaderRow}
             onPress={() => setExtrasExpanded(prev => !prev)}
@@ -606,7 +606,7 @@ const HomeScreen = ({ navigation }) => {
             <Button
               title={language === 'en' ? 'Detail view' : 'Ver detalle'}
               variant="secondary"
-              onPress={() => navigation.navigate('Workout', { dayIndex: currentDay, weekNumber: safeWeek })}
+              onPress={() => navigation.navigate('Workouts', { focusDay: currentDay, weekNumber: safeWeek })}
             />
           </View>
         </Card>

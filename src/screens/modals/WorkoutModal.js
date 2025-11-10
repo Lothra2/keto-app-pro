@@ -159,7 +159,10 @@ const WorkoutModal = ({ route, navigation }) => {
         <Button
           title={language === 'en' ? 'Open detailed view' : 'Abrir vista detallada'}
           variant="secondary"
-          onPress={() => navigation.navigate('Workout', { dayIndex: day, weekNumber: week })}
+          onPress={() => {
+            navigation.navigate('Workouts', { focusDay: day, weekNumber: week });
+            navigation.goBack();
+          }}
         />
       </ScrollView>
     </View>

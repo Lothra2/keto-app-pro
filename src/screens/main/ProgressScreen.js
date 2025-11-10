@@ -68,14 +68,19 @@ const ProgressScreen = () => {
 
   const [hydration, setHydration] = useState({ daysWithWater: 0, totalMl: 0 });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const calculateStats = useCallback(
+    (h, w, a) => {
+      const bf = estimateBodyFat(h, w, a, gender);
+      const bmrVal = calculateBMR(h, w, a, gender !== 'female');
+      const bmiVal = calculateBMI(h, w);
+      const category = getBMICategory(bmiVal, language);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData])
+      setBodyFat(bf);
+      setBmr(bmrVal);
+      setBmi(bmiVal);
+      setBmiCategory(category);
+    },
+    [gender, language]
   );
 
   const loadAllProgress = useCallback(async (baseMetrics = {}) => {
@@ -136,6 +141,19 @@ const ProgressScreen = () => {
     return { daysWithWater, totalMl };
   }, [derivedPlan]);
 
+  useEffect(() => {
+    let isActive = true;
+    hydrationStats().then((summary) => {
+      if (isActive) {
+        setHydration(summary);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [hydrationStats, progressVersion]);
+
   const loadData = useCallback(async () => {
     const completed = await getCompletedDaysCount(derivedPlan.length);
     setCompletedDays(completed);
@@ -157,17 +175,15 @@ const ProgressScreen = () => {
     setHydration(hydraStats);
   }, [derivedPlan.length, loadAllProgress, hydrationStats, calculateStats, progressVersion]);
 
-  const calculateStats = useCallback((h, w, a) => {
-    const bf = estimateBodyFat(h, w, a, gender);
-    const bmrVal = calculateBMR(h, w, a, gender !== 'female');
-    const bmiVal = calculateBMI(h, w);
-    const category = getBMICategory(bmiVal, language);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-    setBodyFat(bf);
-    setBmr(bmrVal);
-    setBmi(bmiVal);
-    setBmiCategory(category);
-  }, [gender, language]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleSaveBaseData = async () => {
     if (height && startWeight && age) {
@@ -208,21 +224,6 @@ const ProgressScreen = () => {
         calculateStats(height, dayForm.peso, age);
       }
     }
-  };
-
-  const hydrationStats = async () => {
-    let daysWithWater = 0;
-    let totalMl = 0;
-
-    for (let i = 0; i < derivedPlan.length; i++) {
-      const water = await getWaterState(i);
-      totalMl += water.ml;
-      if (water.ml >= water.goal * 0.8) {
-        daysWithWater++;
-      }
-    }
-
-    return { daysWithWater, totalMl };
   };
 
   const baseHeightNumber = Number(height);

@@ -13,6 +13,7 @@ import { getTheme } from '../../theme';
 import { getDayData, getShoppingList, saveShoppingList } from '../../storage/storage';
 import aiService from '../../api/aiService';
 import { mergePlanDay, buildWeekAiPayload } from '../../utils/plan';
+import { stripMarkdownHeadings } from '../../utils/labels';
 
 const ShoppingScreen = () => {
   const {
@@ -34,7 +35,8 @@ const ShoppingScreen = () => {
   const parseAiList = useCallback((text) => {
     if (!text) return [];
 
-    const lines = text
+    const cleanedText = stripMarkdownHeadings(text).replace(/\*/g, '');
+    const lines = cleanedText
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
