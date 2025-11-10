@@ -94,6 +94,7 @@ const MultiMetricChart = ({
         const min = Math.min(...filteredValues);
         const max = Math.max(...filteredValues);
         const range = max - min || 1;
+        const chartType = metric.chartType || 'line';
 
         const scaleY = (value, index) => {
           const safeValue = Number(value);
@@ -118,11 +119,13 @@ const MultiMetricChart = ({
 
         return {
           ...metric,
+          chartType,
           values,
           min,
           max,
-          segments,
-          latestValue
+          segments: chartType === 'bar' ? [] : segments,
+          latestValue,
+          scaleY
         };
       })
       .filter(Boolean);
@@ -203,54 +206,85 @@ const MultiMetricChart = ({
             );
           })}
 
-          {scaledMetrics.map((metric) => (
-            <React.Fragment key={metric.key}>
-              {metric.segments.map((segment, idx) => {
-                const path = createSmoothPath(segment);
-                if (!path) return null;
-                return (
-                  <Path
-                    key={`${metric.key}-segment-${idx}`}
-                    d={path}
-                    stroke={metric.color}
-                    strokeWidth={3}
-                    fill="none"
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                  />
-                );
-              })}
-
-              {metric.segments.map((segment, idx) => {
-                if (!segment.length) return null;
-                const areaPath = `${createSmoothPath(segment)} L ${segment[segment.length - 1].x} ${height - padding} L ${segment[0].x} ${height - padding} Z`;
-                return (
-                  <Path
-                    key={`${metric.key}-fill-${idx}`}
-                    d={areaPath}
-                    fill={`url(#gradient-${metric.key})`}
-                    opacity={0.22}
-                  />
-                );
-              })}
-
-              {metric.segments.map((segment, idx) => (
-                <React.Fragment key={`${metric.key}-dots-${idx}`}>
-                  {segment.map((point, pointIndex) => (
-                    <Circle
-                      key={`${metric.key}-dot-${idx}-${pointIndex}`}
-                      cx={point.x}
-                      cy={point.y}
-                      r={4.5}
-                      fill={theme?.colors?.card || '#fff'}
-                      stroke={metric.color}
-                      strokeWidth={2.5}
+          {scaledMetrics
+            .filter((metric) => metric.chartType === 'bar')
+            .map((metric) => (
+              <React.Fragment key={metric.key}>
+                {metric.values.map((value, index) => {
+                  if (value === null || value === undefined) return null;
+                  const { x, y } = metric.scaleY(value, index);
+                  const baseY = height - padding;
+                  const barHeight = Math.max(8, baseY - y);
+                  const barWidth = Math.max(16, xStep ? Math.min(36, xStep * 0.5) : 28);
+                  const centeredX =
+                    data.length === 1 ? innerWidth / 2 - barWidth / 2 : x - barWidth / 2;
+                  return (
+                    <Rect
+                      key={`${metric.key}-bar-${index}`}
+                      x={centeredX}
+                      y={baseY - barHeight}
+                      width={barWidth}
+                      height={barHeight}
+                      fill={metric.color}
+                      opacity={0.7}
+                      rx={8}
+                      ry={8}
                     />
-                  ))}
-                </React.Fragment>
-              ))}
-            </React.Fragment>
-          ))}
+                  );
+                })}
+              </React.Fragment>
+            ))}
+
+          {scaledMetrics
+            .filter((metric) => metric.chartType !== 'bar')
+            .map((metric) => (
+              <React.Fragment key={metric.key}>
+                {metric.segments.map((segment, idx) => {
+                  const path = createSmoothPath(segment);
+                  if (!path) return null;
+                  return (
+                    <Path
+                      key={`${metric.key}-segment-${idx}`}
+                      d={path}
+                      stroke={metric.color}
+                      strokeWidth={3}
+                      fill="none"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  );
+                })}
+
+                {metric.segments.map((segment, idx) => {
+                  if (!segment.length) return null;
+                  const areaPath = `${createSmoothPath(segment)} L ${segment[segment.length - 1].x} ${height - padding} L ${segment[0].x} ${height - padding} Z`;
+                  return (
+                    <Path
+                      key={`${metric.key}-fill-${idx}`}
+                      d={areaPath}
+                      fill={`url(#gradient-${metric.key})`}
+                      opacity={0.22}
+                    />
+                  );
+                })}
+
+                {metric.segments.map((segment, idx) => (
+                  <React.Fragment key={`${metric.key}-dots-${idx}`}>
+                    {segment.map((point, pointIndex) => (
+                      <Circle
+                        key={`${metric.key}-dot-${idx}-${pointIndex}`}
+                        cx={point.x}
+                        cy={point.y}
+                        r={4.5}
+                        fill={theme?.colors?.card || '#fff'}
+                        stroke={metric.color}
+                        strokeWidth={2.5}
+                      />
+                    ))}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            ))}
 
           {data.map((point, index) => (
             <SvgText

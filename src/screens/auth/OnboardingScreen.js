@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import Button from '../../components/shared/Button';
