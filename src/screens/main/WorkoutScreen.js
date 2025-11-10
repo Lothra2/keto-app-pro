@@ -41,6 +41,41 @@ const WorkoutScreen = ({ route, navigation }) => {
   const selectedIntensity = metrics.workoutIntensity || 'medium';
 
   const totalDays = derivedPlan.length || 14;
+  const clampDay = (day) => Math.min(Math.max(day ?? 0, 0), Math.max(totalDays - 1, 0));
+
+  const initialDay = clampDay(
+    typeof focusDay === 'number'
+      ? focusDay
+      : typeof dayIndex === 'number'
+      ? dayIndex
+      : currentDay
+  );
+
+  const [activeDay, setActiveDay] = useState(initialDay);
+  const safeActiveDay = clampDay(activeDay);
+  const week = weekNumber || Math.floor(safeActiveDay / 7) + 1;
+
+  useEffect(() => {
+    if (typeof focusDay === 'number') {
+      const clamped = clampDay(focusDay);
+      setActiveDay(clamped);
+      setCurrentDay(clamped);
+    }
+  }, [focusDay, totalDays, setCurrentDay]);
+
+  useEffect(() => {
+    if (typeof dayIndex === 'number') {
+      const clamped = clampDay(dayIndex);
+      setActiveDay(clamped);
+      setCurrentDay(clamped);
+    }
+  }, [dayIndex, totalDays, setCurrentDay]);
+
+  useEffect(() => {
+    if (currentDay !== safeActiveDay) {
+      setActiveDay(clampDay(currentDay));
+    }
+  }, [currentDay, safeActiveDay, totalDays]);
 
   const clampDay = useCallback(
     (dayValue = 0) => {
