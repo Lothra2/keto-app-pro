@@ -37,6 +37,7 @@ import { getWorkoutForDay } from '../../data/workouts';
 import aiService from '../../api/aiService';
 import { calculateConsumedCalories, calculateDynamicMacros } from '../../utils/calculations';
 import { mergePlanDay, MEAL_KEYS, buildWeekAiPayload } from '../../utils/plan';
+import { getDayDisplayName, sanitizeReviewBullet, stripMarkdownHeadings } from '../../utils/labels';
 
 const defaultMealState = {
   desayuno: false,
@@ -54,16 +55,21 @@ const extractIngredientsFromQty = (qty = '') =>
 
 const collectExtrasFromAI = (storedDay) => {
   if (!storedDay || typeof storedDay !== 'object') return [];
-  const extras = [];
+  const extras = new Set();
 
   MEAL_KEYS.forEach((key) => {
     const qty = storedDay?.[key]?.qty;
     if (qty) {
-      extractIngredientsFromQty(qty).forEach((item) => extras.push(item));
+      extractIngredientsFromQty(qty).forEach((item) => {
+        const cleaned = item.replace(/^[-+•\s]+/, '').replace(/\s+/g, ' ').trim();
+        if (cleaned.length > 1) {
+          extras.add(cleaned);
+        }
+      });
     }
   });
 
-  return extras;
+  return Array.from(extras);
 };
 
 const normalizeDayReview = (value, language = 'es') => {
@@ -75,12 +81,12 @@ const normalizeDayReview = (value, language = 'es') => {
         if (typeof item === 'string') {
           return {
             label: language === 'en' ? `Note ${index + 1}` : `Nota ${index + 1}`,
-            text: item
+            text: sanitizeReviewBullet(item)
           };
         }
         if (item && typeof item === 'object') {
           const label = item.label || (language === 'en' ? `Note ${index + 1}` : `Nota ${index + 1}`);
-          return { label, text: item.text || '' };
+          return { label, text: sanitizeReviewBullet(item.text || '') };
         }
         return null;
       })
@@ -98,7 +104,7 @@ const normalizeDayReview = (value, language = 'es') => {
       .filter(Boolean)
       .map((text, index) => ({
         label: language === 'en' ? `Note ${index + 1}` : `Nota ${index + 1}`,
-        text
+        text: sanitizeReviewBullet(text)
       }));
   }
 
@@ -111,8 +117,8 @@ const normalizeWeekReview = (value, language = 'es') => {
   if (Array.isArray(value)) {
     return value
       .map((item) => {
-        if (typeof item === 'string') return item;
-        if (item && typeof item === 'object') return item.text || '';
+        if (typeof item === 'string') return stripMarkdownHeadings(item);
+        if (item && typeof item === 'object') return stripMarkdownHeadings(item.text || '');
         return '';
       })
       .filter(Boolean);
@@ -129,7 +135,7 @@ const normalizeWeekReview = (value, language = 'es') => {
     } catch (error) {
       return value
         .split(/\n+/)
-        .map((text) => text.trim())
+        .map((text) => stripMarkdownHeadings(text))
         .filter(Boolean);
     }
   }
@@ -148,7 +154,8 @@ const HomeScreen = ({ navigation }) => {
     setCurrentDay,
     setCurrentWeek,
     apiCredentials,
-    metrics
+    metrics,
+    notifyProgressUpdate
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -160,6 +167,7 @@ const HomeScreen = ({ navigation }) => {
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [waterInfo, setWaterInfo] = useState({ goal: metrics.waterGoal || 2400, ml: 0 });
   const [extras, setExtras] = useState([]);
+  const [extrasExpanded, setExtrasExpanded] = useState(false);
   const [dayReview, setDayReview] = useState(null);
   const [weekReview, setWeekReview] = useState(null);
   const [showWeekReview, setShowWeekReview] = useState(false);
@@ -188,7 +196,11 @@ const HomeScreen = ({ navigation }) => {
       const stored = await getDayData(currentDay);
 
       const merged = mergePlanDay(baseDay, stored || {});
-      merged.dia = merged.dia || `Día ${currentDay + 1}`;
+      merged.dia = getDayDisplayName({
+        label: merged.dia,
+        index: currentDay,
+        language
+      });
       setDayData(merged);
 
       const calState = await getCalorieState(currentDay, merged.kcal || baseDay.kcal || 1600);
@@ -218,7 +230,9 @@ const HomeScreen = ({ navigation }) => {
       const savedWeekReview = await getWeekReview(Math.floor(currentDay / 7) + 1);
       setWeekReview(normalizeWeekReview(savedWeekReview, language));
 
-      setExtras(collectExtrasFromAI(stored));
+      const extractedExtras = collectExtrasFromAI(stored);
+      setExtras(extractedExtras);
+      setExtrasExpanded(false);
     } catch (error) {
       console.error('Error loading day data:', error);
     }
@@ -268,6 +282,7 @@ const HomeScreen = ({ navigation }) => {
       goal: water.goal || metrics.waterGoal || 2400,
       ml: water.ml || 0
     });
+    notifyProgressUpdate();
   };
 
   const handleResetWater = async () => {
@@ -277,6 +292,7 @@ const HomeScreen = ({ navigation }) => {
       goal: water.goal || metrics.waterGoal || 2400,
       ml: water.ml || 0
     });
+    notifyProgressUpdate();
   };
 
   const handleGenerateAI = (mealKey) => {
@@ -388,6 +404,7 @@ const HomeScreen = ({ navigation }) => {
   const handleToggleDayComplete = async () => {
     await setDayCompleted(currentDay, !isDone);
     setIsDone((prev) => !prev);
+    notifyProgressUpdate();
   };
 
   const handleWeekChange = (week) => {
@@ -408,7 +425,7 @@ const HomeScreen = ({ navigation }) => {
     return [
       {
         key: 'desayuno',
-        title: language === 'en' ? '🍳 Breakfast' : '🍳 Desayuno',
+        title: language === 'en' ? 'Breakfast' : 'Desayuno',
         icon: '🍳',
         data: dayData.desayuno,
         isCompleted: mealStates.desayuno,
@@ -418,7 +435,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'snackAM',
-        title: language === 'en' ? '⏰ Snack AM' : '⏰ Snack AM',
+        title: language === 'en' ? 'Snack AM' : 'Snack AM',
         icon: '⏰',
         data: dayData.snackAM,
         isCompleted: mealStates.snackAM,
@@ -427,7 +444,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'almuerzo',
-        title: language === 'en' ? '🥗 Lunch' : '🥗 Almuerzo',
+        title: language === 'en' ? 'Lunch' : 'Almuerzo',
         icon: '🥗',
         data: dayData.almuerzo,
         isCompleted: mealStates.almuerzo,
@@ -437,7 +454,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'snackPM',
-        title: language === 'en' ? '🥜 Snack PM' : '🥜 Snack PM',
+        title: language === 'en' ? 'Snack PM' : 'Snack PM',
         icon: '🥜',
         data: dayData.snackPM,
         isCompleted: mealStates.snackPM,
@@ -446,7 +463,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'cena',
-        title: language === 'en' ? '🍖 Dinner' : '🍖 Cena',
+        title: language === 'en' ? 'Dinner' : 'Cena',
         icon: '🍖',
         data: dayData.cena,
         isCompleted: mealStates.cena,
@@ -540,17 +557,34 @@ const HomeScreen = ({ navigation }) => {
       </Card>
 
       {extras.length ? (
-        <Card style={styles.extrasCard}>
-          <Text style={styles.sectionTitle}>
-            {language === 'en' ? 'AI extras for today' : 'Extras IA para hoy'}
-          </Text>
-          <View style={styles.extrasChips}>
-            {extras.map((item, index) => (
-              <Text key={`${item}-${index}`} style={styles.extraChip}>
-                + {item}
+        <Card style={styles.extrasCard} outlined>
+          <TouchableOpacity
+            style={styles.extrasHeaderRow}
+            onPress={() => setExtrasExpanded(prev => !prev)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.extrasHeaderText}>
+              <Text style={styles.sectionTitle}>
+                {language === 'en' ? 'AI extras for today' : 'Extras IA para hoy'}
               </Text>
-            ))}
-          </View>
+              <Text style={styles.extrasHint}>
+                {language === 'en'
+                  ? 'Quick reminders from your AI meals'
+                  : 'Recordatorios rápidos de tus comidas IA'}
+              </Text>
+            </View>
+            <Text style={styles.extrasToggle}>{extrasExpanded ? '−' : '+'}</Text>
+          </TouchableOpacity>
+          {extrasExpanded ? (
+            <View style={styles.extrasList}>
+              {extras.map((item, index) => (
+                <View key={`${item}-${index}`} style={styles.extraRow}>
+                  <Text style={styles.extraBullet}>•</Text>
+                  <Text style={styles.extraText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </Card>
       ) : null}
 
@@ -572,7 +606,7 @@ const HomeScreen = ({ navigation }) => {
             <Button
               title={language === 'en' ? 'Detail view' : 'Ver detalle'}
               variant="secondary"
-              onPress={() => navigation.navigate('Workout', { dayIndex: currentDay, weekNumber: safeWeek })}
+              onPress={() => navigation.navigate('Workouts', { focusDay: currentDay, weekNumber: safeWeek })}
             />
           </View>
         </Card>
@@ -588,6 +622,26 @@ const HomeScreen = ({ navigation }) => {
             onPress={handleGenerateFullDay}
             style={styles.aiButton}
           />
+          <Button
+            title={language === 'en' ? 'AI review of your day 💬' : 'Revisión IA de tu día 💬'}
+            variant="secondary"
+            onPress={handleReviewDay}
+            style={styles.aiButton}
+          />
+          <Button
+            title={language === 'en' ? 'Weekly AI review 📅' : 'Revisión IA de semana 📅'}
+            variant="secondary"
+            onPress={handleGenerateWeekReview}
+            style={styles.aiButton}
+          />
+        </View>
+      </Card>
+
+      <Card style={styles.toolCard}>
+        <Text style={styles.sectionTitle}>
+          {language === 'en' ? 'Planning tools' : 'Herramientas'}
+        </Text>
+        <View style={styles.aiButtons}>
           <Button
             title={language === 'en' ? 'Progress 📊' : 'Progreso 📊'}
             variant="secondary"
@@ -610,13 +664,9 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>
             {language === 'en' ? 'AI review of your day' : 'Revisión IA de tu día'}
           </Text>
-          <Button
-            title={language === 'en' ? 'Analyze day 💬' : 'Analizar día 💬'}
-            variant="ghost"
-            onPress={handleReviewDay}
-            style={styles.reviewButton}
-            loading={reviewLoading}
-          />
+          <Text style={styles.reviewHint}>
+            {language === 'en' ? 'Trigger it from AI actions ↑' : 'Lánzalo desde Acciones IA ↑'}
+          </Text>
         </View>
         {reviewLoading ? (
           <Text style={styles.reviewLoading}>
@@ -645,13 +695,11 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>
             {language === 'en' ? 'Weekly AI review' : 'Revisión IA de la semana'}
           </Text>
-          <Button
-            title={language === 'en' ? 'Generate' : 'Generar'}
-            variant="ghost"
-            onPress={handleGenerateWeekReview}
-            style={styles.reviewButton}
-            loading={weekReviewLoading}
-          />
+          <Text style={styles.reviewHint}>
+            {language === 'en'
+              ? 'Start it from AI actions ↑'
+              : 'Dispara la IA desde Acciones ↑'}
+          </Text>
         </View>
         {weekReviewLoading ? (
           <Text style={styles.reviewLoading}>
@@ -825,6 +873,39 @@ const createStyles = (theme) =>
     extrasCard: {
       gap: theme.spacing.sm
     },
+    extrasHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: theme.spacing.sm
+    },
+    extrasHeaderText: {
+      flex: 1,
+      gap: 4
+    },
+    extrasHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
+    extrasToggle: {
+      ...theme.typography.h1,
+      color: theme.colors.primary,
+      lineHeight: 24
+    },
+    extrasList: {
+      marginTop: theme.spacing.sm,
+      gap: theme.spacing.xs
+    },
+    extraRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8
+    },
+    extraBullet: {
+      color: theme.colors.primary,
+      fontSize: 14,
+      lineHeight: 20
+    },
     sectionTitle: {
       ...theme.typography.h3,
       color: theme.colors.text
@@ -833,18 +914,11 @@ const createStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted
     },
-    extrasChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: theme.spacing.xs
-    },
-    extraChip: {
+    extraText: {
       ...theme.typography.caption,
       color: theme.colors.text,
-      backgroundColor: theme.colors.cardSoft,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: theme.radius.full
+      flex: 1,
+      lineHeight: 18
     },
     workoutCard: {
       gap: theme.spacing.sm
@@ -859,8 +933,12 @@ const createStyles = (theme) =>
     aiActionsCard: {
       gap: theme.spacing.sm
     },
-    aiButtons: {
+    toolCard: {
       gap: theme.spacing.sm
+    },
+    aiButtons: {
+      gap: theme.spacing.sm,
+      flexDirection: 'column'
     },
     aiButton: {
       width: '100%'
@@ -874,11 +952,11 @@ const createStyles = (theme) =>
     reviewHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'flex-start'
     },
-    reviewButton: {
-      paddingVertical: theme.spacing.xs,
-      paddingHorizontal: theme.spacing.sm
+    reviewHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
     },
     reviewLoading: {
       ...theme.typography.bodySmall,

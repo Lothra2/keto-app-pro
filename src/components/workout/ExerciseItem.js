@@ -4,11 +4,25 @@ import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 
 const ExerciseItem = ({ exercise }) => {
-  const { theme: themeMode } = useApp();
+  const { theme: themeMode, language } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
 
   if (!exercise) return null;
+
+  const infoLines = [
+    exercise.descripcion && { icon: '📋', text: exercise.descripcion },
+    exercise.detalle && { icon: '🧠', text: exercise.detalle },
+    exercise.duracion && {
+      icon: '⏱️',
+      text: `${language === 'en' ? 'Duration' : 'Duración'}: ${exercise.duracion}`
+    },
+    exercise.descanso && {
+      icon: '🧘',
+      text: `${language === 'en' ? 'Rest' : 'Descanso'}: ${exercise.descanso}`
+    },
+    exercise.notas && { icon: '✨', text: exercise.notas }
+  ].filter(Boolean);
 
   return (
     <View style={styles.container}>
@@ -18,8 +32,15 @@ const ExerciseItem = ({ exercise }) => {
           <Text style={styles.series}>{exercise.series}</Text>
         ) : null}
       </View>
-      {exercise.descripcion ? (
-        <Text style={styles.description}>{exercise.descripcion}</Text>
+      {infoLines.length ? (
+        <View style={styles.infoList}>
+          {infoLines.map((line, index) => (
+            <View key={`${line.icon}-${index}`} style={styles.infoRow}>
+              <Text style={styles.infoIcon}>{line.icon}</Text>
+              <Text style={styles.infoText}>{line.text}</Text>
+            </View>
+          ))}
+        </View>
       ) : null}
     </View>
   );
@@ -46,9 +67,23 @@ const getStyles = (theme) =>
       ...theme.typography.caption,
       color: theme.colors.textMuted
     },
-    description: {
+    infoList: {
+      gap: 4
+    },
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 6
+    },
+    infoIcon: {
+      fontSize: 12,
+      lineHeight: 18
+    },
+    infoText: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      flex: 1,
+      lineHeight: 18
     }
   });
 

@@ -9,6 +9,7 @@ import HomeScreen from '../screens/main/HomeScreen';
 import ShoppingScreen from '../screens/main/ShoppingScreen';
 import ProgressScreen from '../screens/main/ProgressScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
+import WorkoutScreen from '../screens/main/WorkoutScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -37,6 +38,7 @@ const TabNavigator = () => {
   const labels = {
     menu: language === 'en' ? 'Menu' : 'Menú',
     shopping: language === 'en' ? 'Shopping' : 'Compras',
+    workout: language === 'en' ? 'Workouts' : 'Entrenos',
     progress: language === 'en' ? 'Progress' : 'Progreso',
     settings: language === 'en' ? 'Settings' : 'Ajustes'
   };
@@ -74,6 +76,16 @@ const TabNavigator = () => {
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon emoji="🛒" focused={focused} label={labels.shopping} />
+          )
+        }}
+      />
+
+      <Tab.Screen
+        name="Workouts"
+        component={WorkoutScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="🏋️" focused={focused} label={labels.workout} />
           )
         }}
       />

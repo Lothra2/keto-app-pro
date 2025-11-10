@@ -12,7 +12,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 
-const SettingsScreen = () => {
+const SettingsScreen = ({ navigation }) => {
   const {
     theme: themeMode,
     language,
@@ -114,6 +114,22 @@ const SettingsScreen = () => {
         <Text style={styles.title}>
           {language === 'en' ? '⚙️ Settings' : '⚙️ Ajustes'}
         </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {language === 'en' ? 'Need some guidance?' : '¿Necesitas ayuda?'}
+        </Text>
+        <Text style={styles.sectionDescription}>
+          {language === 'en'
+            ? 'Read the quick guide to understand meals, progress and AI tools.'
+            : 'Consulta la guía rápida para entender comidas, progreso y herramientas IA.'}
+        </Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Help')}>
+          <Text style={styles.buttonText}>
+            {language === 'en' ? 'Open help guide' : 'Abrir guía de ayuda'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Name */}
