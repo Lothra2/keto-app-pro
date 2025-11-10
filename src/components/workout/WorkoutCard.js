@@ -5,7 +5,14 @@ import ExerciseItem from './ExerciseItem';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 
-const WorkoutCard = ({ title, focus, exercises = [], collapsible = false, initiallyCollapsed = true }) => {
+const WorkoutCard = ({
+  title,
+  focus,
+  exercises = [],
+  collapsible = false,
+  initiallyCollapsed = true,
+  onExercisePress
+}) => {
   const { theme: themeMode, language } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
@@ -34,7 +41,11 @@ const WorkoutCard = ({ title, focus, exercises = [], collapsible = false, initia
       {expanded ? (
         <View style={styles.list}>
           {exercises.map((exercise, index) => (
-            <ExerciseItem key={`${exercise.nombre}-${index}`} exercise={exercise} />
+            <ExerciseItem
+              key={`${exercise.nombre || exercise.name}-${index}`}
+              exercise={exercise}
+              onPress={onExercisePress ? () => onExercisePress(exercise) : undefined}
+            />
           ))}
         </View>
       ) : null}

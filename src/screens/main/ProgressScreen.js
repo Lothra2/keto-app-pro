@@ -67,12 +67,25 @@ const ProgressScreen = () => {
   });
 
   const [hydration, setHydration] = useState({ daysWithWater: 0, totalMl: 0 });
+  const [exerciseSummary, setExerciseSummary] = useState({ daysLogged: 0, totalKcal: 0 });
 
   const calculateStats = useCallback(
     (h, w, a) => {
-      const bf = estimateBodyFat(h, w, a, gender);
-      const bmrVal = calculateBMR(h, w, a, gender !== 'female');
-      const bmiVal = calculateBMI(h, w);
+      const heightNumber = Number(h);
+      const weightNumber = Number(w);
+      const ageNumber = Number(a);
+
+      if (!heightNumber || !weightNumber || !ageNumber) {
+        setBodyFat(null);
+        setBmr(null);
+        setBmi(null);
+        setBmiCategory(null);
+        return;
+      }
+
+      const bf = estimateBodyFat(heightNumber, weightNumber, ageNumber, gender);
+      const bmrVal = calculateBMR(heightNumber, weightNumber, ageNumber, gender !== 'female');
+      const bmiVal = calculateBMI(heightNumber, weightNumber);
       const category = getBMICategory(bmiVal, language);
 
       setBodyFat(bf);
@@ -87,6 +100,8 @@ const ProgressScreen = () => {
     const data = [];
     const baseHeight = Number(baseMetrics.height || height);
     const baseAge = Number(baseMetrics.age || age);
+    let daysWithExercise = 0;
+    let totalExerciseKcal = 0;
 
     for (let i = 0; i < derivedPlan.length; i++) {
       const dayProgress = await getProgressData(i);
@@ -108,6 +123,12 @@ const ProgressScreen = () => {
         baseHeight && baseAge && pesoNumber
           ? estimateBodyFat(baseHeight, pesoNumber, baseAge, gender)
           : null;
+      const burnedKcal = dayProgress.exkcal ? Number(dayProgress.exkcal) : 0;
+
+      if (burnedKcal > 0) {
+        daysWithExercise += 1;
+        totalExerciseKcal += burnedKcal;
+      }
 
       data.push({
         dayIndex: i,
@@ -119,11 +140,16 @@ const ProgressScreen = () => {
         water: water.ml,
         waterGoal: water.goal,
         calGoal: calorieState.goal || derivedPlan[i]?.kcal || 1600,
-        calConsumed: consumedCalories
+        calConsumed: consumedCalories,
+        burnedKcal
       });
     }
 
     setProgressByDay(data);
+    setExerciseSummary({
+      daysLogged: daysWithExercise,
+      totalKcal: Math.round(totalExerciseKcal)
+    });
   }, [age, derivedPlan, gender, height, language]);
 
   const hydrationStats = useCallback(async () => {
@@ -220,8 +246,8 @@ const ProgressScreen = () => {
       setShowDayModal(false);
       await loadAllProgress({ height, age });
 
-      if (dayForm.peso && height && age) {
-        calculateStats(height, dayForm.peso, age);
+      if (height && startWeight && age) {
+        calculateStats(height, startWeight, age);
       }
     }
   };
@@ -285,7 +311,8 @@ const ProgressScreen = () => {
         key: 'weight',
         label: language === 'en' ? 'Weight (kg)' : 'Peso (kg)',
         color: theme.colors.primary,
-        formatter: (value) => `${value.toFixed(1)} kg`
+        formatter: (value) => `${value.toFixed(1)} kg`,
+        chartType: 'bar'
       },
       {
         key: 'bodyFat',
@@ -314,6 +341,22 @@ const ProgressScreen = () => {
         .filter((item) => item.water > 0),
     [progressByDay, language]
   );
+
+  const exerciseHistory = useMemo(() => {
+    return progressByDay
+      .filter((entry) => entry.burnedKcal && entry.burnedKcal > 0)
+      .map((entry) => ({
+        label: getDayTag(entry.dayIndex, language),
+        kcal: Math.round(entry.burnedKcal),
+        name:
+          entry.displayName ||
+          getDayDisplayName({
+            label: derivedPlan[entry.dayIndex]?.dia,
+            index: entry.dayIndex,
+            language
+          })
+      }));
+  }, [progressByDay, language, derivedPlan]);
 
   const calorieHistory = useMemo(
     () =>
@@ -468,13 +511,75 @@ const ProgressScreen = () => {
               );
             })}
           </View>
-      </View>
-    )}
+        </View>
+      )}
 
-    {calorieHistory.length > 0 && (
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>
-          {language === 'en' ? 'Calorie adherence trend' : 'Tendencia de calorías'}
+      {exerciseSummary.daysLogged > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {language === 'en' ? '🔥 Activity impact' : '🔥 Impacto de actividad'}
+          </Text>
+          <Text style={styles.statText}>
+            {language === 'en'
+              ? `${exerciseSummary.daysLogged} active days logged`
+              : `${exerciseSummary.daysLogged} días con actividad registrada`}
+          </Text>
+          <Text style={styles.statText}>
+            {language === 'en'
+              ? `${exerciseSummary.totalKcal} kcal burned in total`
+              : `${exerciseSummary.totalKcal} kcal quemadas en total`}
+          </Text>
+          {exerciseSummary.daysLogged ? (
+            <Text style={styles.statHighlight}>
+              {language === 'en'
+                ? `${Math.round(exerciseSummary.totalKcal / exerciseSummary.daysLogged)} kcal average on active days`
+                : `${Math.round(exerciseSummary.totalKcal / exerciseSummary.daysLogged)} kcal promedio en días activos`}
+            </Text>
+          ) : null}
+        </View>
+      )}
+
+      {exerciseHistory.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {language === 'en' ? 'Daily workout burn' : 'Quema diaria de entreno'}
+          </Text>
+          <View style={styles.exerciseBars}>
+            {(() => {
+              const maxBurn = Math.max(...exerciseHistory.map((item) => item.kcal), 1);
+              return exerciseHistory.map((item) => {
+                const heightPercent = Math.max(10, Math.round((item.kcal / maxBurn) * 100));
+                return (
+                  <View key={item.label} style={styles.exerciseBarItem}>
+                    <View style={styles.exerciseBarTrack}>
+                      <View
+                        style={[
+                          styles.exerciseBarFill,
+                          {
+                            height: `${heightPercent}%`
+                          }
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.exerciseLabel}>{item.label}</Text>
+                    <Text style={styles.exerciseValue}>{item.kcal} kcal</Text>
+                  </View>
+                );
+              });
+            })()}
+          </View>
+          <Text style={styles.exerciseCaption}>
+            {language === 'en'
+              ? 'Log your training calories to compare effort across the week.'
+              : 'Registra las calorías de tus entrenos para comparar el esfuerzo en la semana.'}
+          </Text>
+        </View>
+      )}
+
+      {calorieHistory.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {language === 'en' ? 'Calorie adherence trend' : 'Tendencia de calorías'}
         </Text>
         <View style={styles.calorieList}>
           {calorieHistory.map((item) => {
@@ -671,6 +776,18 @@ const ProgressScreen = () => {
               onChangeText={(text) => setDayForm({...dayForm, energia: text})}
             />
             <TextInput
+              style={styles.input}
+              placeholder={
+                language === 'en'
+                  ? 'Workout calories burned'
+                  : 'Kcal quemadas en ejercicio'
+              }
+              placeholderTextColor={theme.colors.textMuted}
+              keyboardType="numeric"
+              value={dayForm.exkcal}
+              onChangeText={(text) => setDayForm({...dayForm, exkcal: text})}
+            />
+            <TextInput
               style={[styles.input, styles.textArea]}
               placeholder={language === 'en' ? 'Notes' : 'Notas'}
               placeholderTextColor={theme.colors.textMuted}
@@ -769,6 +886,11 @@ const getStyles = (theme) => StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text,
     marginBottom: 4
+  },
+  statHighlight: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.primary,
+    fontWeight: '700'
   },
   editButton: {
     backgroundColor: theme.colors.bgSoft,
@@ -985,6 +1107,48 @@ const getStyles = (theme) => StyleSheet.create({
   hydrationValue: {
     ...theme.typography.caption,
     color: theme.colors.textMuted
+  },
+  exerciseBars: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap'
+  },
+  exerciseBarItem: {
+    alignItems: 'center',
+    width: 60,
+    gap: 6
+  },
+  exerciseBarTrack: {
+    width: 28,
+    height: 140,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.bgSoft,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: theme.colors.border
+  },
+  exerciseBarFill: {
+    width: '100%',
+    borderRadius: theme.radius.md,
+    backgroundColor: 'rgba(239,68,68,0.8)'
+  },
+  exerciseLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+    fontWeight: '600'
+  },
+  exerciseValue: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    fontWeight: '600'
+  },
+  exerciseCaption: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.sm
   }
 });
 

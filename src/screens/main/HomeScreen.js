@@ -33,7 +33,6 @@ import {
   setDayCompleted
 } from '../../storage/storage';
 import { getDailyTip, getMotivationalMessage } from '../../data/tips';
-import { getWorkoutForDay } from '../../data/workouts';
 import aiService from '../../api/aiService';
 import { calculateConsumedCalories, calculateDynamicMacros } from '../../utils/calculations';
 import { mergePlanDay, MEAL_KEYS, buildWeekAiPayload } from '../../utils/plan';
@@ -248,11 +247,6 @@ const HomeScreen = ({ navigation }) => {
     }, [loadDayData])
   );
 
-  const localizedWorkout = useMemo(() => {
-    if (!derivedPlan.length) return null;
-    return getWorkoutForDay(language, safeWeek, currentDay % 7);
-  }, [currentDay, derivedPlan.length, language, safeWeek]);
-
   const dynamicMacros = useMemo(() => {
     if (!dayData?.macros) return null;
     return calculateDynamicMacros(dayData.macros, caloriesConsumed, calorieGoal);
@@ -306,13 +300,6 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('MealGenerator', {
       dayIndex: currentDay,
       mode: 'full-day'
-    });
-  };
-
-  const handleOpenWorkoutModal = () => {
-    navigation.navigate('WorkoutModal', {
-      dayIndex: currentDay,
-      weekNumber: safeWeek
     });
   };
 
@@ -522,8 +509,19 @@ const HomeScreen = ({ navigation }) => {
       </Card>
 
       <Card style={styles.tipCard}>
-        <Text style={styles.tipText}>💡 {tip}</Text>
-        <Text style={styles.tipText}>💪 {motivation}</Text>
+        <View style={styles.tipMessage}>
+          <Text style={styles.tipIcon}>💡</Text>
+          <Text style={styles.tipText} numberOfLines={2}>
+            {tip}
+          </Text>
+        </View>
+        {motivation ? (
+          <View style={styles.tipBadge}>
+            <Text style={styles.tipBadgeText} numberOfLines={1}>
+              {motivation}
+            </Text>
+          </View>
+        ) : null}
       </Card>
 
       <Card style={styles.waterCard}>
@@ -588,34 +586,19 @@ const HomeScreen = ({ navigation }) => {
         </Card>
       ) : null}
 
-      {localizedWorkout ? (
-        <Card style={styles.workoutCard}>
-          <Text style={styles.sectionTitle}>
-            {language === 'en' ? 'Weekly focus' : 'Foco semanal'}
-          </Text>
-          <Text style={styles.sectionDescription}>{localizedWorkout.focus}</Text>
-          <Text style={[styles.sectionTitle, styles.topMargin]}>
-            {language === 'en' ? "Today's training" : 'Entrenamiento de hoy'}
-          </Text>
-          <Text style={styles.sectionDescription}>{localizedWorkout.today}</Text>
-          <View style={styles.workoutButtons}>
-            <Button
-              title={language === 'en' ? 'Open workout IA 🏋️' : 'Entreno IA 🏋️'}
-              onPress={handleOpenWorkoutModal}
-            />
-            <Button
-              title={language === 'en' ? 'Detail view' : 'Ver detalle'}
-              variant="secondary"
-              onPress={() => navigation.navigate('Workouts', { focusDay: currentDay, weekNumber: safeWeek })}
-            />
-          </View>
-        </Card>
-      ) : null}
+      <MealList meals={meals} style={styles.mealList} />
 
       <Card style={styles.aiActionsCard}>
-        <Text style={styles.sectionTitle}>
-          {language === 'en' ? 'AI actions' : 'Acciones IA'}
-        </Text>
+        <View style={styles.aiActionsHeader}>
+          <Text style={styles.sectionTitle}>
+            {language === 'en' ? 'AI actions' : 'Acciones IA'}
+          </Text>
+          <Text style={styles.aiActionsHint}>
+            {language === 'en'
+              ? 'Boost your plan with one tap'
+              : 'Potencia tu plan con un toque'}
+          </Text>
+        </View>
         <View style={styles.aiButtons}>
           <Button
             title={language === 'en' ? 'Full day with AI 🤖' : 'Día completo IA 🤖'}
@@ -636,28 +619,6 @@ const HomeScreen = ({ navigation }) => {
           />
         </View>
       </Card>
-
-      <Card style={styles.toolCard}>
-        <Text style={styles.sectionTitle}>
-          {language === 'en' ? 'Planning tools' : 'Herramientas'}
-        </Text>
-        <View style={styles.aiButtons}>
-          <Button
-            title={language === 'en' ? 'Progress 📊' : 'Progreso 📊'}
-            variant="secondary"
-            onPress={() => navigation.navigate('Progress')}
-            style={styles.aiButton}
-          />
-          <Button
-            title={language === 'en' ? 'Shopping 🛒' : 'Compras 🛒'}
-            variant="secondary"
-            onPress={() => navigation.navigate('Shopping')}
-            style={styles.aiButton}
-          />
-        </View>
-      </Card>
-
-      <MealList meals={meals} style={styles.mealList} />
 
       <Card style={styles.reviewCard}>
         <View style={styles.reviewHeader}>
@@ -811,12 +772,39 @@ const createStyles = (theme) =>
       borderRadius: theme.radius.sm
     },
     tipCard: {
-      gap: theme.spacing.xs
+      gap: theme.spacing.sm,
+      backgroundColor: theme.colors.cardSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md
+    },
+    tipMessage: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm
+    },
+    tipIcon: {
+      fontSize: 20
     },
     tipText: {
-      ...theme.typography.bodySmall,
+      ...theme.typography.body,
       color: theme.colors.text,
-      textAlign: 'center'
+      flex: 1,
+      fontWeight: '600'
+    },
+    tipBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: 'rgba(56,189,248,0.15)',
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: theme.radius.full
+    },
+    tipBadgeText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: '600'
     },
     waterCard: {
       gap: theme.spacing.sm
@@ -920,21 +908,24 @@ const createStyles = (theme) =>
       flex: 1,
       lineHeight: 18
     },
-    workoutCard: {
-      gap: theme.spacing.sm
-    },
-    topMargin: {
-      marginTop: theme.spacing.sm
-    },
-    workoutButtons: {
-      flexDirection: 'row',
-      gap: theme.spacing.sm
-    },
     aiActionsCard: {
-      gap: theme.spacing.sm
+      gap: theme.spacing.md,
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 3
     },
-    toolCard: {
-      gap: theme.spacing.sm
+    aiActionsHeader: {
+      gap: 4
+    },
+    aiActionsHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
     },
     aiButtons: {
       gap: theme.spacing.sm,
