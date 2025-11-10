@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal,
-  Dimensions
+  Modal
 } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import {
@@ -25,6 +23,7 @@ import {
   getBMICategory
 } from '../../utils/calculations';
 import storage, { KEYS } from '../../storage/storage';
+import MultiMetricChart from '../../components/progress/MultiMetricChart';
 
 const ProgressScreen = () => {
   const {
@@ -84,19 +83,44 @@ const ProgressScreen = () => {
       calculateStats(h, w, a);
     }
 
-    await loadAllProgress();
+    await loadAllProgress({ height: h, age: a });
     const hydraStats = await hydrationStats();
     setHydration(hydraStats);
   };
 
-  const loadAllProgress = async () => {
+  const loadAllProgress = async (baseMetrics = {}) => {
     const data = [];
+    const baseHeight = Number(baseMetrics.height || height);
+    const baseAge = Number(baseMetrics.age || age);
+
     for (let i = 0; i < derivedPlan.length; i++) {
       const dayProgress = await getProgressData(i);
-      if (Object.keys(dayProgress).length > 0) {
-        data.push({ dayIndex: i, ...dayProgress });
+      const water = await getWaterState(i);
+      const hasProgress = Object.keys(dayProgress).length > 0;
+      const hasWater = water.ml > 0;
+
+      if (!hasProgress && !hasWater) {
+        continue;
       }
+
+      const pesoNumber = dayProgress.peso ? Number(dayProgress.peso) : null;
+      const energiaNumber = dayProgress.energia ? Number(dayProgress.energia) : null;
+      const computedBodyFat =
+        baseHeight && baseAge && pesoNumber
+          ? estimateBodyFat(baseHeight, pesoNumber, baseAge, gender)
+          : null;
+
+      data.push({
+        dayIndex: i,
+        ...dayProgress,
+        pesoNumber,
+        energiaNumber,
+        bodyFat: computedBodyFat,
+        water: water.ml,
+        waterGoal: water.goal
+      });
     }
+
     setProgressByDay(data);
   };
 
@@ -145,8 +169,8 @@ const ProgressScreen = () => {
     if (selectedDay !== null) {
       await saveProgressData(selectedDay, dayForm);
       setShowDayModal(false);
-      await loadAllProgress();
-      
+      await loadAllProgress({ height, age });
+
       if (dayForm.peso && height && age) {
         calculateStats(height, dayForm.peso, age);
       }
@@ -156,7 +180,7 @@ const ProgressScreen = () => {
   const hydrationStats = async () => {
     let daysWithWater = 0;
     let totalMl = 0;
-    
+
     for (let i = 0; i < derivedPlan.length; i++) {
       const water = await getWaterState(i);
       totalMl += water.ml;
@@ -164,44 +188,92 @@ const ProgressScreen = () => {
         daysWithWater++;
       }
     }
-    
+
     return { daysWithWater, totalMl };
   };
 
-  // Preparar datos para gráfica
-  const getChartData = () => {
-    const labels = [];
-    const weights = [];
-    
-    // Peso inicial
-    if (startWeight) {
-      labels.push('Inicio');
-      weights.push(parseFloat(startWeight));
+  const baseHeightNumber = Number(height);
+  const baseAgeNumber = Number(age);
+
+  const initialBodyFat = useMemo(() => {
+    if (!startWeight || !baseHeightNumber || !baseAgeNumber) {
+      return null;
     }
 
-    // Pesos registrados
-    progressByDay.forEach((p) => {
-      if (p.peso) {
-        labels.push(`D${p.dayIndex + 1}`);
-        weights.push(parseFloat(p.peso));
-      }
+    return estimateBodyFat(baseHeightNumber, Number(startWeight), baseAgeNumber, gender);
+  }, [startWeight, baseHeightNumber, baseAgeNumber, gender]);
+
+  const chartPoints = useMemo(() => {
+    const points = [];
+
+    if (startWeight) {
+      points.push({
+        label: language === 'en' ? 'Start' : 'Inicio',
+        weight: Number(startWeight),
+        energy: null,
+        bodyFat: initialBodyFat
+      });
+    }
+
+    progressByDay.forEach((entry) => {
+      points.push({
+        label: `D${entry.dayIndex + 1}`,
+        weight:
+          entry.pesoNumber !== null && entry.pesoNumber !== undefined
+            ? entry.pesoNumber
+            : entry.peso
+            ? Number(entry.peso)
+            : null,
+        energy:
+          entry.energiaNumber !== null && entry.energiaNumber !== undefined
+            ? entry.energiaNumber
+            : entry.energia
+            ? Number(entry.energia)
+            : null,
+        bodyFat: entry.bodyFat !== null && entry.bodyFat !== undefined ? entry.bodyFat : null
+      });
     });
 
-    // Si no hay datos, mostrar placeholder
-    if (weights.length === 0) {
-      return {
-        labels: ['Sin datos'],
-        datasets: [{ data: [0] }]
-      };
-    }
+    return points.filter(
+      (point) => point.weight !== null || point.energy !== null || point.bodyFat !== null
+    );
+  }, [progressByDay, startWeight, language, initialBodyFat]);
 
-    return {
-      labels,
-      datasets: [{ data: weights, color: () => theme.colors.primary }]
-    };
-  };
+  const metricConfig = useMemo(
+    () => [
+      {
+        key: 'weight',
+        label: language === 'en' ? 'Weight (kg)' : 'Peso (kg)',
+        color: theme.colors.primary,
+        formatter: (value) => `${value.toFixed(1)} kg`
+      },
+      {
+        key: 'bodyFat',
+        label: language === 'en' ? 'Body fat %' : '% de grasa',
+        color: '#f97316',
+        formatter: (value) => `${value.toFixed(1)} %`
+      },
+      {
+        key: 'energy',
+        label: language === 'en' ? 'Energy (1-10)' : 'Energía (1-10)',
+        color: '#a855f7',
+        formatter: (value) => `${value.toFixed(1)}/10`
+      }
+    ],
+    [language, theme.colors.primary]
+  );
 
-  const screenWidth = Dimensions.get('window').width;
+  const hydrationHistory = useMemo(
+    () =>
+      progressByDay
+        .map((entry) => ({
+          label: `D${entry.dayIndex + 1}`,
+          water: entry.water || 0,
+          goal: entry.waterGoal || 2400
+        }))
+        .filter((item) => item.water > 0),
+    [progressByDay]
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -267,33 +339,18 @@ const ProgressScreen = () => {
         </TouchableOpacity>
       )}
 
-      {/* Gráfica de Peso */}
-      {progressByDay.length > 0 && (
+      {/* Gráfica de progreso */}
+      {chartPoints.length > 0 && (
         <View style={styles.chartCard}>
           <Text style={styles.cardTitle}>
-            {language === 'en' ? 'Weight Progress' : 'Progreso de Peso'}
+            {language === 'en' ? 'Wellness trends' : 'Tendencias de bienestar'}
           </Text>
-          <LineChart
-            data={getChartData()}
-            width={screenWidth - 48}
-            height={220}
-            chartConfig={{
-              backgroundColor: theme.colors.card,
-              backgroundGradientFrom: theme.colors.card,
-              backgroundGradientTo: theme.colors.card,
-              decimalPlaces: 1,
-              color: (opacity = 1) => theme.colors.primary,
-              labelColor: (opacity = 1) => theme.colors.text,
-              style: { borderRadius: 16 },
-              propsForDots: {
-                r: '6',
-                strokeWidth: '2',
-                stroke: theme.colors.primary
-              }
-            }}
-            bezier
-            style={styles.chart}
-          />
+          <MultiMetricChart data={chartPoints} metrics={metricConfig} theme={theme} />
+          <Text style={styles.chartCaption}>
+            {language === 'en'
+              ? 'Each line is scaled to its own range so you can quickly spot trends in weight, body fat and energy.'
+              : 'Cada línea se escala a su propio rango para resaltar tendencias de peso, % de grasa y energía.'}
+          </Text>
         </View>
       )}
 
@@ -308,11 +365,44 @@ const ProgressScreen = () => {
             : `Días con meta: ${hydration.daysWithWater} / ${derivedPlan.length}`}
         </Text>
         <Text style={styles.statText}>
-          {language === 'en' 
+          {language === 'en'
             ? `Total water: ${hydration.totalMl} ml`
             : `Agua total: ${hydration.totalMl} ml`}
         </Text>
       </View>
+
+      {hydrationHistory.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            {language === 'en' ? 'Daily hydration trend' : 'Tendencia de hidratación diaria'}
+          </Text>
+          <View style={styles.hydrationBars}>
+            {hydrationHistory.map((item) => {
+              const percent = Math.min(100, Math.round((item.water / item.goal) * 100));
+              return (
+                <View key={item.label} style={styles.hydrationBarItem}>
+                  <View style={styles.hydrationBarTrack}>
+                    <View
+                      style={[
+                        styles.hydrationBarFill,
+                        {
+                          height: `${Math.max(8, percent)}%`,
+                          backgroundColor:
+                            percent >= 100
+                              ? 'rgba(34,197,94,0.75)'
+                              : 'rgba(56,189,248,0.75)'
+                        }
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.hydrationLabel}>{item.label}</Text>
+                  <Text style={styles.hydrationValue}>{item.water} ml</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       {/* Daily Progress */}
       <View style={styles.section}>
@@ -321,6 +411,23 @@ const ProgressScreen = () => {
         </Text>
         {derivedPlan.map((day, index) => {
           const hasData = progressByDay.find(p => p.dayIndex === index);
+          const weightValue = hasData
+            ? typeof hasData.pesoNumber === 'number' && !Number.isNaN(hasData.pesoNumber)
+              ? hasData.pesoNumber
+              : hasData.peso
+              ? Number(hasData.peso)
+              : null
+            : null;
+          const energyValue = hasData
+            ? typeof hasData.energiaNumber === 'number' && !Number.isNaN(hasData.energiaNumber)
+              ? hasData.energiaNumber
+              : hasData.energia
+              ? Number(hasData.energia)
+              : null
+            : null;
+          const bodyFatValue =
+            hasData && typeof hasData.bodyFat === 'number' ? hasData.bodyFat : null;
+          const waterValue = hasData && typeof hasData.water === 'number' ? hasData.water : null;
           return (
             <TouchableOpacity
               key={index}
@@ -329,10 +436,20 @@ const ProgressScreen = () => {
             >
               <Text style={styles.dayTitle}>{day.dia}</Text>
               {hasData ? (
-                <Text style={styles.dayData}>
-                  {hasData.peso ? `${hasData.peso} kg` : ''}
-                  {hasData.energia ? ` • Energía: ${hasData.energia}/10` : ''}
-                </Text>
+                <View style={styles.dayMetricsRow}>
+                  {weightValue !== null && !Number.isNaN(weightValue) ? (
+                    <Text style={styles.dayMetric}>⚖️ {weightValue.toFixed(1)} kg</Text>
+                  ) : null}
+                  {bodyFatValue !== null && !Number.isNaN(bodyFatValue) ? (
+                    <Text style={styles.dayMetric}>🔥 {bodyFatValue.toFixed(1)} %</Text>
+                  ) : null}
+                  {energyValue !== null && !Number.isNaN(energyValue) ? (
+                    <Text style={styles.dayMetric}>⚡ {energyValue.toFixed(1)}/10</Text>
+                  ) : null}
+                  {waterValue ? (
+                    <Text style={styles.dayMetric}>💧 {waterValue} ml</Text>
+                  ) : null}
+                </View>
               ) : (
                 <Text style={styles.dayDataEmpty}>
                   {language === 'en' ? 'Tap to add data' : 'Toca para agregar'}
@@ -556,12 +673,13 @@ const getStyles = (theme) => StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    alignItems: 'center'
+    marginBottom: theme.spacing.md
   },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 16
+  chartCaption: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: theme.spacing.sm
   },
   section: {
     marginTop: theme.spacing.md
@@ -589,9 +707,19 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4
   },
-  dayData: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.text
+  dayMetricsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  dayMetric: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.bgSoft,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: theme.radius.full,
+    overflow: 'hidden'
   },
   dayDataEmpty: {
     ...theme.typography.bodySmall,
@@ -648,6 +776,40 @@ const getStyles = (theme) => StyleSheet.create({
     ...theme.typography.body,
     color: '#fff',
     fontWeight: '600'
+  },
+  hydrationBars: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap'
+  },
+  hydrationBarItem: {
+    alignItems: 'center',
+    width: 56
+  },
+  hydrationBarTrack: {
+    width: 22,
+    height: 120,
+    borderRadius: 999,
+    backgroundColor: theme.colors.bgSoft,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 6
+  },
+  hydrationBarFill: {
+    width: '100%',
+    borderRadius: 999
+  },
+  hydrationLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+    fontWeight: '600'
+  },
+  hydrationValue: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted
   }
 });
 

@@ -54,16 +54,21 @@ const extractIngredientsFromQty = (qty = '') =>
 
 const collectExtrasFromAI = (storedDay) => {
   if (!storedDay || typeof storedDay !== 'object') return [];
-  const extras = [];
+  const extras = new Set();
 
   MEAL_KEYS.forEach((key) => {
     const qty = storedDay?.[key]?.qty;
     if (qty) {
-      extractIngredientsFromQty(qty).forEach((item) => extras.push(item));
+      extractIngredientsFromQty(qty).forEach((item) => {
+        const cleaned = item.replace(/^[-+•\s]+/, '').replace(/\s+/g, ' ').trim();
+        if (cleaned.length > 1) {
+          extras.add(cleaned);
+        }
+      });
     }
   });
 
-  return extras;
+  return Array.from(extras);
 };
 
 const normalizeDayReview = (value, language = 'es') => {
@@ -408,7 +413,7 @@ const HomeScreen = ({ navigation }) => {
     return [
       {
         key: 'desayuno',
-        title: language === 'en' ? '🍳 Breakfast' : '🍳 Desayuno',
+        title: language === 'en' ? 'Breakfast' : 'Desayuno',
         icon: '🍳',
         data: dayData.desayuno,
         isCompleted: mealStates.desayuno,
@@ -418,7 +423,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'snackAM',
-        title: language === 'en' ? '⏰ Snack AM' : '⏰ Snack AM',
+        title: language === 'en' ? 'Snack AM' : 'Snack AM',
         icon: '⏰',
         data: dayData.snackAM,
         isCompleted: mealStates.snackAM,
@@ -427,7 +432,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'almuerzo',
-        title: language === 'en' ? '🥗 Lunch' : '🥗 Almuerzo',
+        title: language === 'en' ? 'Lunch' : 'Almuerzo',
         icon: '🥗',
         data: dayData.almuerzo,
         isCompleted: mealStates.almuerzo,
@@ -437,7 +442,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'snackPM',
-        title: language === 'en' ? '🥜 Snack PM' : '🥜 Snack PM',
+        title: language === 'en' ? 'Snack PM' : 'Snack PM',
         icon: '🥜',
         data: dayData.snackPM,
         isCompleted: mealStates.snackPM,
@@ -446,7 +451,7 @@ const HomeScreen = ({ navigation }) => {
       },
       {
         key: 'cena',
-        title: language === 'en' ? '🍖 Dinner' : '🍖 Cena',
+        title: language === 'en' ? 'Dinner' : 'Cena',
         icon: '🍖',
         data: dayData.cena,
         isCompleted: mealStates.cena,
@@ -541,14 +546,22 @@ const HomeScreen = ({ navigation }) => {
 
       {extras.length ? (
         <Card style={styles.extrasCard}>
-          <Text style={styles.sectionTitle}>
-            {language === 'en' ? 'AI extras for today' : 'Extras IA para hoy'}
-          </Text>
-          <View style={styles.extrasChips}>
+          <View style={styles.extrasHeader}>
+            <Text style={styles.sectionTitle}>
+              {language === 'en' ? 'AI extras for today' : 'Extras IA para hoy'}
+            </Text>
+            <Text style={styles.extrasHint}>
+              {language === 'en'
+                ? 'Auto-generated from your AI meals'
+                : 'Generados automáticamente desde tus comidas IA'}
+            </Text>
+          </View>
+          <View style={styles.extrasGrid}>
             {extras.map((item, index) => (
-              <Text key={`${item}-${index}`} style={styles.extraChip}>
-                + {item}
-              </Text>
+              <View key={`${item}-${index}`} style={styles.extraPill}>
+                <Text style={styles.extraIcon}>✨</Text>
+                <Text style={styles.extraText}>{item}</Text>
+              </View>
             ))}
           </View>
         </Card>
@@ -589,6 +602,26 @@ const HomeScreen = ({ navigation }) => {
             style={styles.aiButton}
           />
           <Button
+            title={language === 'en' ? 'AI review of your day 💬' : 'Revisión IA de tu día 💬'}
+            variant="secondary"
+            onPress={handleReviewDay}
+            style={styles.aiButton}
+          />
+          <Button
+            title={language === 'en' ? 'Weekly AI review 📅' : 'Revisión IA de semana 📅'}
+            variant="secondary"
+            onPress={handleGenerateWeekReview}
+            style={styles.aiButton}
+          />
+        </View>
+      </Card>
+
+      <Card style={styles.toolCard}>
+        <Text style={styles.sectionTitle}>
+          {language === 'en' ? 'Planning tools' : 'Herramientas'}
+        </Text>
+        <View style={styles.aiButtons}>
+          <Button
             title={language === 'en' ? 'Progress 📊' : 'Progreso 📊'}
             variant="secondary"
             onPress={() => navigation.navigate('Progress')}
@@ -610,13 +643,9 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>
             {language === 'en' ? 'AI review of your day' : 'Revisión IA de tu día'}
           </Text>
-          <Button
-            title={language === 'en' ? 'Analyze day 💬' : 'Analizar día 💬'}
-            variant="ghost"
-            onPress={handleReviewDay}
-            style={styles.reviewButton}
-            loading={reviewLoading}
-          />
+          <Text style={styles.reviewHint}>
+            {language === 'en' ? 'Trigger it from AI actions ↑' : 'Lánzalo desde Acciones IA ↑'}
+          </Text>
         </View>
         {reviewLoading ? (
           <Text style={styles.reviewLoading}>
@@ -645,13 +674,11 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>
             {language === 'en' ? 'Weekly AI review' : 'Revisión IA de la semana'}
           </Text>
-          <Button
-            title={language === 'en' ? 'Generate' : 'Generar'}
-            variant="ghost"
-            onPress={handleGenerateWeekReview}
-            style={styles.reviewButton}
-            loading={weekReviewLoading}
-          />
+          <Text style={styles.reviewHint}>
+            {language === 'en'
+              ? 'Start it from AI actions ↑'
+              : 'Dispara la IA desde Acciones ↑'}
+          </Text>
         </View>
         {weekReviewLoading ? (
           <Text style={styles.reviewLoading}>
@@ -825,6 +852,13 @@ const createStyles = (theme) =>
     extrasCard: {
       gap: theme.spacing.sm
     },
+    extrasHeader: {
+      gap: 4
+    },
+    extrasHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
     sectionTitle: {
       ...theme.typography.h3,
       color: theme.colors.text
@@ -833,18 +867,31 @@ const createStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted
     },
-    extrasChips: {
+    extrasGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: theme.spacing.xs
+      gap: theme.spacing.sm
     },
-    extraChip: {
+    extraPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.colors.cardSoft,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: theme.radius.full,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    extraIcon: {
+      fontSize: 14
+    },
+    extraText: {
       ...theme.typography.caption,
       color: theme.colors.text,
-      backgroundColor: theme.colors.cardSoft,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: theme.radius.full
+      maxWidth: 180,
+      flexShrink: 1,
+      lineHeight: 18
     },
     workoutCard: {
       gap: theme.spacing.sm
@@ -859,8 +906,12 @@ const createStyles = (theme) =>
     aiActionsCard: {
       gap: theme.spacing.sm
     },
-    aiButtons: {
+    toolCard: {
       gap: theme.spacing.sm
+    },
+    aiButtons: {
+      gap: theme.spacing.sm,
+      flexDirection: 'column'
     },
     aiButton: {
       width: '100%'
@@ -874,11 +925,11 @@ const createStyles = (theme) =>
     reviewHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'flex-start'
     },
-    reviewButton: {
-      paddingVertical: theme.spacing.xs,
-      paddingHorizontal: theme.spacing.sm
+    reviewHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
     },
     reviewLoading: {
       ...theme.typography.bodySmall,

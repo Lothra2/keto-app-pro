@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
@@ -18,6 +18,16 @@ const MealCard = ({
   const styles = getStyles(theme);
 
   const hasAIData = mealData?.isAI || false;
+  const ingredientLines = useMemo(() => {
+    if (!mealData?.qty) return [];
+
+    return mealData.qty
+      .split(/\r?\n|•|\u2022|,/g)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }, [mealData?.qty]);
+
+  const noteText = mealData?.note || mealData?.descripcion || '';
 
   return (
     <View style={[styles.container, isCompleted && styles.containerCompleted]}>
@@ -27,9 +37,6 @@ const MealCard = ({
           <Text style={styles.icon}>{icon}</Text>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>{title}</Text>
-            {mealData?.qty && (
-              <Text style={styles.qty}>{mealData.qty}</Text>
-            )}
           </View>
         </View>
         
@@ -65,13 +72,23 @@ const MealCard = ({
               </View>
             )}
           </View>
+          {ingredientLines.length > 0 && (
+            <View style={styles.ingredientsList}>
+              {ingredientLines.map((line, index) => (
+                <View key={`${line}-${index}`} style={styles.ingredientRow}>
+                  <Text style={styles.ingredientBullet}>•</Text>
+                  <Text style={styles.ingredientText}>{line}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       )}
 
       {/* Note */}
-      {mealData?.note && (
-        <Text style={styles.note}>{mealData.note}</Text>
-      )}
+      {noteText ? (
+        <Text style={styles.note}>{noteText}</Text>
+      ) : null}
     </View>
   );
 };
@@ -112,10 +129,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  qty: {
-    ...theme.typography.caption,
-    color: theme.colors.textMuted,
-  },
   actions: {
     flexDirection: 'row',
     gap: theme.spacing.xs,
@@ -155,10 +168,31 @@ const getStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+    flexWrap: 'wrap'
   },
   mealName: {
     ...theme.typography.bodySmall,
     color: theme.colors.text,
+    lineHeight: 18,
+  },
+  ingredientsList: {
+    marginTop: theme.spacing.xs,
+    gap: 6,
+  },
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  ingredientBullet: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  ingredientText: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+    flex: 1,
     lineHeight: 18,
   },
   aiBadge: {

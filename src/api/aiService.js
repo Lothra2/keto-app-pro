@@ -246,14 +246,35 @@ class AIService {
       throw new Error('Could not parse full day response');
     }
 
+    const enhanceMeal = (meal) => {
+      if (!meal || typeof meal !== 'object') return meal;
+
+      const base = { ...meal };
+      if (!base.nombre && base.name) {
+        base.nombre = base.name;
+      }
+      if (!base.qty) {
+        if (Array.isArray(base.ingredientes)) {
+          base.qty = base.ingredientes.join(', ');
+        } else if (Array.isArray(base.ingredients)) {
+          base.qty = base.ingredients.join(', ');
+        }
+      }
+      if (!base.note) {
+        base.note = base.descripcion || base.description || base.desc || '';
+      }
+
+      return { ...base, isAI: true };
+    };
+
     return {
       kcal: structured.kcal,
       macros: structured.macros,
-      desayuno: structured.desayuno,
-      snackAM: structured.snackAM,
-      almuerzo: structured.almuerzo,
-      snackPM: structured.snackPM,
-      cena: structured.cena,
+      desayuno: enhanceMeal(structured.desayuno),
+      snackAM: enhanceMeal(structured.snackAM),
+      almuerzo: enhanceMeal(structured.almuerzo),
+      snackPM: enhanceMeal(structured.snackPM),
+      cena: enhanceMeal(structured.cena),
       isAI: true
     };
   }
