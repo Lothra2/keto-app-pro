@@ -1,7 +1,15 @@
 // MultiMetricChart.js
 import React, { useMemo } from 'react'
 import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native'
-import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle, Text as SvgText } from 'react-native-svg'
+import Svg, {
+  Defs,
+  LinearGradient,
+  Stop,
+  Rect,
+  Path,
+  Circle,
+  Text as SvgText
+} from 'react-native-svg'
 
 const { width: screenWidth } = Dimensions.get('window')
 
@@ -34,21 +42,33 @@ const movingAverage = (arr, k = 7) => {
       if (first !== null) sum -= first
     }
     if (v !== null) sum += v
-    const valids = q.filter(n => n !== null)
+    const valids = q.filter((n) => n !== null)
     out.push(valids.length ? sum / valids.length : null)
   }
   return out
 }
 
+// normalizar nombre de métrica
+const normalizeMetric = (m) => {
+  const s = String(m || '').toLowerCase()
+  if (s.includes('fat') || s.includes('grasa')) return 'bodyFat'
+  if (s.includes('ener')) return 'energy'
+  if (s.includes('peso') || s.includes('weight')) return 'weight'
+  return 'weight'
+}
+
 // ===== componente =====
 const MultiMetricChart = ({
-  data = [],                 // [{ date, label, weight, bodyFat, energy }]
-  metric = 'weight',         // viene de tu selector externo, puede ser "Peso", "% Grasa", "Energía", etc
+  data = [], // [{ label, displayName, weight, bodyFat, energy }]
+  // NUEVO: metrics desde fuera, por ejemplo [{ key:'weight', label:'Peso (kg)', color, formatter }]
+  metrics,
+  // compat: prop antigua como string
+  metric: metricProp = 'weight',
   height = 240,
   width = screenWidth - 32,
   theme,
   language = 'es',
-  showValueBadges = true,    // muestra solo el último valor
+  showValueBadges = true,
   weightTargetMin = null,
   weightTargetMax = null,
   showWeightMA = true
@@ -72,57 +92,122 @@ const MultiMetricChart = ({
   }
 
   const labels = {
-    es: { noData: 'No hay datos aún', helper: 'Registra peso, energía o % de grasa para ver la gráfica', weight: 'Peso', bodyFat: '% Grasa', energy: 'Energía' },
-    en: { noData: 'No data yet', helper: 'Track weight, energy or body fat to unlock the chart', weight: 'Weight', bodyFat: 'Body Fat %', energy: 'Energy' }
+    es: {
+      noData: 'No hay datos aún',
+      helper: 'Registra peso, energía o % de grasa para ver la gráfica',
+      weight: 'Peso',
+      bodyFat: '% Grasa',
+      energy: 'Energía'
+    },
+    en: {
+      noData: 'No data yet',
+      helper: 'Track weight, energy or body fat to unlock the chart',
+      weight: 'Weight',
+      bodyFat: 'Body Fat %',
+      energy: 'Energy'
+    }
   }[language === 'en' ? 'en' : 'es']
 
-  // Normaliza lo que venga del selector externo
-  const normalizeMetric = (m) => {
-    const s = String(m || '').toLowerCase()
-    if (s.includes('fat') || s.includes('grasa')) return 'bodyFat'
-    if (s.includes('ener')) return 'energy'
-    if (s.includes('peso') || s.includes('weight')) return 'weight'
-    return 'weight'
-  }
-  const metricKey = normalizeMetric(metric)
+  // 1) elegimos qué métrica usar, dando prioridad a metrics[0]
+  const metricKey = useMemo(() => {
+    if (metrics && metrics.length && metrics[0]?.key) {
+      return normalizeMetric(metrics[0].key)
+    }
+    return normalizeMetric(metricProp)
+  }, [metrics, metricProp])
 
-  // configuración por métrica
+  // 2) configuración por métrica + override con la info que viene en metrics[0]
   const active = useMemo(() => {
+    let base
     if (metricKey === 'bodyFat') {
-      return { key: 'bodyFat', label: labels.bodyFat, color: t.purple, floor: null, ceil: null, yPad: 0.12, fmt: v => `${Number(v).toFixed(1)} %`, area: false }
+      base = {
+        key: 'bodyFat',
+        label: labels.bodyFat,
+        color: t.purple,
+        floor: null,
+        ceil: null,
+        yPad: 0.12,
+        fmt: (v) => `${Number(v).toFixed(1)} %`,
+        area: false
+      }
+    } else if (metricKey === 'energy') {
+      base = {
+        key: 'energy',
+        label: labels.energy,
+        color: t.blue,
+        floor: 0,
+        ceil: 10,
+        yPad: 0.05,
+        fmt: (v) => `${Number(v).toFixed(1)}`,
+        area: false
+      }
+    } else {
+      base = {
+        key: 'weight',
+        label: labels.weight,
+        color: t.green,
+        floor: null,
+        ceil: null,
+        yPad: 0.1,
+        fmt: (v) => `${Number(v).toFixed(1)} kg`,
+        area: true
+      }
     }
-    if (metricKey === 'energy') {
-      return { key: 'energy', label: labels.energy, color: t.blue, floor: 0, ceil: 10, yPad: 0.05, fmt: v => `${Number(v).toFixed(1)}`, area: false }
+
+    if (metrics && metrics.length) {
+      const m0 = metrics[0]
+      if (m0.label) base.label = m0.label
+      if (m0.color) base.color = m0.color
+      if (typeof m0.formatter === 'function') base.fmt = m0.formatter
+      // si quisieras, podrías usar chartType para forzar área o solo línea
+      // if (m0.chartType === 'line') base.area = false
     }
-    return { key: 'weight', label: labels.weight, color: t.green, floor: null, ceil: null, yPad: 0.10, fmt: v => `${Number(v).toFixed(1)} kg`, area: true }
-  }, [metricKey, labels, t])
+
+    return base
+  }, [metricKey, labels, t, metrics])
 
   const xStep = data.length > 1 ? usableWidth / (data.length - 1) : 0
 
   const series = useMemo(() => {
-    const values = data.map(p => {
+    const values = data.map((p) => {
       const raw = p?.[active.key]
       if (raw === null || raw === undefined || raw === '') return null
       const n = Number(raw)
       return Number.isNaN(n) ? null : n
     })
-    const filtered = values.filter(v => v !== null)
-    if (!filtered.length) return { values, min: 0, max: 1, latest: null, delta: null }
+    const filtered = values.filter((v) => v !== null)
+    if (!filtered.length) {
+      return { values, min: 0, max: 1, latest: null, delta: null }
+    }
 
     let min = active.floor !== null ? active.floor : Math.min(...filtered)
     let max = active.ceil !== null ? active.ceil : Math.max(...filtered)
-    if (min === max) { min -= 1; max += 1 }
+    if (min === max) {
+      min -= 1
+      max += 1
+    }
 
     const range = max - min
     const pad = range * active.yPad
     if (active.floor === null) min -= pad
     if (active.ceil === null) max += pad
-    if (min > max) { const tmp = min; min = max; max = tmp }
+    if (min > max) {
+      const tmp = min
+      min = max
+      max = tmp
+    }
 
-    const latestIndex = [...values].reverse().findIndex(v => v !== null)
-    const latest = latestIndex === -1 ? null : values[values.length - 1 - latestIndex]
-    const prevIndex = [...values].reverse().slice(latestIndex + 1).findIndex(v => v !== null)
-    const prev = prevIndex === -1 ? null : values[values.length - 1 - latestIndex - 1 - prevIndex]
+    const latestIndex = [...values].reverse().findIndex((v) => v !== null)
+    const latest =
+      latestIndex === -1 ? null : values[values.length - 1 - latestIndex]
+    const prevIndex = [...values]
+      .reverse()
+      .slice(latestIndex + 1)
+      .findIndex((v) => v !== null)
+    const prev =
+      prevIndex === -1
+        ? null
+        : values[values.length - 1 - latestIndex - 1 - prevIndex]
     const delta = latest !== null && prev !== null ? latest - prev : null
 
     return { values, min, max, latest, delta }
@@ -131,82 +216,173 @@ const MultiMetricChart = ({
   const scaleY = (v) => {
     const n = Number(v)
     const clamped = Math.max(series.min, Math.min(series.max, n))
-    const tY = (clamped - series.min) / (series.max - series.min)
+    const tY = (clamped - series.min) / (series.max - series.min || 1)
     return padding + (1 - tY) * usableHeight
   }
 
-  const points = useMemo(() => {
-    return series.values.map((v, i) => {
-      if (v === null) return null
-      const x = padding + i * xStep
-      const y = scaleY(v)
-      return { x, y, v, i }
-    }).filter(Boolean)
-  }, [series, xStep])
+  const points = useMemo(
+    () =>
+      series.values
+        .map((v, i) => {
+          if (v === null) return null
+          const x = padding + i * xStep
+          const y = scaleY(v)
+          return { x, y, v, i }
+        })
+        .filter(Boolean),
+    [series, xStep]
+  )
 
   const maPoints = useMemo(() => {
     if (active.key !== 'weight' || !showWeightMA) return []
     const ma = movingAverage(series.values, 7)
-    return ma.map((v, i) => {
-      if (v === null) return null
-      const x = padding + i * xStep
-      const y = scaleY(v)
-      return { x, y, v, i }
-    }).filter(Boolean)
+    return ma
+      .map((v, i) => {
+        if (v === null) return null
+        const x = padding + i * xStep
+        const y = scaleY(v)
+        return { x, y, v, i }
+      })
+      .filter(Boolean)
   }, [series, xStep, active, showWeightMA])
 
   if (!data.length) {
     return (
-      <View style={[styles.empty, { borderColor: t.border, backgroundColor: t.card }]}>
-        <Text style={[styles.emptyTitle, { color: t.text }]}>{labels.noData}</Text>
-        <Text style={[styles.emptySub, { color: t.textMuted }]}>{labels.helper}</Text>
+      <View
+        style={[
+          styles.empty,
+          { borderColor: t.border, backgroundColor: t.card }
+        ]}
+      >
+        <Text style={[styles.emptyTitle, { color: t.text }]}>
+          {labels.noData}
+        </Text>
+        <Text style={[styles.emptySub, { color: t.textMuted }]}>
+          {labels.helper}
+        </Text>
       </View>
     )
   }
 
-  const latestStr = series.latest !== null ? active.fmt(series.latest) : '–'
-  const deltaStr = series.delta !== null ? `${series.delta >= 0 ? '+' : ''}${series.delta.toFixed(1)}` : null
-  const showTargetBand = active.key === 'weight' && weightTargetMin !== null && weightTargetMax !== null
-  const gridY = [0, 0.33, 0.66, 1].map(tick => padding + tick * usableHeight)
+  const latestStr =
+    series.latest !== null ? active.fmt(series.latest) : '–'
+  const deltaStr =
+    series.delta !== null
+      ? `${series.delta >= 0 ? '+' : ''}${series.delta.toFixed(1)}`
+      : null
+  const showTargetBand =
+    active.key === 'weight' &&
+    weightTargetMin !== null &&
+    weightTargetMax !== null
+  const gridY = [0, 0.33, 0.66, 1].map(
+    (tick) => padding + tick * usableHeight
+  )
 
   return (
     <View>
       {/* Leyenda compacta, sin botones internos */}
       <View style={styles.legend}>
         <View style={styles.legendLeft}>
-          <View style={[styles.dot, { backgroundColor: active.color }]} />
-          <Text style={[styles.legendLabel, { color: t.text }]}>{active.label}</Text>
+          <View
+            style={[styles.dot, { backgroundColor: active.color }]}
+          />
+          <Text
+            style={[styles.legendLabel, { color: t.text }]}
+          >
+            {active.label}
+          </Text>
         </View>
         <View style={styles.legendRight}>
-          <Text style={[styles.legendValue, { color: t.text }]}>{latestStr}</Text>
+          <Text
+            style={[styles.legendValue, { color: t.text }]}
+          >
+            {latestStr}
+          </Text>
           {deltaStr !== null ? (
-            <Text style={[styles.legendDelta, { color: series.delta >= 0 ? t.accent : '#ef4444' }]}>{deltaStr}</Text>
+            <Text
+              style={[
+                styles.legendDelta,
+                {
+                  color:
+                    series.delta >= 0 ? t.accent : '#ef4444'
+                }
+              ]}
+            >
+              {deltaStr}
+            </Text>
           ) : null}
         </View>
       </View>
 
       {/* Chart diario */}
-      <View style={[styles.chartWrapper, { borderColor: t.border, backgroundColor: t.card }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 0 }}>
+      <View
+        style={[
+          styles.chartWrapper,
+          { borderColor: t.border, backgroundColor: t.card }
+        ]}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 0 }}
+        >
           <Svg width={innerWidth} height={height}>
             <Defs>
-              <LinearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <Stop offset="0%" stopColor={t.bg} stopOpacity="0.06" />
-                <Stop offset="100%" stopColor={t.bg} stopOpacity="0" />
+              <LinearGradient
+                id="bgGrad"
+                x1="0%"
+                y1="0%"
+                x2="0%"
+                y2="100%"
+              >
+                <Stop
+                  offset="0%"
+                  stopColor={t.bg}
+                  stopOpacity="0.06"
+                />
+                <Stop
+                  offset="100%"
+                  stopColor={t.bg}
+                  stopOpacity="0"
+                />
               </LinearGradient>
-              <LinearGradient id="metricFill" x1="0%" y1="0%" x2="0%" y2="100%">
-                <Stop offset="0%" stopColor={active.color} stopOpacity="0.20" />
-                <Stop offset="100%" stopColor={active.color} stopOpacity="0" />
+              <LinearGradient
+                id="metricFill"
+                x1="0%"
+                y1="0%"
+                x2="0%"
+                y2="100%"
+              >
+                <Stop
+                  offset="0%"
+                  stopColor={active.color}
+                  stopOpacity="0.2"
+                />
+                <Stop
+                  offset="100%"
+                  stopColor={active.color}
+                  stopOpacity="0"
+                />
               </LinearGradient>
             </Defs>
 
-            <Rect x={0} y={0} width={innerWidth} height={height} fill="url(#bgGrad)" rx={18} ry={18} />
+            <Rect
+              x={0}
+              y={0}
+              width={innerWidth}
+              height={height}
+              fill="url(#bgGrad)"
+              rx={18}
+              ry={18}
+            />
 
             {/* Grid */}
             {gridY.map((y, idx) => (
               <Path
                 key={`grid-${idx}`}
-                d={`M ${padding} ${y} H ${innerWidth - padding}`}
+                d={`M ${padding} ${y} H ${
+                  innerWidth - padding
+                }`}
                 stroke={t.border}
                 strokeWidth={0.5}
                 strokeDasharray="4 7"
@@ -214,28 +390,48 @@ const MultiMetricChart = ({
             ))}
 
             {/* Banda objetivo para peso */}
-            {showTargetBand ? (() => {
-              const yTop = scaleY(Math.min(weightTargetMin, weightTargetMax))
-              const yBot = scaleY(Math.max(weightTargetMin, weightTargetMax))
-              const h = Math.max(0, yBot - yTop)
-              return (
-                <Rect
-                  x={padding}
-                  y={yTop}
-                  width={innerWidth - padding * 2}
-                  height={h}
-                  fill="rgba(16,185,129,0.16)"
-                  rx={10}
-                  ry={10}
-                />
-              )
-            })() : null}
+            {showTargetBand
+              ? (() => {
+                  const yTop = scaleY(
+                    Math.min(weightTargetMin, weightTargetMax)
+                  )
+                  const yBot = scaleY(
+                    Math.max(weightTargetMin, weightTargetMax)
+                  )
+                  const h = Math.max(0, yBot - yTop)
+                  return (
+                    <Rect
+                      x={padding}
+                      y={yTop}
+                      width={innerWidth - padding * 2}
+                      height={h}
+                      fill="rgba(16,185,129,0.16)"
+                      rx={10}
+                      ry={10}
+                    />
+                  )
+                })()
+              : null}
 
             {/* Área solo para peso */}
-            {active.area && points.length > 1 ? (() => {
-              const areaPath = `${createSmoothPath(points)} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`
-              return <Path d={areaPath} fill="url(#metricFill)" opacity={0.9} />
-            })() : null}
+            {active.area && points.length > 1
+              ? (() => {
+                  const areaPath = `${createSmoothPath(
+                    points
+                  )} L ${
+                    points[points.length - 1].x
+                  } ${height - padding} L ${
+                    points[0].x
+                  } ${height - padding} Z`
+                  return (
+                    <Path
+                      d={areaPath}
+                      fill="url(#metricFill)"
+                      opacity={0.9}
+                    />
+                  )
+                })()
+              : null}
 
             {/* Línea principal */}
             {points.length > 1 ? (
@@ -250,7 +446,9 @@ const MultiMetricChart = ({
             ) : null}
 
             {/* Promedio móvil 7d para peso */}
-            {active.key === 'weight' && showWeightMA && maPoints.length > 1 ? (
+            {active.key === 'weight' &&
+            showWeightMA &&
+            maPoints.length > 1 ? (
               <Path
                 d={createSmoothPath(maPoints)}
                 stroke={t.accent}
@@ -263,35 +461,55 @@ const MultiMetricChart = ({
 
             {/* Puntos */}
             {points.map((p, idx) => (
-              <Circle key={`dot-${idx}`} cx={p.x} cy={p.y} r={4.5} fill={t.card} stroke={active.color} strokeWidth={2.5} />
+              <Circle
+                key={`dot-${idx}`}
+                cx={p.x}
+                cy={p.y}
+                r={4.5}
+                fill={t.card}
+                stroke={active.color}
+                strokeWidth={2.5}
+              />
             ))}
 
             {/* Solo etiqueta del último punto */}
-            {showValueBadges && points.length ? (() => {
-              const last = points[points.length - 1]
-              const text = active.fmt(last.v)
-              const ly = Math.max(padding + 14, last.y - 8)
-              return (
-                <>
-                  <SvgText
-                    x={last.x}
-                    y={ly}
-                    fontSize={12}
-                    fontWeight="600"
-                    fill={t.text}
-                    textAnchor="middle"
-                    stroke={t.card}
-                    strokeWidth={3}
-                    paintOrder="stroke"
-                  >
-                    {text}
-                  </SvgText>
-                  <SvgText x={last.x} y={ly} fontSize={12} fontWeight="600" fill={t.text} textAnchor="middle">
-                    {text}
-                  </SvgText>
-                </>
-              )
-            })() : null}
+            {showValueBadges && points.length
+              ? (() => {
+                  const last = points[points.length - 1]
+                  const text = active.fmt(last.v)
+                  const ly = Math.max(
+                    padding + 14,
+                    last.y - 8
+                  )
+                  return (
+                    <>
+                      <SvgText
+                        x={last.x}
+                        y={ly}
+                        fontSize={12}
+                        fontWeight="600"
+                        fill={t.text}
+                        textAnchor="middle"
+                        stroke={t.card}
+                        strokeWidth={3}
+                        paintOrder="stroke"
+                      >
+                        {text}
+                      </SvgText>
+                      <SvgText
+                        x={last.x}
+                        y={ly}
+                        fontSize={12}
+                        fontWeight="600"
+                        fill={t.text}
+                        textAnchor="middle"
+                      >
+                        {text}
+                      </SvgText>
+                    </>
+                  )
+                })()
+              : null}
 
             {/* Labels X */}
             {data.map((row, i) => (
@@ -303,7 +521,7 @@ const MultiMetricChart = ({
                 fill={t.textMuted}
                 textAnchor="middle"
               >
-                {row.label}
+                {row.displayName || row.label}
               </SvgText>
             ))}
           </Svg>
