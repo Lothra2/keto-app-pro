@@ -14,24 +14,20 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import aiService from '../../api/aiService';
+import ScreenBanner from '../../components/shared/ScreenBanner';
+import { stripMarkdownHeadings } from '../../utils/labels';
 
 const QUICK = [
-  { id: 'q1', text: 'Plan keto 1800 kcal' },
-  { id: 'q2', text: 'Rutina calistenia 30 min' },
-  { id: 'q3', text: 'Receta con atún y aguacate' },
-  { id: 'q4', text: 'Analiza mi día, proteína baja' },
+  { id: 'q1', textEs: 'Plan keto 1800 kcal', textEn: 'Keto plan 1800 kcal' },
+  { id: 'q2', textEs: 'Rutina calistenia 30 min', textEn: 'Calisthenics routine 30 min' },
+  { id: 'q3', textEs: 'Receta con atún y aguacate', textEn: 'Recipe with tuna and avocado' },
+  { id: 'q4', textEs: 'Analiza mi día, proteína baja', textEn: 'Review my day, low protein' },
 ];
 
-const MODES = [
-  { id: 'auto', labelEs: 'Auto', labelEn: 'Auto' },
-  { id: 'diet', labelEs: 'Dieta', labelEn: 'Diet' },
-  { id: 'calis', labelEs: 'Calistenia', labelEn: 'Calisthenics' },
-  { id: 'recipes', labelEs: 'Recetas', labelEn: 'Recipes' },
-  { id: 'image', labelEs: 'Imagen', labelEn: 'Image' },
-];
+const MODES = [{ id: 'auto', labelEs: 'Auto', labelEn: 'Auto' }];
 
 const ConsultorScreen = () => {
-  const { theme: themeMode, language, apiUser, apiPass } = useApp();
+  const { theme: themeMode, language, apiCredentials } = useApp();
   const theme = getTheme(themeMode);
 
   const [messages, setMessages] = useState([
@@ -45,18 +41,36 @@ const ConsultorScreen = () => {
     },
   ]);
   const [input, setInput] = useState('');
-  const [mode, setMode] = useState('auto'); // auto | diet | calis | recipes | image
+  const [mode, setMode] = useState('auto'); // único modo activo
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
 
-  const creds = useMemo(() => ({ user: apiUser, pass: apiPass }), [apiUser, apiPass]);
+  const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
+  const hasCredentials = Boolean(creds.user && creds.pass);
+
+  const cleanAssistantText = useCallback((value) => {
+    if (!value) return '';
+
+    return stripMarkdownHeadings(value)
+      .replace(/\*\*/g, '')
+      .replace(/`/g, '')
+      .replace(/\u2022/g, '•')
+      .replace(/^\s*[-*]\s+/gm, '• ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }, []);
 
   const push = useCallback((msg) => {
-    setMessages((prev) => [...prev, msg]);
+    const normalized =
+      msg.role === 'assistant' && typeof msg.text === 'string'
+        ? { ...msg, text: cleanAssistantText(msg.text) }
+        : msg;
+
+    setMessages((prev) => [...prev, normalized]);
     requestAnimationFrame(() => {
       listRef.current?.scrollToEnd({ animated: true });
     });
-  }, []);
+  }, [cleanAssistantText]);
 
   const handleQuick = useCallback((text) => setInput(text), []);
 
@@ -70,6 +84,18 @@ const ConsultorScreen = () => {
     setLoading(true);
 
     try {
+      if (!hasCredentials) {
+        push({
+          id: String(Date.now() + 1),
+          role: 'assistant',
+          text:
+            language === 'en'
+              ? 'Add your API credentials in Settings to talk with the consultant.'
+              : 'Agrega tus credenciales API en Ajustes para usar el consultor.',
+        });
+        return;
+      }
+
       if (mode === 'image') {
         const img = await aiService.generateImage({
           prompt: trimmed,
@@ -78,18 +104,18 @@ const ConsultorScreen = () => {
           size: '1024x1024',
         });
 
-        if (img?.imageUrl || img?.base64) {
+        if (img?.error) {
+          push({
+            id: String(Date.now() + 2),
+            role: 'assistant',
+            text: img.error,
+          });
+        } else if (img?.imageUrl || img?.base64) {
           push({
             id: String(Date.now() + 1),
             role: 'assistant',
             text: language === 'en' ? 'Image generated' : 'Imagen generada',
             imageUri: img.imageUrl || `data:image/png;base64,${img.base64}`,
-          });
-        } else {
-          push({
-            id: String(Date.now() + 2),
-            role: 'assistant',
-            text: language === 'en' ? 'I could not create the image.' : 'No pude crear la imagen.',
           });
         }
       } else {
@@ -144,6 +170,52 @@ const ConsultorScreen = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={{ padding: 16 }}>
+        <ScreenBanner
+          theme={theme}
+          icon="🤖"
+          title={language === 'en' ? 'AI Consultant' : 'Consultor IA'}
+          subtitle={
+            language === 'en'
+              ? 'Ask for keto plans, calisthenics or recipes.'
+              : 'Pide planes keto, calistenia o recetas.'
+          }
+          description={
+            language === 'en'
+              ? 'Ask anything about keto plans, recipes or calisthenics.'
+              : 'Pregunta lo que necesites de planes keto, recetas o calistenia.'
+          }
+          badge={
+            hasCredentials
+              ? language === 'en'
+                ? 'Connected'
+                : 'Conectado'
+              : language === 'en'
+              ? 'Missing credentials'
+              : 'Faltan credenciales'
+          }
+          badgeTone={hasCredentials ? 'success' : 'warning'}
+          footnote={
+            language === 'en'
+              ? 'Use the quick prompts or type your own question below.'
+              : 'Usa los atajos rápidos o escribe tu pregunta abajo.'
+          }
+          style={styles.banner}
+        >
+          <View style={styles.bannerModes}>
+            <Text style={styles.bannerLabel}>
+              {language === 'en' ? 'Active mode' : 'Modo activo'}
+            </Text>
+            <Text style={styles.bannerModeValue}>
+              {
+                MODES.find((m) => m.id === mode)?.[language === 'en' ? 'labelEn' : 'labelEs'] ||
+                mode
+              }
+            </Text>
+          </View>
+        </ScreenBanner>
+      </View>
+
       {/* chips rápidos */}
       <View style={styles.quickRow}>
         <FlatList
@@ -152,44 +224,49 @@ const ConsultorScreen = () => {
           keyExtractor={(q) => q.id}
           contentContainerStyle={{ paddingHorizontal: 12 }}
           showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => handleQuick(item.text)}
-              style={[
-                styles.quickChip,
-                { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-              ]}
-            >
-              <Text style={{ color: theme.colors.text }}>{item.text}</Text>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => {
+            const label = language === 'en' ? item.textEn : item.textEs;
+            return (
+              <TouchableOpacity
+                onPress={() => handleQuick(label)}
+                style={[
+                  styles.quickChip,
+                  { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+                ]}
+              >
+                <Text style={{ color: theme.colors.text }}>{label}</Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       </View>
 
       {/* selector de modo */}
-      <View style={styles.modeRow}>
-        {MODES.map((m) => {
-          const active = m.id === mode;
-          const label = language === 'en' ? m.labelEn : m.labelEs;
-          return (
-            <TouchableOpacity
-              key={m.id}
-              onPress={() => setMode(m.id)}
-              style={[
-                styles.modeChip,
-                {
-                  backgroundColor: active ? theme.colors.primary : 'transparent',
-                  borderColor: active ? theme.colors.primary : theme.colors.border,
-                },
-              ]}
-            >
-              <Text style={{ color: active ? theme.colors.onPrimary : theme.colors.textMuted }}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {MODES.length > 1 && (
+        <View style={styles.modeRow}>
+          {MODES.map((m) => {
+            const active = m.id === mode;
+            const label = language === 'en' ? m.labelEn : m.labelEs;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                onPress={() => setMode(m.id)}
+                style={[
+                  styles.modeChip,
+                  {
+                    backgroundColor: active ? theme.colors.primary : 'transparent',
+                    borderColor: active ? theme.colors.primary : theme.colors.border,
+                  },
+                ]}
+              >
+                <Text style={{ color: active ? theme.colors.onPrimary : theme.colors.textMuted }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {/* chat */}
       <FlatList
@@ -237,7 +314,30 @@ const ConsultorScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  quickRow: { paddingVertical: 8 },
+  banner: {
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  bannerModes: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bannerLabel: {
+    fontSize: 13,
+    color: 'rgba(241,245,249,0.8)',
+    fontWeight: '600',
+  },
+  bannerModeValue: {
+    fontSize: 14,
+    color: 'rgba(248,250,252,0.95)',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  quickRow: { paddingVertical: 8, paddingHorizontal: 12 },
   quickChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,

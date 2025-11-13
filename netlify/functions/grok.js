@@ -168,7 +168,9 @@ exports.handler = async (event) => {
   }
 
   // ====== 2) Generación de IMAGEN ======
-  if (["image", "image-gen", "generate-image"].includes(mode)) {
+  const imageModes = ["consultor-image", "image", "image-gen", "generate-image"];
+
+  if (imageModes.includes(mode)) {
     if (!prompt) {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: "prompt required" }) };
     }

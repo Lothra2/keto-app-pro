@@ -49,9 +49,9 @@ export const AppProvider = ({ children }) => {
 
   // Reconstruir plan cuando cambian semanas o género
   useEffect(() => {
-    const plan = buildPlan(planWeeks, gender);
+    const plan = buildPlan(planWeeks, gender, language);
     setDerivedPlan(plan);
-  }, [planWeeks, gender]);
+  }, [planWeeks, gender, language]);
 
   const loadInitialData = async () => {
     try {
@@ -118,7 +118,7 @@ export const AppProvider = ({ children }) => {
         workoutIntensity: savedIntensity || prev.workoutIntensity
       }));
 
-      const plan = buildPlan(weeksValue, genderValue);
+      const plan = buildPlan(weeksValue, genderValue, savedLang || language);
       setDerivedPlan(plan);
 
       const savedSelectedDay = values[KEYS.SELECTED_DAY];

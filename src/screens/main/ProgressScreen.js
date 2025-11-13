@@ -30,6 +30,7 @@ import MultiMetricChart from '../../components/progress/MultiMetricChart'
 import { getDayDisplayName, getDayTag } from '../../utils/labels'
 import { syncUserBaseOverrides } from '../../storage/storage'
 import { toOneDecimal, toIntOrNull, toNumberOrNull } from '../../utils/validation'
+import ScreenBanner from '../../components/shared/ScreenBanner'
 
 const USER_HEIGHT_KEY = 'USER_HEIGHT_OVERRIDE'
 const USER_WEIGHT_KEY = 'USER_WEIGHT_OVERRIDE'
@@ -455,16 +456,52 @@ const ProgressScreen = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          {language === 'en' ? '📈 Progress' : '📈 Progreso'}
-        </Text>
-        <Text style={styles.subtitle}>
-          {language === 'en'
+      <ScreenBanner
+        theme={theme}
+        icon="📈"
+        title={language === 'en' ? 'Progress' : 'Progreso'}
+        subtitle={
+          language === 'en'
             ? `${completedDays} of ${derivedPlan.length} days completed`
-            : `${completedDays} de ${derivedPlan.length} días completados`}
-        </Text>
-      </View>
+            : `${completedDays} de ${derivedPlan.length} días completados`
+        }
+        description={
+          language === 'en'
+            ? 'Log your metrics to watch trends and stay accountable.'
+            : 'Registra tus métricas para ver tendencias y mantener el enfoque.'
+        }
+        badge={
+          `${Math.min(100, Math.round((completedDays / Math.max(derivedPlan.length || 1, 1)) * 100))}%`
+        }
+        badgeTone="info"
+        style={styles.banner}
+        footnote={
+          language === 'en'
+            ? 'Tap a day to edit weight, energy and notes.'
+            : 'Toca un día para editar peso, energía y notas.'
+        }
+      >
+        <View style={styles.bannerStatsRow}>
+          <View style={styles.bannerStat}>
+            <Text style={styles.bannerStatLabel}>
+              {language === 'en' ? 'Water days' : 'Días con agua'}
+            </Text>
+            <Text style={styles.bannerStatValue}>{waterSummary}</Text>
+          </View>
+          <View style={styles.bannerStat}>
+            <Text style={styles.bannerStatLabel}>
+              {language === 'en' ? 'Workouts' : 'Entrenos'}
+            </Text>
+            <Text style={styles.bannerStatValue}>{workoutSummary}</Text>
+          </View>
+          <View style={styles.bannerStat}>
+            <Text style={styles.bannerStatLabel}>
+              {language === 'en' ? 'Calorie adherence' : 'Adherencia calorías'}
+            </Text>
+            <Text style={styles.bannerStatValue}>{adherenceSummary}</Text>
+          </View>
+        </View>
+      </ScreenBanner>
 
       {/* Base Data */}
       {hasBaseData ? (
@@ -943,17 +980,31 @@ const getStyles = (theme) =>
       padding: theme.spacing.lg,
       paddingBottom: 100
     },
-    header: {
-      marginBottom: theme.spacing.lg
+    banner: {
+      marginBottom: theme.spacing.lg,
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 6
     },
-    title: {
-      ...theme.typography.h1,
-      color: theme.colors.text,
-      marginBottom: 4
+    bannerStatsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: theme.spacing.md
     },
-    subtitle: {
+    bannerStat: {
+      flex: 1,
+      gap: 4
+    },
+    bannerStatLabel: {
+      ...theme.typography.caption,
+      color: 'rgba(226,232,240,0.85)'
+    },
+    bannerStatValue: {
       ...theme.typography.body,
-      color: theme.colors.textMuted
+      color: 'rgba(248,250,252,0.95)',
+      fontWeight: '600'
     },
     card: {
       backgroundColor: theme.colors.card,
