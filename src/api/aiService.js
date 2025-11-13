@@ -87,6 +87,8 @@ class AIService {
 
     const candidates = ['consultor-image', 'image', 'image-gen', 'generate-image']
 
+    let lastErrorMessage = ''
+
     for (const tryMode of candidates) {
       try {
         const data = await callNetlifyAI({
@@ -107,7 +109,15 @@ class AIService {
         }
       } catch (e) {
         const status = e?.response?.status
+        const message = e?.response?.data?.error || e.message || ''
+
         if (status === 401 || status === 400 || status === 404) {
+          lastErrorMessage = message
+          continue
+        }
+
+        if (!status && message) {
+          lastErrorMessage = message
           continue
         }
         throw e
@@ -116,9 +126,10 @@ class AIService {
 
     return {
       error:
-        language === 'en'
+        lastErrorMessage ||
+        (language === 'en'
           ? 'We could not create the image with the current configuration.'
-          : 'No pudimos crear la imagen con la configuración actual.'
+          : 'No pudimos crear la imagen con la configuración actual.')
     }
   }
 
