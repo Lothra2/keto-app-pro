@@ -9,6 +9,7 @@ import Button from '../../components/shared/Button'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import { getWorkoutForDay } from '../../data/workouts'
 import Card from '../../components/shared/Card'
+import ScreenBanner from '../../components/shared/ScreenBanner'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}

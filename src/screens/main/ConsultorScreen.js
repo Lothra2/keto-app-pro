@@ -15,6 +15,7 @@ import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import aiService from '../../api/aiService';
 import ScreenBanner from '../../components/shared/ScreenBanner';
+import { stripMarkdownHeadings } from '../../utils/labels';
 
 const QUICK = [
   { id: 'q1', text: 'Plan keto 1800 kcal' },
@@ -53,12 +54,29 @@ const ConsultorScreen = () => {
   const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
   const hasCredentials = Boolean(creds.user && creds.pass);
 
+  const cleanAssistantText = useCallback((value) => {
+    if (!value) return '';
+
+    return stripMarkdownHeadings(value)
+      .replace(/\*\*/g, '')
+      .replace(/`/g, '')
+      .replace(/\u2022/g, '•')
+      .replace(/^\s*[-*]\s+/gm, '• ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }, []);
+
   const push = useCallback((msg) => {
-    setMessages((prev) => [...prev, msg]);
+    const normalized =
+      msg.role === 'assistant' && typeof msg.text === 'string'
+        ? { ...msg, text: cleanAssistantText(msg.text) }
+        : msg;
+
+    setMessages((prev) => [...prev, normalized]);
     requestAnimationFrame(() => {
       listRef.current?.scrollToEnd({ animated: true });
     });
-  }, []);
+  }, [cleanAssistantText]);
 
   const handleQuick = useCallback((text) => setInput(text), []);
 
@@ -92,18 +110,18 @@ const ConsultorScreen = () => {
           size: '1024x1024',
         });
 
-        if (img?.imageUrl || img?.base64) {
+        if (img?.error) {
+          push({
+            id: String(Date.now() + 2),
+            role: 'assistant',
+            text: img.error,
+          });
+        } else if (img?.imageUrl || img?.base64) {
           push({
             id: String(Date.now() + 1),
             role: 'assistant',
             text: language === 'en' ? 'Image generated' : 'Imagen generada',
             imageUri: img.imageUrl || `data:image/png;base64,${img.base64}`,
-          });
-        } else {
-          push({
-            id: String(Date.now() + 2),
-            role: 'assistant',
-            text: language === 'en' ? 'I could not create the image.' : 'No pude crear la imagen.',
           });
         }
       } else {

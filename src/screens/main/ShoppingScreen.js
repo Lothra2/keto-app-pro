@@ -14,6 +14,7 @@ import { getDayData, getShoppingList, saveShoppingList } from '../../storage/sto
 import aiService from '../../api/aiService'
 import { mergePlanDay, buildWeekAiPayload } from '../../utils/plan'
 import { stripMarkdownHeadings } from '../../utils/labels'
+import ScreenBanner from '../../components/shared/ScreenBanner'
 
 const ShoppingScreen = () => {
   const {
