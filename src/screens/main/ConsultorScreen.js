@@ -14,6 +14,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import aiService from '../../api/aiService';
+import ScreenBanner from '../../components/shared/ScreenBanner';
 
 const QUICK = [
   { id: 'q1', text: 'Plan keto 1800 kcal' },
@@ -31,7 +32,7 @@ const MODES = [
 ];
 
 const ConsultorScreen = () => {
-  const { theme: themeMode, language, apiUser, apiPass } = useApp();
+  const { theme: themeMode, language, apiCredentials } = useApp();
   const theme = getTheme(themeMode);
 
   const [messages, setMessages] = useState([
@@ -49,7 +50,8 @@ const ConsultorScreen = () => {
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
 
-  const creds = useMemo(() => ({ user: apiUser, pass: apiPass }), [apiUser, apiPass]);
+  const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
+  const hasCredentials = Boolean(creds.user && creds.pass);
 
   const push = useCallback((msg) => {
     setMessages((prev) => [...prev, msg]);
@@ -70,6 +72,18 @@ const ConsultorScreen = () => {
     setLoading(true);
 
     try {
+      if (!hasCredentials) {
+        push({
+          id: String(Date.now() + 1),
+          role: 'assistant',
+          text:
+            language === 'en'
+              ? 'Add your API credentials in Settings to talk with the consultant.'
+              : 'Agrega tus credenciales API en Ajustes para usar el consultor.',
+        });
+        return;
+      }
+
       if (mode === 'image') {
         const img = await aiService.generateImage({
           prompt: trimmed,
@@ -144,6 +158,52 @@ const ConsultorScreen = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={{ padding: 16 }}>
+        <ScreenBanner
+          theme={theme}
+          icon="🤖"
+          title={language === 'en' ? 'AI Consultant' : 'Consultor IA'}
+          subtitle={
+            language === 'en'
+              ? 'Ask for keto plans, calisthenics or recipes.'
+              : 'Pide planes keto, calistenia o recetas.'
+          }
+          description={
+            language === 'en'
+              ? 'Switch between chat or image mode to create anything you need.'
+              : 'Cambia entre modo chat o imagen para crear lo que necesites.'
+          }
+          badge={
+            hasCredentials
+              ? language === 'en'
+                ? 'Connected'
+                : 'Conectado'
+              : language === 'en'
+              ? 'Missing credentials'
+              : 'Faltan credenciales'
+          }
+          badgeTone={hasCredentials ? 'success' : 'warning'}
+          footnote={
+            language === 'en'
+              ? 'Use the quick prompts or type your own question below.'
+              : 'Usa los atajos rápidos o escribe tu pregunta abajo.'
+          }
+          style={styles.banner}
+        >
+          <View style={styles.bannerModes}>
+            <Text style={styles.bannerLabel}>
+              {language === 'en' ? 'Active mode' : 'Modo activo'}
+            </Text>
+            <Text style={styles.bannerModeValue}>
+              {
+                MODES.find((m) => m.id === mode)?.[language === 'en' ? 'labelEn' : 'labelEs'] ||
+                mode
+              }
+            </Text>
+          </View>
+        </ScreenBanner>
+      </View>
+
       {/* chips rápidos */}
       <View style={styles.quickRow}>
         <FlatList
@@ -237,7 +297,30 @@ const ConsultorScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  quickRow: { paddingVertical: 8 },
+  banner: {
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  bannerModes: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bannerLabel: {
+    fontSize: 13,
+    color: 'rgba(241,245,249,0.8)',
+    fontWeight: '600',
+  },
+  bannerModeValue: {
+    fontSize: 14,
+    color: 'rgba(248,250,252,0.95)',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  quickRow: { paddingVertical: 8, paddingHorizontal: 12 },
   quickChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
