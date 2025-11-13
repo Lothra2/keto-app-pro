@@ -1,19 +1,22 @@
 import { basePlan } from '../data/basePlan';
+import { basePlanEn } from '../data/basePlanEn';
 
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
  */
-export function buildPlan(weeks = 2, gender = 'male') {
+export function buildPlan(weeks = 2, gender = 'male', language = 'es') {
   const totalDays = weeks * 7;
   const plan = [];
 
+  const template = language === 'en' ? basePlanEn : basePlan;
+
   for (let i = 0; i < totalDays; i++) {
-    const baseDay = basePlan[i % basePlan.length];
+    const baseDay = template[i % template.length];
     const dayCopy = JSON.parse(JSON.stringify(baseDay));
-    
+
     // Actualizar nombre del día
-    dayCopy.dia = `Día ${i + 1}`;
-    
+    dayCopy.dia = language === 'en' ? `Day ${i + 1}` : `Día ${i + 1}`;
+
     // Ajuste de calorías por género
     if (gender === 'female') {
       dayCopy.kcal = Math.round((dayCopy.kcal || 1600) * 0.9);

@@ -18,19 +18,13 @@ import ScreenBanner from '../../components/shared/ScreenBanner';
 import { stripMarkdownHeadings } from '../../utils/labels';
 
 const QUICK = [
-  { id: 'q1', text: 'Plan keto 1800 kcal' },
-  { id: 'q2', text: 'Rutina calistenia 30 min' },
-  { id: 'q3', text: 'Receta con atún y aguacate' },
-  { id: 'q4', text: 'Analiza mi día, proteína baja' },
+  { id: 'q1', textEs: 'Plan keto 1800 kcal', textEn: 'Keto plan 1800 kcal' },
+  { id: 'q2', textEs: 'Rutina calistenia 30 min', textEn: 'Calisthenics routine 30 min' },
+  { id: 'q3', textEs: 'Receta con atún y aguacate', textEn: 'Recipe with tuna and avocado' },
+  { id: 'q4', textEs: 'Analiza mi día, proteína baja', textEn: 'Review my day, low protein' },
 ];
 
-const MODES = [
-  { id: 'auto', labelEs: 'Auto', labelEn: 'Auto' },
-  { id: 'diet', labelEs: 'Dieta', labelEn: 'Diet' },
-  { id: 'calis', labelEs: 'Calistenia', labelEn: 'Calisthenics' },
-  { id: 'recipes', labelEs: 'Recetas', labelEn: 'Recipes' },
-  { id: 'image', labelEs: 'Imagen', labelEn: 'Image' },
-];
+const MODES = [{ id: 'auto', labelEs: 'Auto', labelEn: 'Auto' }];
 
 const ConsultorScreen = () => {
   const { theme: themeMode, language, apiCredentials } = useApp();
@@ -47,7 +41,7 @@ const ConsultorScreen = () => {
     },
   ]);
   const [input, setInput] = useState('');
-  const [mode, setMode] = useState('auto'); // auto | diet | calis | recipes | image
+  const [mode, setMode] = useState('auto'); // único modo activo
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
 
@@ -188,8 +182,8 @@ const ConsultorScreen = () => {
           }
           description={
             language === 'en'
-              ? 'Switch between chat or image mode to create anything you need.'
-              : 'Cambia entre modo chat o imagen para crear lo que necesites.'
+              ? 'Ask anything about keto plans, recipes or calisthenics.'
+              : 'Pregunta lo que necesites de planes keto, recetas o calistenia.'
           }
           badge={
             hasCredentials
@@ -230,44 +224,49 @@ const ConsultorScreen = () => {
           keyExtractor={(q) => q.id}
           contentContainerStyle={{ paddingHorizontal: 12 }}
           showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => handleQuick(item.text)}
-              style={[
-                styles.quickChip,
-                { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-              ]}
-            >
-              <Text style={{ color: theme.colors.text }}>{item.text}</Text>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => {
+            const label = language === 'en' ? item.textEn : item.textEs;
+            return (
+              <TouchableOpacity
+                onPress={() => handleQuick(label)}
+                style={[
+                  styles.quickChip,
+                  { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+                ]}
+              >
+                <Text style={{ color: theme.colors.text }}>{label}</Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       </View>
 
       {/* selector de modo */}
-      <View style={styles.modeRow}>
-        {MODES.map((m) => {
-          const active = m.id === mode;
-          const label = language === 'en' ? m.labelEn : m.labelEs;
-          return (
-            <TouchableOpacity
-              key={m.id}
-              onPress={() => setMode(m.id)}
-              style={[
-                styles.modeChip,
-                {
-                  backgroundColor: active ? theme.colors.primary : 'transparent',
-                  borderColor: active ? theme.colors.primary : theme.colors.border,
-                },
-              ]}
-            >
-              <Text style={{ color: active ? theme.colors.onPrimary : theme.colors.textMuted }}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {MODES.length > 1 && (
+        <View style={styles.modeRow}>
+          {MODES.map((m) => {
+            const active = m.id === mode;
+            const label = language === 'en' ? m.labelEn : m.labelEs;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                onPress={() => setMode(m.id)}
+                style={[
+                  styles.modeChip,
+                  {
+                    backgroundColor: active ? theme.colors.primary : 'transparent',
+                    borderColor: active ? theme.colors.primary : theme.colors.border,
+                  },
+                ]}
+              >
+                <Text style={{ color: active ? theme.colors.onPrimary : theme.colors.textMuted }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {/* chat */}
       <FlatList
