@@ -15,6 +15,7 @@ import WeekSelector from '../../components/progress/WeekSelector';
 import DayPills from '../../components/progress/DayPills';
 import CalorieBar from '../../components/meals/CalorieBar';
 import Card from '../../components/shared/Card';
+import ScreenBanner from '../../components/shared/ScreenBanner';
 import Button from '../../components/shared/Button';
 import {
   getDayData,
@@ -680,6 +681,11 @@ const HomeScreen = ({ navigation }) => {
   const waterPercent = Math.min(100, Math.round((waterInfo.ml / (waterInfo.goal || 1)) * 100));
   const completedMealsCount = Object.values(mealStates).filter(Boolean).length;
   const totalMeals = Object.keys(mealStates).length;
+  const macrosDisplay = {
+    carbs: dynamicMacros?.carbs || dayData.macros?.carbs || '--',
+    prot: dynamicMacros?.prot || dayData.macros?.prot || '--',
+    fat: dynamicMacros?.fat || dayData.macros?.fat || '--'
+  };
 
   return (
     <ScrollView
@@ -703,43 +709,69 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <Card style={styles.heroCard}>
-        <View style={styles.heroTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>{greeting}</Text>
-            <Text style={styles.dayTitle}>{dayData.dia}</Text>
-            <Text style={styles.subDay}>
-              {language === 'en' ? `Week ${safeWeek}` : `Semana ${safeWeek}`}
-            </Text>
-          </View>
+      <ScreenBanner
+        theme={theme}
+        icon="🍽️"
+        title={greeting}
+        subtitle={dayData.dia}
+        description={language === 'en' ? `Week ${safeWeek}` : `Semana ${safeWeek}`}
+        badge={
+          isDone
+            ? language === 'en'
+              ? 'Completed'
+              : 'Completado'
+            : language === 'en'
+            ? 'In progress'
+            : 'En progreso'
+        }
+        badgeTone={isDone ? 'success' : 'muted'}
+        rightSlot={
           <TouchableOpacity
-            style={[styles.dayDonePill, isDone && styles.dayDonePillActive]}
+            style={[styles.bannerToggle, isDone && styles.bannerToggleActive]}
             onPress={handleToggleDayComplete}
           >
-            <Text style={styles.dayDoneText}>
-              {isDone ? (language === 'en' ? 'Done' : 'Hecho') : (language === 'en' ? 'Mark' : 'Marcar')}
+            <Text style={[styles.bannerToggleText, isDone && styles.bannerToggleTextActive]}>
+              {isDone
+                ? language === 'en'
+                  ? 'Undo'
+                  : 'Desmarcar'
+                : language === 'en'
+                ? 'Mark day'
+                : 'Marcar día'}
             </Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.heroMacros}>
-          <Text style={styles.kcalText}>
-            {(dayData.kcal || calorieGoal)} kcal
-          </Text>
-          <View style={styles.macrosList}>
-            <Text style={styles.macroBadge}>
-              C {dynamicMacros?.carbs || dayData.macros?.carbs}
+        }
+        footnote={
+          language === 'en'
+            ? 'Track meals, water and workouts to keep your day on point.'
+            : 'Registra comidas, agua y entrenos para mantener tu día en ruta.'
+        }
+        style={styles.homeBanner}
+      >
+        <View style={styles.bannerStatsRow}>
+          <View style={styles.bannerStat}>
+            <Text style={styles.bannerStatLabel}>
+              {language === 'en' ? 'Daily calories' : 'Calorías diarias'}
             </Text>
-            <Text style={styles.macroBadge}>
-              P {dynamicMacros?.prot || dayData.macros?.prot}
-            </Text>
-            <Text style={styles.macroBadge}>
-              G {dynamicMacros?.fat || dayData.macros?.fat}
-            </Text>
+            <Text style={styles.bannerStatValue}>{(dayData.kcal || calorieGoal)} kcal</Text>
+          </View>
+          <View style={styles.bannerMacros}>
+            <View style={styles.bannerMacroChip}>
+              <Text style={styles.bannerMacroLabel}>C</Text>
+              <Text style={styles.bannerMacroValue}>{macrosDisplay.carbs}</Text>
+            </View>
+            <View style={styles.bannerMacroChip}>
+              <Text style={styles.bannerMacroLabel}>P</Text>
+              <Text style={styles.bannerMacroValue}>{macrosDisplay.prot}</Text>
+            </View>
+            <View style={styles.bannerMacroChip}>
+              <Text style={styles.bannerMacroLabel}>G</Text>
+              <Text style={styles.bannerMacroValue}>{macrosDisplay.fat}</Text>
+            </View>
           </View>
         </View>
-        <CalorieBar consumed={caloriesConsumed} goal={calorieGoal} />
-      </Card>
+        <CalorieBar consumed={caloriesConsumed} goal={calorieGoal} variant="overlay" />
+      </ScreenBanner>
 
       <View style={styles.quickRow}>
         <View style={styles.statCard}>
@@ -1110,72 +1142,70 @@ const createStyles = (theme) =>
       ...theme.typography.body,
       color: theme.colors.text
     },
-    heroCard: {
+    homeBanner: {
       marginHorizontal: theme.spacing.lg,
       marginTop: theme.spacing.md,
-      gap: theme.spacing.sm,
-      backgroundColor: theme.colors.card,
-      borderColor: 'transparent',
-      borderRadius: theme.radius.lg,
-      padding: theme.spacing.md
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 6
     },
-    heroTop: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: theme.spacing.sm
-    },
-    greeting: {
-      ...theme.typography.body,
-      color: theme.colors.text,
-      marginBottom: 2
-    },
-    dayTitle: {
-      ...theme.typography.h1,
-      color: theme.colors.text
-    },
-    subDay: {
-      ...theme.typography.caption,
-      color: theme.colors.textMuted
-    },
-    dayDonePill: {
-      paddingHorizontal: 14,
-      paddingVertical: 6,
+    bannerToggle: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
       borderRadius: 999,
-      backgroundColor: 'rgba(226,232,240,0.05)',
-      borderWidth: 1,
-      borderColor: 'rgba(226,232,240,0.08)'
+      backgroundColor: 'rgba(15,23,42,0.35)'
     },
-    dayDonePillActive: {
-      backgroundColor: 'rgba(34,197,94,0.2)',
-      borderColor: 'rgba(34,197,94,0.6)'
+    bannerToggleActive: {
+      backgroundColor: 'rgba(34,197,94,0.3)'
     },
-    dayDoneText: {
+    bannerToggleText: {
       ...theme.typography.caption,
-      color: theme.colors.text,
+      color: 'rgba(248,250,252,0.9)',
       fontWeight: '600'
     },
-    heroMacros: {
+    bannerToggleTextActive: {
+      color: 'rgba(248,250,252,1)'
+    },
+    bannerStatsRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       gap: theme.spacing.md
     },
-    kcalText: {
-      ...theme.typography.body,
-      color: theme.colors.primary,
+    bannerStat: {
+      flex: 1,
+      gap: 4
+    },
+    bannerStatLabel: {
+      ...theme.typography.caption,
+      color: 'rgba(226,232,240,0.85)'
+    },
+    bannerStatValue: {
+      ...theme.typography.h2,
+      color: 'rgba(248,250,252,0.98)' 
+    },
+    bannerMacros: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm
+    },
+    bannerMacroChip: {
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 6,
+      borderRadius: theme.radius.md,
+      backgroundColor: 'rgba(15,23,42,0.25)',
+      alignItems: 'center'
+    },
+    bannerMacroLabel: {
+      ...theme.typography.caption,
+      color: 'rgba(226,232,240,0.75)',
       fontWeight: '600'
     },
-    macrosList: {
-      flexDirection: 'row',
-      gap: theme.spacing.xs
-    },
-    macroBadge: {
-      ...theme.typography.caption,
-      color: theme.colors.text,
-      backgroundColor: theme.colors.cardSoft,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: theme.radius.sm
+    bannerMacroValue: {
+      ...theme.typography.body,
+      color: 'rgba(248,250,252,0.95)',
+      fontWeight: '600'
     },
     quickRow: {
       flexDirection: 'row',
