@@ -14,6 +14,7 @@ import { getDayData, getShoppingList, saveShoppingList } from '../../storage/sto
 import aiService from '../../api/aiService'
 import { mergePlanDay, buildWeekAiPayload } from '../../utils/plan'
 import { stripMarkdownHeadings } from '../../utils/labels'
+import ScreenBanner from '../../components/shared/ScreenBanner'
 
 const ShoppingScreen = () => {
   const {
@@ -168,35 +169,35 @@ const ShoppingScreen = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>
-            {language === 'en' ? '🛒 Shopping List' : '🛒 Lista de compras'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {language === 'en' ? `Week ${currentWeek}` : `Semana ${currentWeek}`}
-          </Text>
-        </View>
-
-        {prettyDate ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {language === 'en' ? 'Updated' : 'Actualizado'}
-            </Text>
-            <Text style={styles.badgeSub}>{prettyDate}</Text>
-          </View>
-        ) : (
-          <View style={[styles.badge, styles.badgeWarn]}>
-            <Text style={styles.badgeText}>
-              {language === 'en' ? 'No AI list' : 'Sin lista IA'}
-            </Text>
-            <Text style={styles.badgeSub}>
-              {language === 'en' ? 'Create one' : 'Genera una'}
-            </Text>
-          </View>
-        )}
-      </View>
+      <ScreenBanner
+        theme={theme}
+        icon="🛒"
+        title={language === 'en' ? 'Shopping List' : 'Lista de compras'}
+        subtitle={language === 'en' ? `Week ${currentWeek}` : `Semana ${currentWeek}`}
+        description={
+          language === 'en'
+            ? 'Base groceries plus AI suggestions for your keto plan.'
+            : 'Compras base más sugerencias IA para tu plan keto.'
+        }
+        badge={
+          prettyDate
+            ? language === 'en'
+              ? 'AI list ready'
+              : 'Lista IA lista'
+            : language === 'en'
+            ? 'Pending list'
+            : 'Lista pendiente'
+        }
+        badgeTone={prettyDate ? 'success' : 'warning'}
+        footnote={
+          prettyDate
+            ? `${language === 'en' ? 'Updated on' : 'Actualizada'} ${prettyDate}`
+            : language === 'en'
+            ? 'Generate it with one tap to save time at the store.'
+            : 'Genérala con un toque para ahorrar tiempo en la tienda.'
+        }
+        style={styles.banner}
+      />
 
       {/* card acción */}
       <View style={styles.actionCard}>
@@ -303,41 +304,13 @@ const getStyles = (theme) =>
       paddingBottom: 140,
       gap: theme.spacing.lg
     },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start'
-    },
-    title: {
-      ...theme.typography.h1,
-      color: theme.colors.text,
-      marginBottom: 4
-    },
-    subtitle: {
-      ...theme.typography.body,
-      color: theme.colors.textMuted
-    },
-    badge: {
-      backgroundColor: theme.colors.card,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.radius.sm,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      maxWidth: 180
-    },
-    badgeWarn: {
-      backgroundColor: 'rgba(239,68,68,0.12)',
-      borderColor: 'rgba(239,68,68,0.32)'
-    },
-    badgeText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: theme.colors.text
-    },
-    badgeSub: {
-      fontSize: 10,
-      color: theme.colors.textMuted
+    banner: {
+      marginBottom: theme.spacing.lg,
+      shadowColor: '#000',
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 6
     },
     actionCard: {
       backgroundColor: theme.colors.card,
