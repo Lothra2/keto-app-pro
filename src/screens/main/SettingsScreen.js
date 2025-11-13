@@ -12,6 +12,7 @@ import {
 import { CommonActions } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import ScreenBanner from '../../components/shared/ScreenBanner';
 
 const SettingsScreen = ({ navigation }) => {
   const {
@@ -139,12 +140,39 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>
-          {language === 'en' ? '⚙️ Settings' : '⚙️ Ajustes'}
-        </Text>
-      </View>
+      <ScreenBanner
+        theme={theme}
+        icon="⚙️"
+        title={language === 'en' ? 'Settings' : 'Ajustes'}
+        subtitle={
+          language === 'en'
+            ? 'Customize your plan, AI access and preferences.'
+            : 'Personaliza tu plan, acceso IA y preferencias.'
+        }
+        description={
+          language === 'en'
+            ? `Language: ${language === 'en' ? 'English' : 'Español'} · Theme: ${
+                themeMode === 'dark' ? 'Dark' : 'Light'
+              }`
+            : `Idioma: ${language === 'en' ? 'English' : 'Español'} · Tema: ${
+                themeMode === 'dark' ? 'Oscuro' : 'Claro'
+              }`
+        }
+        badge={
+          user?.name
+            ? `${language === 'en' ? 'User' : 'Usuario'}: ${user.name}`
+            : language === 'en'
+            ? 'Add your name'
+            : 'Agrega tu nombre'
+        }
+        badgeTone={user?.name ? 'success' : 'warning'}
+        footnote={
+          language === 'en'
+            ? 'Changes are saved automatically.'
+            : 'Los cambios se guardan automáticamente.'
+        }
+        style={styles.banner}
+      />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
@@ -412,12 +440,13 @@ const getStyles = (theme) => StyleSheet.create({
     padding: theme.spacing.lg,
     paddingBottom: 100
   },
-  header: {
-    marginBottom: theme.spacing.lg
-  },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text
+  banner: {
+    marginBottom: theme.spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6
   },
   section: {
     marginBottom: theme.spacing.xl

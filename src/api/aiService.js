@@ -85,7 +85,9 @@ class AIService {
         ? 'Generate a clean, realistic image aligned with keto, health, or calisthenics. No text overlays. Good lighting.'
         : 'Genera una imagen limpia y realista alineada con keto, salud o calistenia. Sin textos en la imagen. Buena iluminación.'
 
-    const candidates = ['image', 'image-gen', 'generate-image']
+    const candidates = ['consultor-image', 'image', 'image-gen', 'generate-image']
+
+    let lastErrorMessage = ''
 
     for (const tryMode of candidates) {
       try {
@@ -107,14 +109,28 @@ class AIService {
         }
       } catch (e) {
         const status = e?.response?.status
+        const message = e?.response?.data?.error || e.message || ''
+
         if (status === 401 || status === 400 || status === 404) {
+          lastErrorMessage = message
+          continue
+        }
+
+        if (!status && message) {
+          lastErrorMessage = message
           continue
         }
         throw e
       }
     }
 
-    return { error: language === 'en' ? 'No image returned.' : 'No se obtuvo imagen.' }
+    return {
+      error:
+        lastErrorMessage ||
+        (language === 'en'
+          ? 'We could not create the image with the current configuration.'
+          : 'No pudimos crear la imagen con la configuración actual.')
+    }
   }
 
   /**

@@ -14,7 +14,8 @@ const OnboardingScreen = ({ navigation }) => {
     updateMetrics,
     metrics,
     gender,
-    completeOnboarding
+    completeOnboarding,
+    planWeeks
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -26,6 +27,7 @@ const OnboardingScreen = ({ navigation }) => {
   const [weight, setWeight] = useState(metrics.startWeight ? String(metrics.startWeight) : '');
   const [age, setAge] = useState(metrics.age ? String(metrics.age) : '');
   const [waterGoal, setWaterGoal] = useState(metrics.waterGoal ? String(metrics.waterGoal) : '2400');
+  const [selectedWeeks, setSelectedWeeks] = useState(planWeeks || 2);
   const [saving, setSaving] = useState(false);
 
   const tips = useMemo(() => {
@@ -49,6 +51,11 @@ const OnboardingScreen = ({ navigation }) => {
     await updateSettings('gender', value);
   };
 
+  const handleSelectWeeks = async (value) => {
+    setSelectedWeeks(value);
+    await updateSettings('plan-weeks', value);
+  };
+
   const handleSubmit = async () => {
     if (!name.trim() || !height.trim() || !weight.trim() || !age.trim()) {
       Alert.alert(
@@ -70,6 +77,7 @@ const OnboardingScreen = ({ navigation }) => {
         age: age.trim(),
         waterGoal: waterGoal.trim() || '2400'
       });
+      await updateSettings('plan-weeks', selectedWeeks);
       completeOnboarding();
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error) {
@@ -129,6 +137,38 @@ const OnboardingScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+      </Card>
+
+      <Card style={styles.card}>
+        <Text style={styles.sectionTitle}>
+          {language === 'en' ? 'Plan duration' : 'Duración del plan'}
+        </Text>
+        <Text style={styles.sectionDescription}>
+          {language === 'en'
+            ? 'Choose how many weeks you want to follow this guide.'
+            : 'Elige cuántas semanas quieres seguir esta guía.'}
+        </Text>
+        <View style={styles.weeksRow}>
+          {[2, 3, 4].map((weeksOption) => {
+            const active = selectedWeeks === weeksOption;
+            return (
+              <TouchableOpacity
+                key={weeksOption}
+                style={[styles.weekOption, active && styles.weekOptionActive]}
+                onPress={() => handleSelectWeeks(weeksOption)}
+              >
+                <Text style={[styles.weekOptionLabel, active && styles.weekOptionLabelActive]}>
+                  {weeksOption} {language === 'en' ? 'weeks' : 'semanas'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.weeksHint}>
+          {language === 'en'
+            ? 'You can adjust this anytime from Settings.'
+            : 'Podrás ajustarlo cuando quieras desde Ajustes.'}
+        </Text>
       </Card>
 
       <Card style={styles.card}>
@@ -236,6 +276,10 @@ const getStyles = (theme) =>
       ...theme.typography.h3,
       color: theme.colors.text
     },
+    sectionDescription: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted
+    },
     input: {
       ...theme.typography.body,
       backgroundColor: theme.colors.cardSoft,
@@ -294,6 +338,36 @@ const getStyles = (theme) =>
     tipText: {
       ...theme.typography.bodySmall,
       color: theme.colors.text
+    },
+    weeksRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm
+    },
+    weekOption: {
+      flex: 1,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.cardSoft,
+      paddingVertical: theme.spacing.md,
+      alignItems: 'center'
+    },
+    weekOptionActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: 'rgba(15,118,110,0.6)'
+    },
+    weekOptionLabel: {
+      ...theme.typography.body,
+      color: theme.colors.text
+    },
+    weekOptionLabelActive: {
+      color: '#f8fafc',
+      fontWeight: '600'
+    },
+    weeksHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      textAlign: 'center'
     },
     continueButton: {
       marginTop: theme.spacing.md

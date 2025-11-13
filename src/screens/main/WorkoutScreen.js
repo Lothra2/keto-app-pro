@@ -9,6 +9,7 @@ import Button from '../../components/shared/Button'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import { getWorkoutForDay } from '../../data/workouts'
 import Card from '../../components/shared/Card'
+import ScreenBanner from '../../components/shared/ScreenBanner'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}
@@ -281,35 +282,47 @@ const WorkoutScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { backgroundColor: theme.colors.card }]}>
-        <Text style={styles.title}>{language === 'en' ? '🏋️ Workouts' : '🏋️ Entrenos'}</Text>
-        <Text style={styles.subtitle}>
-          {weekLabel} · {dayLabel}
-        </Text>
-        <Text style={styles.subtitle}>
-          {language === 'en' ? `Intensity: ${intensityLabel}` : `Intensidad: ${intensityLabel}`}
-        </Text>
-        <View style={styles.dayControls}>
-          <TouchableOpacity
-            onPress={() => handleChangeDay(-1)}
-            style={[styles.dayButton, safeActiveDay === 0 && styles.dayButtonDisabled]}
-            disabled={safeActiveDay === 0}
-          >
-            <Text style={styles.dayButtonText}>−</Text>
-          </TouchableOpacity>
-          <Text style={styles.dayBadge}>{dayLabel}</Text>
-          <TouchableOpacity
-            onPress={() => handleChangeDay(1)}
-            style={[
-              styles.dayButton,
-              safeActiveDay >= totalDays - 1 && styles.dayButtonDisabled
-            ]}
-            disabled={safeActiveDay >= totalDays - 1}
-          >
-            <Text style={styles.dayButtonText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenBanner
+        theme={theme}
+        icon="🏋️"
+        title={language === 'en' ? 'Workouts' : 'Entrenos'}
+        subtitle={`${weekLabel} · ${dayLabel}`}
+        description={
+          language === 'en'
+            ? `Intensity: ${intensityLabel}`
+            : `Intensidad: ${intensityLabel}`
+        }
+        badge={`${language === 'en' ? 'Plan days' : 'Días plan'} ${totalDays}`}
+        badgeTone="info"
+        rightSlot={
+          <View style={styles.bannerControls}>
+            <TouchableOpacity
+              onPress={() => handleChangeDay(-1)}
+              style={[styles.bannerControlButton, safeActiveDay === 0 && styles.bannerControlButtonDisabled]}
+              disabled={safeActiveDay === 0}
+            >
+              <Text style={styles.bannerControlText}>−</Text>
+            </TouchableOpacity>
+            <Text style={styles.bannerControlBadge}>{dayLabel}</Text>
+            <TouchableOpacity
+              onPress={() => handleChangeDay(1)}
+              style={[
+                styles.bannerControlButton,
+                safeActiveDay >= totalDays - 1 && styles.bannerControlButtonDisabled
+              ]}
+              disabled={safeActiveDay >= totalDays - 1}
+            >
+              <Text style={styles.bannerControlText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        footnote={
+          language === 'en'
+            ? 'Generate routines with AI or follow the base guide.'
+            : 'Genera rutinas con IA o sigue la guía base.'
+        }
+        style={styles.banner}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.focusCard}>
@@ -455,50 +468,44 @@ const getStyles = theme => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.bg
   },
-  header: {
-    padding: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border
+  banner: {
+    margin: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6
   },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
-    marginBottom: 4
-  },
-  subtitle: {
-    ...theme.typography.body,
-    color: theme.colors.textMuted
-  },
-  dayControls: {
-    marginTop: theme.spacing.md,
+  bannerControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md
+    gap: theme.spacing.sm
   },
-  dayButton: {
-    width: 36,
-    height: 36,
+  bannerControlButton: {
+    width: 34,
+    height: 34,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: 'rgba(15,23,42,0.28)',
     alignItems: 'center',
     justifyContent: 'center'
   },
-  dayButtonDisabled: {
-    backgroundColor: theme.colors.primarySoft
+  bannerControlButtonDisabled: {
+    opacity: 0.35
   },
-  dayButtonText: {
-    color: '#fff',
+  bannerControlText: {
+    color: 'rgba(248,250,252,0.95)',
     fontSize: 18,
     fontWeight: '700'
   },
-  dayBadge: {
+  bannerControlBadge: {
     ...theme.typography.body,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.cardSoft,
-    borderRadius: theme.radius.full,
+    color: 'rgba(248,250,252,0.95)',
+    backgroundColor: 'rgba(15,23,42,0.2)',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radius.full,
+    fontWeight: '600'
   },
   content: {
     padding: theme.spacing.lg,
