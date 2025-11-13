@@ -414,18 +414,6 @@ const SettingsScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {language === 'en' ? 'Add to Home Screen' : 'Agregar a Pantalla de Inicio'}
-        </Text>
-        <Text style={styles.sectionDescription}>
-          {language === 'en' 
-            ? 'On iPhone or Android open the share menu and choose "Add to Home Screen".'
-            : 'En iPhone o Android abre el menú de compartir y elige "Agregar a pantalla de inicio".'}
-        </Text>
-      </View>
-
       <Text style={styles.version}>Keto Pro v1.0.0</Text>
     </ScrollView>
   );
