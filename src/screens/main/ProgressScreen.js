@@ -53,6 +53,14 @@ const ProgressScreen = () => {
   const theme = getTheme(themeMode)
   const styles = getStyles(theme)
 
+  const userWaterGoal = useMemo(
+    () => {
+      const parsed = Number(metrics?.waterGoal)
+      return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 2400
+    },
+    [metrics?.waterGoal]
+  )
+
   const [completedDays, setCompletedDays] = useState(0)
 
   const [showBaseDataModal, setShowBaseDataModal] = useState(false)
@@ -133,7 +141,7 @@ const ProgressScreen = () => {
 
       for (let i = 0; i < derivedPlan.length; i++) {
         const dayProgress = await getProgressData(i)
-        const water = await getWaterState(i)
+        const water = await getWaterState(i, userWaterGoal)
         const calorieState = await getCalorieState(i, derivedPlan[i]?.kcal || 1600)
         const hasProgress = Object.keys(dayProgress).length > 0
         const hasWater = water.ml > 0
@@ -186,7 +194,7 @@ const ProgressScreen = () => {
         totalKcal: Math.round(totalExerciseKcal)
       })
     },
-    [age, derivedPlan, gender, height, language]
+    [age, derivedPlan, gender, height, language, userWaterGoal]
   )
 
   const hydrationStats = useCallback(
@@ -195,7 +203,7 @@ const ProgressScreen = () => {
       let totalMl = 0
 
       for (let i = 0; i < derivedPlan.length; i++) {
-        const water = await getWaterState(i)
+        const water = await getWaterState(i, userWaterGoal)
         totalMl += water.ml
         if (water.ml >= water.goal * 0.8) {
           daysWithWater++
@@ -204,7 +212,7 @@ const ProgressScreen = () => {
 
       return { daysWithWater, totalMl }
     },
-    [derivedPlan]
+    [derivedPlan, userWaterGoal]
   )
 
   // 1) cargar base data solo una vez
@@ -255,7 +263,7 @@ const ProgressScreen = () => {
     await loadAllProgress({ height, age })
     const hydraStats = await hydrationStats()
     setHydration(hydraStats)
-  }, [derivedPlan.length, loadAllProgress, hydrationStats, height, age])
+  }, [derivedPlan.length, loadAllProgress, hydrationStats, height, age, userWaterGoal])
 
   useFocusEffect(
     useCallback(() => {
