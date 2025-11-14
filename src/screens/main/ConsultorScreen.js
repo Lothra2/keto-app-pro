@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +48,7 @@ const ConsultorScreen = () => {
   const [mode, setMode] = useState('auto'); // único modo activo
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
   const hasCredentials = Boolean(creds.user && creds.pass);
@@ -163,6 +165,28 @@ const ConsultorScreen = () => {
     };
   }, [theme]);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (event) => {
+      const height = event?.endCoordinates?.height || 0;
+      setKeyboardOffset(Math.max(height - insets.bottom, 0));
+    };
+
+    const onHide = () => {
+      setKeyboardOffset(0);
+    };
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [insets.bottom]);
+
   const renderItem = ({ item }) => {
     const isUser = item.role === 'user';
     return (
@@ -203,8 +227,8 @@ const ConsultorScreen = () => {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 16 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
       <View style={styles.bannerWrapper}>
         <ScreenBanner
@@ -318,7 +342,10 @@ const ConsultorScreen = () => {
         data={messages}
         keyExtractor={(m) => m.id}
         renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, { paddingBottom: 120 + insets.bottom }]}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 120 + insets.bottom + keyboardOffset },
+        ]}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
       />
@@ -340,6 +367,7 @@ const ConsultorScreen = () => {
             shadowOffset: { width: 0, height: -6 },
             elevation: 10,
             paddingBottom: 12 + insets.bottom,
+            bottom: keyboardOffset,
           },
         ]}
       >
@@ -357,6 +385,9 @@ const ConsultorScreen = () => {
           value={input}
           onChangeText={setInput}
           multiline
+          onFocus={() =>
+            requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }))
+          }
         />
         <TouchableOpacity
           onPress={handleResetChat}

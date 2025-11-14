@@ -252,7 +252,7 @@ const WorkoutScreen = ({ route, navigation }) => {
     derivedPlan,
     language,
     intensityLabel,
-    localPlan.focus
+    localPlan
   ])
 
   const handleExercisePress = exercise => {
@@ -263,7 +263,18 @@ const WorkoutScreen = ({ route, navigation }) => {
   const closeExerciseDetail = () => setDetailExercise(null)
 
   const localPlan = useMemo(() => {
-    return getWorkoutForDay(language, week, safeActiveDay % 7)
+    const plan = getWorkoutForDay(language, week, safeActiveDay % 7)
+
+    if (plan) {
+      return {
+        ...plan,
+        focus: plan.focus || '',
+        today: plan.today || '',
+        days: Array.isArray(plan.days) ? plan.days : []
+      }
+    }
+
+    return { focus: '', today: '', days: [] }
   }, [language, week, safeActiveDay])
 
   const referenceExercises = useMemo(() => {

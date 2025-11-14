@@ -861,11 +861,11 @@ const HomeScreen = ({ navigation }) => {
       >
         <View style={styles.tipMessage}>
           <View style={styles.tipIconWrap}>
-            <Text style={styles.tipIcon}>💧</Text>
+            <Text style={styles.tipIcon}>💡</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.tipLabel}>
-              {language === 'en' ? 'Hydration reminder' : 'Recordatorio de hidratación'}
+              {language === 'en' ? 'Daily reminder' : 'Recordatorio del día'}
             </Text>
             <Text style={styles.tipText} numberOfLines={2}>
               {tip}
