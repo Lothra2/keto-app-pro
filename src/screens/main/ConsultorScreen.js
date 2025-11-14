@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,10 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import aiService from '../../api/aiService';
@@ -27,24 +29,26 @@ const QUICK = [
 
 const MODES = [{ id: 'auto', labelEs: 'Auto', labelEn: 'Auto' }];
 
+const getWelcomeMessage = (language) => ({
+  id: 'welcome',
+  role: 'assistant',
+  text:
+    language === 'en'
+      ? 'Hi, I am your keto and calisthenics coach. Ask me for meal plans, recipes, or bodyweight workouts.'
+      : 'Hola, soy tu consultor de dieta keto y calistenia. Pídeme planes, recetas o entrenos con peso corporal.',
+});
+
 const ConsultorScreen = () => {
   const { theme: themeMode, language, apiCredentials } = useApp();
   const theme = getTheme(themeMode);
+  const insets = useSafeAreaInsets();
 
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      text:
-        language === 'en'
-          ? 'Hi, I am your keto and calisthenics coach. Ask me for meal plans, recipes, or bodyweight workouts.'
-          : 'Hola, soy tu consultor de dieta keto y calistenia. Pídeme planes, recetas o entrenos con peso corporal.',
-    },
-  ]);
+  const [messages, setMessages] = useState([getWelcomeMessage(language)]);
   const [input, setInput] = useState('');
   const [mode, setMode] = useState('auto'); // único modo activo
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
   const hasCredentials = Boolean(creds.user && creds.pass);
@@ -72,6 +76,10 @@ const ConsultorScreen = () => {
       listRef.current?.scrollToEnd({ animated: true });
     });
   }, [cleanAssistantText]);
+
+  const handleResetChat = useCallback(() => {
+    setMessages([getWelcomeMessage(language)]);
+  }, [language]);
 
   const handleQuick = useCallback((text) => setInput(text), []);
 
@@ -157,6 +165,28 @@ const ConsultorScreen = () => {
     };
   }, [theme]);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (event) => {
+      const height = event?.endCoordinates?.height || 0;
+      setKeyboardOffset(Math.max(height - insets.bottom, 0));
+    };
+
+    const onHide = () => {
+      setKeyboardOffset(0);
+    };
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [insets.bottom]);
+
   const renderItem = ({ item }) => {
     const isUser = item.role === 'user';
     return (
@@ -198,6 +228,7 @@ const ConsultorScreen = () => {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
       <View style={styles.bannerWrapper}>
         <ScreenBanner
@@ -311,8 +342,12 @@ const ConsultorScreen = () => {
         data={messages}
         keyExtractor={(m) => m.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 120 + insets.bottom + keyboardOffset },
+        ]}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        keyboardShouldPersistTaps="handled"
       />
 
       {/* input */}
@@ -331,6 +366,8 @@ const ConsultorScreen = () => {
             shadowRadius: 18,
             shadowOffset: { width: 0, height: -6 },
             elevation: 10,
+            paddingBottom: 12 + insets.bottom,
+            bottom: keyboardOffset,
           },
         ]}
       >
@@ -348,7 +385,24 @@ const ConsultorScreen = () => {
           value={input}
           onChangeText={setInput}
           multiline
+          onFocus={() =>
+            requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }))
+          }
         />
+        <TouchableOpacity
+          onPress={handleResetChat}
+          disabled={loading || messages.length <= 1}
+          style={[
+            styles.resetBtn,
+            {
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surface,
+            },
+            (loading || messages.length <= 1) && styles.resetBtnDisabled,
+          ]}
+        >
+          <Text style={[styles.resetTxt, { color: theme.colors.textMuted }]}>↺</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={onSend}
           disabled={loading || input.trim().length === 0}
@@ -465,7 +519,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     padding: 10,
     gap: 8,
-    paddingBottom: 16,
   },
   input: {
     flex: 1,
@@ -474,6 +527,21 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
+  },
+  resetBtn: {
+    height: 40,
+    minWidth: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  resetBtnDisabled: {
+    opacity: 0.4,
+  },
+  resetTxt: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   sendBtn: {
     height: 42,

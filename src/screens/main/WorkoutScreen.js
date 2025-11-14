@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native'
 import { useApp } from '../../context/AppContext'
 import { getTheme } from '../../theme'
 import { getWorkoutData, saveWorkoutData } from '../../storage/storage'
@@ -10,6 +10,8 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import { getWorkoutForDay } from '../../data/workouts'
 import Card from '../../components/shared/Card'
 import ScreenBanner from '../../components/shared/ScreenBanner'
+import { exportWorkoutPlanPdf } from '../../utils/pdf'
+import { getDayDisplayName } from '../../utils/labels'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}
@@ -32,6 +34,7 @@ const WorkoutScreen = ({ route, navigation }) => {
   const [loadingType, setLoadingType] = useState(null)
   const [loadingMessage, setLoadingMessage] = useState('')
   const [detailExercise, setDetailExercise] = useState(null)
+  const [exportingPdf, setExportingPdf] = useState(false)
 
   const intensities = ['soft', 'medium', 'hard']
   const intensityLabels = {
@@ -183,6 +186,75 @@ const WorkoutScreen = ({ route, navigation }) => {
     }
   }
 
+  const handleExportWorkoutPdf = useCallback(async () => {
+    if (exportingPdf) return
+
+    setExportingPdf(true)
+
+    try {
+      const startOfWeek = Math.floor(safeActiveDay / 7) * 7
+      const endOfWeek = Math.min(startOfWeek + 7, totalDays)
+      const weekIndex = Math.floor(startOfWeek / 7) + 1
+      const daysPayload = []
+      let weeklyFocus = ''
+
+      for (let day = startOfWeek; day < endOfWeek; day += 1) {
+        const planDay = derivedPlan[day] || {}
+        const label =
+          getDayDisplayName({ label: planDay.dia, index: day, language }) ||
+          (language === 'en' ? `Day ${day + 1}` : `Día ${day + 1}`)
+        const saved = await getWorkoutData(day)
+        const exercises = Array.isArray(saved) ? saved : []
+        const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
+
+        if (!weeklyFocus && reference?.focus) {
+          weeklyFocus = reference.focus
+        }
+
+        daysPayload.push({
+          title: label,
+          focus: reference?.focus || '',
+          exercises,
+          summary: !exercises.length ? reference?.today : '',
+          duration:
+            exercises.length > 0
+              ? `${exercises.length} ${language === 'en' ? 'exercises' : 'ejercicios'}`
+              : undefined
+        })
+      }
+
+      if (!daysPayload.length) {
+        throw new Error('No workouts to export')
+      }
+
+      await exportWorkoutPlanPdf({
+        weekNumber: weekIndex,
+        language,
+        days: daysPayload,
+        intensityLabel: `${language === 'en' ? 'Intensity' : 'Intensidad'}: ${intensityLabel}`,
+        focus: weeklyFocus || localPlan.focus
+      })
+    } catch (error) {
+      console.error('Workout PDF export error', error)
+      Alert.alert(
+        language === 'en' ? 'PDF error' : 'Error al exportar PDF',
+        language === 'en'
+          ? 'We could not build the workout PDF. Try again later.'
+          : 'No pudimos generar el PDF de entrenos. Intenta más tarde.'
+      )
+    } finally {
+      setExportingPdf(false)
+    }
+  }, [
+    exportingPdf,
+    safeActiveDay,
+    totalDays,
+    derivedPlan,
+    language,
+    intensityLabel,
+    localPlan
+  ])
+
   const handleExercisePress = exercise => {
     if (!exercise) return
     setDetailExercise(exercise)
@@ -191,7 +263,18 @@ const WorkoutScreen = ({ route, navigation }) => {
   const closeExerciseDetail = () => setDetailExercise(null)
 
   const localPlan = useMemo(() => {
-    return getWorkoutForDay(language, week, safeActiveDay % 7)
+    const plan = getWorkoutForDay(language, week, safeActiveDay % 7)
+
+    if (plan) {
+      return {
+        ...plan,
+        focus: plan.focus || '',
+        today: plan.today || '',
+        days: Array.isArray(plan.days) ? plan.days : []
+      }
+    }
+
+    return { focus: '', today: '', days: [] }
   }, [language, week, safeActiveDay])
 
   const referenceExercises = useMemo(() => {
@@ -400,6 +483,26 @@ const WorkoutScreen = ({ route, navigation }) => {
               : <Text style={styles.loadingHint}>{loadingMessage}</Text>
             : null}
         </View>
+
+        <Card style={styles.pdfCard}>
+          <View style={styles.pdfHeader}>
+            <Text style={styles.sectionTitle}>
+              📄 {language === 'en' ? 'Weekly workouts PDF' : 'PDF semanal de entrenos'}
+            </Text>
+            <Text style={styles.pdfHint}>
+              {language === 'en'
+                ? 'Share the full routine for this week, including AI exercises.'
+                : 'Comparte la rutina completa de la semana, con los ejercicios IA.'}
+            </Text>
+          </View>
+          <Button
+            title={language === 'en' ? 'Share workouts PDF' : 'Compartir PDF de entrenos'}
+            onPress={handleExportWorkoutPdf}
+            loading={exportingPdf}
+            disabled={exportingPdf}
+            style={styles.pdfButton}
+          />
+        </Card>
 
         <WorkoutCard
           title={language === 'en' ? 'AI workout' : 'Entreno IA'}
@@ -613,6 +716,19 @@ const getStyles = theme => StyleSheet.create({
   },
   generateButton: {
     width: '100%'
+  },
+  pdfCard: {
+    gap: theme.spacing.sm
+  },
+  pdfHeader: {
+    gap: 4
+  },
+  pdfHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted
+  },
+  pdfButton: {
+    alignSelf: 'flex-start'
   },
   loadingHint: {
     ...theme.typography.caption,

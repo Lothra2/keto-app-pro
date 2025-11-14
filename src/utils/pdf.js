@@ -25,6 +25,22 @@ const parseLines = (value = '') =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const sharePdfFile = async ({ html, language = 'es', shareTitle }) => {
+  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  let shared = false;
+
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      dialogTitle: shareTitle || (language === 'en' ? 'Share PDF' : 'Compartir PDF'),
+      mimeType: 'application/pdf',
+      UTI: 'com.adobe.pdf'
+    });
+    shared = true;
+  }
+
+  return { uri, shared, html };
+};
+
 export const exportWeekPlanPdf = async ({
   weekNumber = 1,
   derivedPlan = [],
@@ -231,19 +247,749 @@ export const exportWeekPlanPdf = async ({
     </html>
   `;
 
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-  let shared = false;
+  return await sharePdfFile({
+    html,
+    language,
+    shareTitle: language === 'en' ? 'Share weekly PDF' : 'Compartir PDF semanal'
+  });
+};
 
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, {
-      dialogTitle: language === 'en' ? 'Share weekly PDF' : 'Compartir PDF semanal',
-      mimeType: 'application/pdf',
-      UTI: 'com.adobe.pdf'
-    });
-    shared = true;
-  }
+export const exportWorkoutPlanPdf = async ({
+  weekNumber = 1,
+  language = 'es',
+  intensityLabel = '',
+  days = [],
+  focus = ''
+}) => {
+  const safeWeek = Number.isFinite(Number(weekNumber)) ? Number(weekNumber) : 1;
 
-  return { uri, shared, html };
+  const daySections = days.length
+    ? days
+        .map((day) => {
+          const exercises = Array.isArray(day.exercises) ? day.exercises : [];
+          const focusLine = day.focus || focus;
+          const exerciseHtml = exercises.length
+            ? exercises
+                .map((exercise) => {
+                  const details = [
+                    exercise.series && `${language === 'en' ? 'Sets' : 'Series'}: ${exercise.series}`,
+                    exercise.duracion && `${language === 'en' ? 'Duration' : 'Duración'}: ${exercise.duracion}`,
+                    exercise.descanso && `${language === 'en' ? 'Rest' : 'Descanso'}: ${exercise.descanso}`,
+                    exercise.descripcion || exercise.detalle,
+                    exercise.notas
+                  ]
+                    .filter(Boolean)
+                    .map((detail) => `<li>${escapeHtml(String(detail))}</li>`)
+                    .join('');
+
+                  return `
+                    <div class="exercise">
+                      <div class="exercise-header">
+                        <h3>${escapeHtml(exercise.nombre || exercise.name || '')}</h3>
+                      </div>
+                      ${details ? `<ul class="exercise-meta">${details}</ul>` : ''}
+                    </div>
+                  `;
+                })
+                .join('')
+            : day.summary
+            ? `<p class="reference">${escapeHtml(day.summary)}</p>`
+            : `<p class="reference">${escapeHtml(
+                language === 'en'
+                  ? 'No workout saved yet. Generate it with AI to view the full routine.'
+                  : 'Sin entreno guardado. Genera con IA para ver la rutina completa.'
+              )}</p>`;
+
+          return `
+            <section class="day-card">
+              <header class="day-header">
+                <div>
+                  <h2>${escapeHtml(day.title || '')}</h2>
+                  ${focusLine ? `<p class="day-focus">${escapeHtml(focusLine)}</p>` : ''}
+                </div>
+                ${day.duration ? `<span class="badge">${escapeHtml(day.duration)}</span>` : ''}
+              </header>
+              ${exerciseHtml}
+            </section>
+          `;
+        })
+        .join('')
+    : `<section class="day-card empty">${escapeHtml(
+        language === 'en' ? 'No workouts logged yet.' : 'Aún no hay entrenos registrados.'
+      )}</section>`;
+
+  const subtitle = language === 'en'
+    ? 'Weekly calisthenics & cardio plan'
+    : 'Plan semanal de calistenia y cardio';
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="${language}">
+      <head>
+        <meta charset="utf-8" />
+        <title>${language === 'en' ? 'Weekly workout plan' : 'Plan semanal de entrenos'}</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 32px;
+            background: #0f172a;
+            color: #e2e8f0;
+          }
+          .week-header {
+            text-align: center;
+            margin-bottom: 32px;
+          }
+          .week-header h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: -0.5px;
+          }
+          .week-header p {
+            margin: 8px 0 0;
+            color: rgba(226,232,240,0.75);
+            font-size: 14px;
+          }
+          .meta-strip {
+            display: inline-flex;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(14,165,233,0.14);
+            color: #38bdf8;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 12px;
+          }
+          .day-card {
+            background: rgba(15,23,42,0.82);
+            border-radius: 18px;
+            padding: 22px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(226,232,240,0.08);
+            box-shadow: 0 14px 30px rgba(2, 132, 199, 0.16);
+          }
+          .day-card.empty {
+            text-align: center;
+            font-style: italic;
+            color: rgba(226,232,240,0.7);
+          }
+          .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 18px;
+          }
+          .day-header h2 {
+            margin: 0;
+            font-size: 21px;
+            color: #f8fafc;
+          }
+          .day-focus {
+            margin: 6px 0 0;
+            color: rgba(226,232,240,0.75);
+            font-size: 14px;
+          }
+          .badge {
+            align-self: flex-start;
+            background: rgba(56,189,248,0.12);
+            color: #38bdf8;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+          }
+          .exercise {
+            background: rgba(30,41,59,0.95);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(71,85,105,0.35);
+          }
+          .exercise:last-child {
+            margin-bottom: 0;
+          }
+          .exercise-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #f8fafc;
+          }
+          .exercise-meta {
+            margin: 10px 0 0 18px;
+            padding: 0;
+            color: rgba(226,232,240,0.78);
+            font-size: 13px;
+          }
+          .exercise-meta li {
+            margin-bottom: 4px;
+          }
+          .reference {
+            margin: 0;
+            color: rgba(226,232,240,0.78);
+            font-size: 14px;
+            line-height: 1.6;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="week-header">
+          <h1>${language === 'en' ? 'Week' : 'Semana'} ${safeWeek}</h1>
+          <p>${escapeHtml(subtitle)}</p>
+          ${intensityLabel ? `<span class="meta-strip">${escapeHtml(intensityLabel)}</span>` : ''}
+        </div>
+        ${daySections}
+      </body>
+    </html>
+  `;
+
+  return await sharePdfFile({
+    html,
+    language,
+    shareTitle:
+      language === 'en' ? 'Share weekly workout PDF' : 'Compartir PDF semanal de entrenos'
+  });
+};
+
+export const exportShoppingWeekPdf = async ({
+  language = 'es',
+  weekNumber = 1,
+  sections = [],
+  baseSections = []
+}) => {
+  const safeWeek = Number.isFinite(Number(weekNumber)) ? Number(weekNumber) : 1;
+
+  const renderSection = (title, items) => {
+    if (!items || !items.length) return '';
+    const list = items
+      .map((item) => `<li>${escapeHtml(String(item))}</li>`)
+      .join('');
+    return `
+      <section class="list-card">
+        <h2>${escapeHtml(title)}</h2>
+        <ul>${list}</ul>
+      </section>
+    `;
+  };
+
+  const aiContent = sections.length
+    ? sections
+        .map((section) => renderSection(section.title, section.items))
+        .join('')
+    : `<p class="empty">${escapeHtml(
+        language === 'en'
+          ? 'Generate your list with AI to see the suggested groceries here.'
+          : 'Genera tu lista con IA para ver aquí los ingredientes sugeridos.'
+      )}</p>`;
+
+  const baseContent = baseSections.length
+    ? baseSections.map((section) => renderSection(section.cat || section.title, section.items.split(','))).join('')
+    : '';
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="${language}">
+      <head>
+        <meta charset="utf-8" />
+        <title>${language === 'en' ? 'Weekly shopping list' : 'Lista semanal de compras'}</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 32px;
+            background: #f8fafc;
+            color: #0f172a;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 28px;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 28px;
+          }
+          .header p {
+            margin: 6px 0 0;
+            color: #475569;
+            font-size: 14px;
+          }
+          .section-title {
+            font-size: 18px;
+            margin: 28px 0 12px;
+            color: #0f172a;
+          }
+          .list-card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(148,163,184,0.25);
+            box-shadow: 0 12px 24px rgba(15,23,42,0.08);
+          }
+          .list-card h2 {
+            margin: 0 0 10px;
+            font-size: 17px;
+            color: #0f172a;
+          }
+          .list-card ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #1f2937;
+            font-size: 14px;
+            line-height: 1.6;
+          }
+          .empty {
+            text-align: center;
+            font-style: italic;
+            color: #64748b;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${language === 'en' ? 'Week' : 'Semana'} ${safeWeek}</h1>
+          <p>${escapeHtml(
+            language === 'en'
+              ? 'Base groceries plus your AI generated list.'
+              : 'Compras base más la lista generada por IA.'
+          )}</p>
+        </div>
+
+        <h2 class="section-title">${escapeHtml(
+          language === 'en' ? 'AI shopping plan' : 'Lista inteligente IA'
+        )}</h2>
+        ${aiContent}
+
+        ${baseContent
+          ? `<h2 class="section-title">${escapeHtml(
+              language === 'en' ? 'Coach essentials' : 'Esenciales del coach'
+            )}</h2>${baseContent}`
+          : ''}
+      </body>
+    </html>
+  `;
+
+  return await sharePdfFile({
+    html,
+    language,
+    shareTitle: language === 'en' ? 'Share shopping PDF' : 'Compartir PDF de compras'
+  });
+};
+
+const formatNumber = (value, decimals = 1) => {
+  if (value === null || value === undefined) return '--';
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '--';
+  return num.toFixed(decimals);
+};
+
+const buildTrend = ({ points = [], key, language }) => {
+  const filtered = points.filter((point) =>
+    point && point[key] !== null && point[key] !== undefined && Number.isFinite(Number(point[key]))
+  );
+
+  if (!filtered.length) return '';
+
+  const values = filtered.map((point) => Number(point[key]));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const label =
+    key === 'weight'
+      ? language === 'en'
+        ? 'Weight trend'
+        : 'Tendencia de peso'
+      : key === 'energy'
+      ? language === 'en'
+        ? 'Energy trend'
+        : 'Tendencia de energía'
+      : language === 'en'
+      ? 'Body fat trend'
+      : 'Tendencia de grasa';
+
+  const bars = filtered
+    .map((point) => {
+      const value = Number(point[key]);
+      const height = 30 + Math.round(((value - min) / range) * 70);
+      return `
+        <div class="trend-point">
+          <div class="trend-bar" style="height:${height}px"></div>
+          <span class="trend-value">${escapeHtml(formatNumber(value, key === 'energy' ? 0 : 1))}</span>
+          <span class="trend-label">${escapeHtml(point.label || '')}</span>
+        </div>
+      `;
+    })
+    .join('');
+
+  return `
+    <section class="trend-card">
+      <h3>${escapeHtml(label)}</h3>
+      <div class="trend-chart">${bars}</div>
+    </section>
+  `;
+};
+
+export const exportProgressPdf = async ({
+  language = 'es',
+  weekNumber = 1,
+  scope = 'week',
+  entries = [],
+  derivedPlan = [],
+  hydrationStats = {},
+  exerciseSummary = {},
+  baseStats = {},
+  metricsSummary = {},
+  chartPoints = []
+}) => {
+  const safeWeek = Number.isFinite(Number(weekNumber)) ? Number(weekNumber) : 1;
+  const title =
+    scope === 'plan'
+      ? language === 'en'
+        ? 'Full plan progress'
+        : 'Progreso de todo el plan'
+      : `${language === 'en' ? 'Week' : 'Semana'} ${safeWeek}`;
+
+  const filteredEntries = scope === 'plan'
+    ? entries
+    : entries.filter((entry) => {
+        const weekIdx = Math.floor(entry.dayIndex / 7) + 1;
+        return weekIdx === safeWeek;
+      });
+
+  const displayEntries = filteredEntries.length ? filteredEntries : entries;
+
+  const dayRows = displayEntries.length
+    ? displayEntries
+        .map((entry) => {
+          const planDay = derivedPlan[entry.dayIndex] || {};
+          const label = getDayDisplayName({
+            label: planDay.dia,
+            index: entry.dayIndex,
+            language
+          });
+
+          return `
+            <tr>
+              <td>${escapeHtml(label)}</td>
+              <td>${escapeHtml(formatNumber(entry.pesoNumber ?? entry.peso, 1))} kg</td>
+              <td>${escapeHtml(
+                entry.cintura !== null && entry.cintura !== undefined
+                  ? `${entry.cintura} cm`
+                  : '--'
+              )}</td>
+              <td>${escapeHtml(
+                formatNumber(entry.bodyFat, 1)
+              )} %</td>
+              <td>${escapeHtml(
+                formatNumber(entry.energiaNumber ?? entry.energia, 0)
+              )}/10</td>
+              <td>${escapeHtml(
+                entry.water && entry.waterGoal
+                  ? `${entry.water} / ${entry.waterGoal} ml`
+                  : '--'
+              )}</td>
+              <td>${escapeHtml(
+                entry.calConsumed && entry.calGoal
+                  ? `${entry.calConsumed} / ${entry.calGoal}`
+                  : '--'
+              )}</td>
+              <td>${escapeHtml(entry.notas || '')}</td>
+            </tr>
+          `;
+        })
+        .join('')
+    : `<tr><td colspan="8" class="empty">${escapeHtml(
+        language === 'en'
+          ? 'Log your progress to see it here.'
+          : 'Registra tu progreso para verlo aquí.'
+      )}</td></tr>`;
+
+  const avgWeight = displayEntries.length
+    ? displayEntries.reduce((sum, entry) => sum + (entry.pesoNumber || 0), 0) /
+      Math.max(1, displayEntries.filter((entry) => Number.isFinite(entry.pesoNumber)).length || 1)
+    : null;
+
+  const avgEnergy = displayEntries.length
+    ? displayEntries.reduce((sum, entry) => sum + (entry.energiaNumber || 0), 0) /
+      Math.max(1, displayEntries.filter((entry) => Number.isFinite(entry.energiaNumber)).length || 1)
+    : null;
+
+  const avgBodyFat = displayEntries.length
+    ? displayEntries.reduce((sum, entry) => sum + (entry.bodyFat || 0), 0) /
+      Math.max(1, displayEntries.filter((entry) => Number.isFinite(entry.bodyFat)).length || 1)
+    : null;
+
+  const hydrationScope = scope === 'plan'
+    ? hydrationStats
+    : (() => {
+        let daysWithWater = 0;
+        let totalMl = 0;
+        displayEntries.forEach((entry) => {
+          if (entry.waterGoal && entry.water && entry.water >= entry.waterGoal * 0.8) {
+            daysWithWater += 1;
+          }
+          totalMl += entry.water || 0;
+        });
+        return { daysWithWater, totalMl };
+      })();
+
+  const exerciseScope = scope === 'plan'
+    ? exerciseSummary
+    : (() => {
+        let daysLogged = 0;
+        let totalKcal = 0;
+        displayEntries.forEach((entry) => {
+          if (entry.burnedKcal) {
+            totalKcal += entry.burnedKcal;
+            daysLogged += 1;
+          }
+        });
+        return { daysLogged, totalKcal };
+      })();
+
+  const trends = ['weight', 'bodyFat', 'energy']
+    .map((key) => buildTrend({ points: chartPoints, key, language }))
+    .filter(Boolean)
+    .join('');
+
+  const subtitle =
+    scope === 'plan'
+      ? language === 'en'
+        ? 'Complete body transformation overview'
+        : 'Resumen completo de tu transformación'
+      : language === 'en'
+      ? 'Weekly keto & training check-in'
+      : 'Chequeo semanal de keto y entrenos';
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="${language}">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 32px;
+            background: #0f172a;
+            color: #e2e8f0;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 32px;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 30px;
+            letter-spacing: -0.8px;
+          }
+          .header p {
+            margin: 8px 0 0;
+            color: rgba(226,232,240,0.75);
+            font-size: 14px;
+          }
+          .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+          }
+          .card {
+            background: rgba(15,23,42,0.82);
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid rgba(226,232,240,0.12);
+            box-shadow: 0 16px 32px rgba(14,116,144,0.22);
+          }
+          .card h3 {
+            margin: 0 0 12px;
+            font-size: 16px;
+            color: #f8fafc;
+          }
+          .card p {
+            margin: 6px 0;
+            color: rgba(226,232,240,0.78);
+            font-size: 14px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+          }
+          th, td {
+            border: 1px solid rgba(148,163,184,0.25);
+            padding: 10px;
+            font-size: 13px;
+            text-align: left;
+          }
+          th {
+            background: rgba(15,23,42,0.92);
+            color: #f8fafc;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-size: 12px;
+          }
+          td {
+            color: rgba(226,232,240,0.85);
+          }
+          .empty {
+            text-align: center;
+            color: rgba(226,232,240,0.65);
+          }
+          .trend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-top: 12px;
+          }
+          .trend-card {
+            background: rgba(15,23,42,0.82);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(56,189,248,0.16);
+          }
+          .trend-card h3 {
+            margin: 0 0 12px;
+            font-size: 15px;
+            color: #38bdf8;
+          }
+          .trend-chart {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+          }
+          .trend-point {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+          }
+          .trend-bar {
+            width: 22px;
+            background: linear-gradient(180deg, rgba(56,189,248,0.85), rgba(14,116,144,0.85));
+            border-radius: 12px 12px 4px 4px;
+          }
+          .trend-value {
+            font-size: 12px;
+            color: #f8fafc;
+            font-weight: 600;
+          }
+          .trend-label {
+            font-size: 11px;
+            color: rgba(226,232,240,0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${escapeHtml(title)}</h1>
+          <p>${escapeHtml(subtitle)}</p>
+        </div>
+
+        <div class="cards">
+          <div class="card">
+            <h3>${escapeHtml(language === 'en' ? 'Base data' : 'Datos base')}</h3>
+            <p>${escapeHtml(language === 'en' ? 'Height' : 'Estatura')}: ${escapeHtml(
+              baseStats.height ? `${baseStats.height} cm` : '--'
+            )}</p>
+            <p>${escapeHtml(language === 'en' ? 'Start weight' : 'Peso inicial')}: ${escapeHtml(
+              baseStats.startWeight ? `${baseStats.startWeight} kg` : '--'
+            )}</p>
+            <p>${escapeHtml(language === 'en' ? 'Age' : 'Edad')}: ${escapeHtml(
+              baseStats.age ? String(baseStats.age) : '--'
+            )}</p>
+          </div>
+          <div class="card">
+            <h3>${escapeHtml(language === 'en' ? 'Current metrics' : 'Métricas actuales')}</h3>
+            <p>% ${escapeHtml(
+              language === 'en' ? 'Body fat' : 'Grasa'
+            )}: ${escapeHtml(formatNumber(metricsSummary.bodyFat, 1))}</p>
+            <p>BMR: ${escapeHtml(
+              metricsSummary.bmr ? `${metricsSummary.bmr} kcal` : '--'
+            )}</p>
+            <p>${escapeHtml(
+              language === 'en' ? 'Recommended kcal' : 'Calorías recomendadas'
+            )}: ${escapeHtml(
+              metricsSummary.recommendedCalories
+                ? `${metricsSummary.recommendedCalories}`
+                : '--'
+            )}</p>
+            <p>${escapeHtml(language === 'en' ? 'BMI' : 'IMC')}: ${escapeHtml(
+              metricsSummary.bmi
+                ? `${metricsSummary.bmi} ${metricsSummary.bmiCategory ? `(${metricsSummary.bmiCategory})` : ''}`
+                : '--'
+            )}</p>
+          </div>
+          <div class="card">
+            <h3>${escapeHtml(language === 'en' ? 'Hydration' : 'Hidratación')}</h3>
+            <p>${escapeHtml(
+              language === 'en' ? 'Days on target' : 'Días en objetivo'
+            )}: ${escapeHtml(String(hydrationScope.daysWithWater || 0))}</p>
+            <p>${escapeHtml(language === 'en' ? 'Total water' : 'Agua total')}: ${escapeHtml(
+              hydrationScope.totalMl ? `${hydrationScope.totalMl} ml` : '0 ml'
+            )}</p>
+            <p>${escapeHtml(language === 'en' ? 'Avg body fat' : 'Promedio de grasa')}: ${escapeHtml(
+              formatNumber(avgBodyFat, 1)
+            )} %</p>
+          </div>
+          <div class="card">
+            <h3>${escapeHtml(language === 'en' ? 'Energy & training' : 'Energía y entrenos')}</h3>
+            <p>${escapeHtml(language === 'en' ? 'Avg energy' : 'Energía promedio')}: ${escapeHtml(
+              formatNumber(avgEnergy, 0)
+            )}/10</p>
+            <p>${escapeHtml(language === 'en' ? 'Workout days' : 'Días con entreno')}: ${escapeHtml(
+              String(exerciseScope.daysLogged || 0)
+            )}</p>
+            <p>${escapeHtml(language === 'en' ? 'Kcal burned' : 'Kcal quemadas')}: ${escapeHtml(
+              exerciseScope.totalKcal ? `${exerciseScope.totalKcal}` : '0'
+            )}</p>
+            <p>${escapeHtml(language === 'en' ? 'Avg weight' : 'Peso promedio')}: ${escapeHtml(
+              formatNumber(avgWeight, 1)
+            )} kg</p>
+          </div>
+        </div>
+
+        ${trends ? `<div class="trend-grid">${trends}</div>` : ''}
+
+        <table>
+          <thead>
+            <tr>
+              <th>${escapeHtml(language === 'en' ? 'Day' : 'Día')}</th>
+              <th>${escapeHtml(language === 'en' ? 'Weight' : 'Peso')}</th>
+              <th>${escapeHtml(language === 'en' ? 'Waist' : 'Cintura')}</th>
+              <th>${escapeHtml(language === 'en' ? 'Body fat' : '% Grasa')}</th>
+              <th>${escapeHtml(language === 'en' ? 'Energy' : 'Energía')}</th>
+              <th>${escapeHtml(language === 'en' ? 'Water' : 'Agua')}</th>
+              <th>${escapeHtml(language === 'en' ? 'Calories' : 'Calorías')}</th>
+              <th>${escapeHtml(language === 'en' ? 'Notes' : 'Notas')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dayRows}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  return await sharePdfFile({
+    html,
+    language,
+    shareTitle:
+      scope === 'plan'
+        ? language === 'en'
+          ? 'Share full progress PDF'
+          : 'Compartir PDF de progreso total'
+        : language === 'en'
+        ? 'Share weekly progress PDF'
+        : 'Compartir PDF de progreso semanal'
+  });
 };
 
 export default exportWeekPlanPdf;
