@@ -32,6 +32,7 @@ const ShoppingScreen = () => {
   const [aiList, setAiList] = useState('')
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [showBaseList, setShowBaseList] = useState(true)
 
   // misma lógica de parseo, pero reusable
   const parseAiList = useCallback(
@@ -273,21 +274,38 @@ const ShoppingScreen = () => {
 
       {/* base */}
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            {language === 'en' ? 'Base shopping list' : 'Lista base de compras'}
-          </Text>
-          <Text style={styles.sectionHint}>
-            {language === 'en' ? 'Keto friendly' : 'Apta keto'}
-          </Text>
-        </View>
-
-        {baseList.map((item, index) => (
-          <View key={index} style={styles.categoryCard}>
-            <Text style={styles.categoryTitle}>{item.cat}</Text>
-            <Text style={styles.categoryItems}>{item.items}</Text>
+        <TouchableOpacity
+          style={styles.sectionHeader}
+          onPress={() => setShowBaseList(prev => !prev)}
+          activeOpacity={0.85}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sectionTitle}>
+              {language === 'en' ? 'Base shopping list' : 'Lista base de compras'}
+            </Text>
+            <Text style={styles.sectionHint}>
+              {language === 'en' ? 'Keto friendly staples' : 'Básicos aptos keto'}
+            </Text>
           </View>
-        ))}
+          <View style={styles.sectionToggle}>
+            <Text style={styles.sectionToggleText}>{showBaseList ? '−' : '+'}</Text>
+          </View>
+        </TouchableOpacity>
+
+        {showBaseList ? (
+          baseList.map((item, index) => (
+            <View key={index} style={styles.categoryCard}>
+              <Text style={styles.categoryTitle}>{item.cat}</Text>
+              <Text style={styles.categoryItems}>{item.items}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.collapsedHint}>
+            {language === 'en'
+              ? 'Tap to reopen your staple ingredients.'
+              : 'Toca para ver de nuevo tus básicos.'}
+          </Text>
+        )}
       </View>
     </ScrollView>
   )
@@ -412,7 +430,14 @@ const getStyles = (theme) =>
     sectionHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      gap: theme.spacing.sm
     },
     sectionTitle: {
       ...theme.typography.h3,
@@ -422,12 +447,30 @@ const getStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted
     },
+    sectionToggle: {
+      width: 32,
+      height: 32,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    sectionToggleText: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      fontWeight: '700'
+    },
     categoryCard: {
       backgroundColor: theme.colors.card,
       borderWidth: 1,
       borderColor: theme.colors.border,
       borderRadius: theme.radius.md,
-      padding: theme.spacing.md
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 2
     },
     categoryTitle: {
       ...theme.typography.body,
@@ -439,6 +482,12 @@ const getStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted,
       lineHeight: 18
+    },
+    collapsedHint: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      fontStyle: 'italic',
+      paddingHorizontal: theme.spacing.sm
     }
   })
 

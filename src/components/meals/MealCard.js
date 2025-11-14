@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { hasLeadingEmoji } from '../../utils/labels';
@@ -34,6 +34,11 @@ const MealCard = ({
     (hasAIData ? (language === 'en' ? 'Generated with AI' : 'Generado con IA') : '');
 
   const showIcon = icon && !hasLeadingEmoji(mealData?.nombre || '');
+  const isDark = theme.mode === 'dark';
+  const switchTrack = {
+    false: isDark ? 'rgba(148,163,184,0.35)' : 'rgba(148,163,184,0.3)',
+    true: theme.colors.primary,
+  };
 
   return (
     <View style={[styles.container, isCompleted && styles.containerCompleted]}>
@@ -57,12 +62,13 @@ const MealCard = ({
           )}
 
           {!readOnly && (
-            <Pressable
-              style={[styles.checkButton, isCompleted && styles.checkButtonActive]}
-              onPress={onToggleComplete}
-            >
-              <Text style={styles.checkText}>{isCompleted ? '✓' : '+'}</Text>
-            </Pressable>
+            <Switch
+              value={isCompleted}
+              onValueChange={onToggleComplete}
+              trackColor={switchTrack}
+              thumbColor={isCompleted ? theme.colors.onPrimary : theme.colors.card}
+              ios_backgroundColor={switchTrack.false}
+            />
           )}
         </View>
       </View>
@@ -107,10 +113,15 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   containerCompleted: {
-    backgroundColor: 'rgba(34,197,94,0.1)',
-    borderColor: 'rgba(34,197,94,0.4)',
+    backgroundColor: theme.colors.primarySoft,
+    borderColor: 'rgba(15,118,110,0.45)',
   },
   header: {
     flexDirection: 'row',
@@ -149,22 +160,6 @@ const getStyles = (theme) => StyleSheet.create({
   aiButtonText: {
     color: '#fff',
     fontSize: 11,
-    fontWeight: '600',
-  },
-  checkButton: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  checkText: {
-    color: '#fff',
-    fontSize: 16,
     fontWeight: '600',
   },
   body: {
