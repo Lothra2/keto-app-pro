@@ -335,7 +335,7 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleAddWater = async (amount) => {
-    await addWater(currentDay, amount);
+    await addWater(currentDay, amount, metrics.waterGoal || 2400);
     const water = await getWaterState(currentDay, metrics.waterGoal || 2400);
     setWaterInfo({
       goal: water.goal || metrics.waterGoal || 2400,
