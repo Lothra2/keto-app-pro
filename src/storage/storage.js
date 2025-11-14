@@ -173,15 +173,33 @@ export async function saveMealCompletion(dayIndex, mealKey, completed) {
 // Agua del día
 export async function getWaterState(dayIndex, defaultGoal = 2400) {
   const storage = new Storage();
-  const fallbackGoal = Number(defaultGoal) || 2400;
+  const fallbackProvided = arguments.length >= 2;
+  const parsedFallback = Number(defaultGoal);
+  const normalizedFallback = Number.isFinite(parsedFallback) && parsedFallback > 0
+    ? Math.round(parsedFallback)
+    : 2400;
+  const targetFallback = fallbackProvided ? normalizedFallback : normalizedFallback || 2400;
   const data = await storage.getJSON(DYNAMIC_KEYS.WATER + dayIndex, null);
 
   if (data) {
     const storedGoal = Number(data.goal);
-    const goal = storedGoal > 0 ? storedGoal : fallbackGoal;
+    const hasValidStoredGoal = Number.isFinite(storedGoal) && storedGoal > 0;
     const ml = Number(data.ml) || 0;
 
-    if (!Number.isFinite(storedGoal) || storedGoal !== goal) {
+    let goal = hasValidStoredGoal ? Math.round(storedGoal) : targetFallback;
+    let shouldPersist = false;
+
+    if (!hasValidStoredGoal) {
+      goal = targetFallback;
+      shouldPersist = true;
+    }
+
+    if (fallbackProvided && goal !== targetFallback) {
+      goal = targetFallback;
+      shouldPersist = true;
+    }
+
+    if (shouldPersist) {
       const updated = { goal, ml };
       await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, updated);
       return updated;
@@ -190,7 +208,8 @@ export async function getWaterState(dayIndex, defaultGoal = 2400) {
     return { goal, ml };
   }
 
-  const initial = { goal: fallbackGoal, ml: 0 };
+  const initialGoal = fallbackProvided ? targetFallback : 2400;
+  const initial = { goal: initialGoal, ml: 0 };
   await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, initial);
   return initial;
 }
@@ -218,6 +237,22 @@ export async function resetWater(dayIndex, goal = 2400) {
   const state = { goal: numericGoal, ml: 0 };
   await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, state);
   return state;
+}
+
+export async function syncWaterGoalAcrossPlan(totalDays, newGoal) {
+  const normalizedGoal = Number(newGoal);
+  if (!Number.isFinite(normalizedGoal) || normalizedGoal <= 0 || !totalDays) {
+    return;
+  }
+
+  const roundedGoal = Math.round(normalizedGoal);
+  const tasks = [];
+
+  for (let i = 0; i < totalDays; i++) {
+    tasks.push(getWaterState(i, roundedGoal));
+  }
+
+  await Promise.all(tasks);
 }
 
 // Progreso del día

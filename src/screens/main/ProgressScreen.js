@@ -6,7 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal
+  Modal,
+  Alert
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { useApp } from '../../context/AppContext'
@@ -32,6 +33,9 @@ import { getDayDisplayName, getDayTag } from '../../utils/labels'
 import { syncUserBaseOverrides } from '../../storage/storage'
 import { toOneDecimal, toIntOrNull, toNumberOrNull } from '../../utils/validation'
 import ScreenBanner from '../../components/shared/ScreenBanner'
+import Button from '../../components/shared/Button'
+import Card from '../../components/shared/Card'
+import { exportProgressPdf } from '../../utils/pdf'
 
 const USER_HEIGHT_KEY = 'USER_HEIGHT_OVERRIDE'
 const USER_WEIGHT_KEY = 'USER_WEIGHT_OVERRIDE'
@@ -48,6 +52,14 @@ const ProgressScreen = () => {
 
   const theme = getTheme(themeMode)
   const styles = getStyles(theme)
+
+  const userWaterGoal = useMemo(
+    () => {
+      const parsed = Number(metrics?.waterGoal)
+      return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 2400
+    },
+    [metrics?.waterGoal]
+  )
 
   const [completedDays, setCompletedDays] = useState(0)
 
@@ -82,6 +94,8 @@ const ProgressScreen = () => {
 
   const [selectedMetricKey, setSelectedMetricKey] = useState('weight')
   const [selectedTracker, setSelectedTracker] = useState('water') // water | workout | calories
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [showPdfWeekModal, setShowPdfWeekModal] = useState(false)
 
   const calculateStats = useCallback(
     (h, w, a) => {
@@ -127,7 +141,7 @@ const ProgressScreen = () => {
 
       for (let i = 0; i < derivedPlan.length; i++) {
         const dayProgress = await getProgressData(i)
-        const water = await getWaterState(i)
+        const water = await getWaterState(i, userWaterGoal)
         const calorieState = await getCalorieState(i, derivedPlan[i]?.kcal || 1600)
         const hasProgress = Object.keys(dayProgress).length > 0
         const hasWater = water.ml > 0
@@ -180,7 +194,7 @@ const ProgressScreen = () => {
         totalKcal: Math.round(totalExerciseKcal)
       })
     },
-    [age, derivedPlan, gender, height, language]
+    [age, derivedPlan, gender, height, language, userWaterGoal]
   )
 
   const hydrationStats = useCallback(
@@ -189,7 +203,7 @@ const ProgressScreen = () => {
       let totalMl = 0
 
       for (let i = 0; i < derivedPlan.length; i++) {
-        const water = await getWaterState(i)
+        const water = await getWaterState(i, userWaterGoal)
         totalMl += water.ml
         if (water.ml >= water.goal * 0.8) {
           daysWithWater++
@@ -198,7 +212,7 @@ const ProgressScreen = () => {
 
       return { daysWithWater, totalMl }
     },
-    [derivedPlan]
+    [derivedPlan, userWaterGoal]
   )
 
   // 1) cargar base data solo una vez
@@ -249,7 +263,7 @@ const ProgressScreen = () => {
     await loadAllProgress({ height, age })
     const hydraStats = await hydrationStats()
     setHydration(hydraStats)
-  }, [derivedPlan.length, loadAllProgress, hydrationStats, height, age])
+  }, [derivedPlan.length, loadAllProgress, hydrationStats, height, age, userWaterGoal])
 
   useFocusEffect(
     useCallback(() => {
@@ -386,6 +400,11 @@ const ProgressScreen = () => {
     )
   }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan])
 
+  const totalWeeks = useMemo(
+    () => Math.max(1, Math.ceil((derivedPlan.length || 0) / 7)),
+    [derivedPlan.length]
+  )
+
   const metricConfig = useMemo(
     () => [
       {
@@ -409,6 +428,57 @@ const ProgressScreen = () => {
       }
     ],
     [language, theme.colors.primary]
+  )
+
+  const handleShareProgressPdf = useCallback(
+    async ({ scope, weekNumber }) => {
+      if (exportingPdf) return
+
+      setExportingPdf(true)
+
+      try {
+        await exportProgressPdf({
+          language,
+          weekNumber: weekNumber || 1,
+          scope,
+          entries: progressByDay,
+          derivedPlan,
+          hydrationStats: hydration,
+          exerciseSummary,
+          baseStats: { height, startWeight, age },
+          metricsSummary: { bodyFat, bmr, recommendedCalories, bmi, bmiCategory },
+          chartPoints
+        })
+      } catch (error) {
+        console.error('Progress PDF export error', error)
+        Alert.alert(
+          language === 'en' ? 'PDF error' : 'Error al exportar PDF',
+          language === 'en'
+            ? 'We could not build the progress PDF. Try again later.'
+            : 'No pudimos generar el PDF de progreso. Intenta más tarde.'
+        )
+      } finally {
+        setExportingPdf(false)
+        setShowPdfWeekModal(false)
+      }
+    },
+    [
+      exportingPdf,
+      language,
+      progressByDay,
+      derivedPlan,
+      hydration,
+      exerciseSummary,
+      height,
+      startWeight,
+      age,
+      bodyFat,
+      bmr,
+      recommendedCalories,
+      bmi,
+      bmiCategory,
+      chartPoints
+    ]
   )
 
   const selectedMetric =
@@ -581,6 +651,43 @@ const ProgressScreen = () => {
       )}
 
       {/* Daily Progress arriba */}
+      <Card style={styles.pdfCard}>
+        <Text style={styles.sectionTitle}>
+          📄 {language === 'en' ? 'Progress reports' : 'Reportes de progreso'}
+        </Text>
+        <Text style={styles.pdfHint}>
+          {language === 'en'
+            ? 'Export your progress with all metrics, either by week or for the full program.'
+            : 'Exporta tu progreso con todas las métricas, por semana o de todo el programa.'}
+        </Text>
+        <View style={styles.pdfButtonsRow}>
+          <Button
+            title={language === 'en' ? 'Weekly PDF' : 'PDF semanal'}
+            onPress={() => setShowPdfWeekModal(true)}
+            disabled={exportingPdf}
+            style={styles.pdfButton}
+          />
+          <Button
+            title={language === 'en' ? 'Full plan PDF' : 'PDF del plan completo'}
+            variant="secondary"
+            onPress={() =>
+              handleShareProgressPdf({ scope: 'plan', weekNumber: totalWeeks })
+            }
+            disabled={exportingPdf}
+            style={styles.pdfButton}
+          />
+        </View>
+        <Text style={styles.pdfFootnote}>
+          {exportingPdf
+            ? language === 'en'
+              ? 'Preparing PDF…'
+              : 'Preparando PDF…'
+            : language === 'en'
+            ? 'Includes weight, body fat, hydration and workout data.'
+            : 'Incluye peso, grasa, hidratación y entrenos.'}
+        </Text>
+      </Card>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
           {language === 'en' ? 'Daily Progress' : 'Progreso Diario'}
@@ -870,6 +977,42 @@ const ProgressScreen = () => {
       </View>
 
       {/* Modal base data */}
+      <Modal visible={showPdfWeekModal} transparent animationType="fade">
+        <View style={styles.pdfModalOverlay}>
+          <View style={[styles.pdfModalCard, { backgroundColor: theme.colors.card }]}>
+            <Text style={styles.pdfModalTitle}>
+              {language === 'en' ? 'Select a week' : 'Selecciona una semana'}
+            </Text>
+            <View style={styles.pdfModalList}>
+              {Array.from({ length: totalWeeks }).map((_, index) => {
+                const weekNumber = index + 1
+                return (
+                  <TouchableOpacity
+                    key={weekNumber}
+                    style={styles.pdfModalOption}
+                    onPress={() => handleShareProgressPdf({ scope: 'week', weekNumber })}
+                    disabled={exportingPdf}
+                  >
+                    <Text style={styles.pdfModalOptionText}>
+                      {language === 'en' ? `Week ${weekNumber}` : `Semana ${weekNumber}`}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            <TouchableOpacity
+              style={[styles.pdfModalOption, styles.pdfModalClose]}
+              onPress={() => setShowPdfWeekModal(false)}
+              disabled={exportingPdf}
+            >
+              <Text style={styles.pdfModalCloseText}>
+                {language === 'en' ? 'Close' : 'Cerrar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={showBaseDataModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -1101,6 +1244,26 @@ const getStyles = (theme) =>
       color: theme.colors.primary,
       fontWeight: '600'
     },
+    pdfCard: {
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.sm
+    },
+    pdfHint: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted
+    },
+    pdfButtonsRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap'
+    },
+    pdfButton: {
+      flex: 1
+    },
+    pdfFootnote: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
     section: {
       marginTop: theme.spacing.md,
       marginBottom: theme.spacing.sm
@@ -1273,6 +1436,50 @@ const getStyles = (theme) =>
       ...theme.typography.caption,
       color: theme.colors.textMuted,
       marginVertical: 8
+    },
+    pdfModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(15,23,42,0.65)',
+      justifyContent: 'center',
+      padding: theme.spacing.lg
+    },
+    pdfModalCard: {
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      gap: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.border
+    },
+    pdfModalTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      textAlign: 'center'
+    },
+    pdfModalList: {
+      gap: theme.spacing.sm
+    },
+    pdfModalOption: {
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.bgSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border
+    },
+    pdfModalOptionText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      textAlign: 'center'
+    },
+    pdfModalClose: {
+      backgroundColor: theme.colors.card,
+      borderColor: theme.colors.border
+    },
+    pdfModalCloseText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      textAlign: 'center',
+      fontWeight: '600'
     },
     modalOverlay: {
       flex: 1,
