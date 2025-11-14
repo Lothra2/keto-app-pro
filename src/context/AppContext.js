@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import storage, { KEYS } from '../storage/storage';
+import storage, { KEYS, syncWaterGoalAcrossPlan } from '../storage/storage';
 import { buildPlan } from '../utils/calculations';
 import { useThemeContext } from './ThemeContext';
 
@@ -191,9 +191,7 @@ export const AppProvider = ({ children }) => {
     };
 
     const storageKey = settingsMap[key];
-    if (storageKey) {
-      await storage.set(storageKey, value);
-    }
+    let valueToPersist = value;
 
     switch (key) {
       case 'plan-weeks':
@@ -209,11 +207,26 @@ export const AppProvider = ({ children }) => {
         setThemeMode(value);
         break;
       case 'water-goal':
-        setMetrics(prev => ({ ...prev, waterGoal: Number(value) || prev.waterGoal }));
+        {
+          const numericGoal = Number(value);
+          if (!Number.isFinite(numericGoal) || numericGoal <= 0) {
+            return;
+          }
+          const normalizedGoal = Math.round(numericGoal);
+          valueToPersist = normalizedGoal;
+          setMetrics(prev => ({ ...prev, waterGoal: normalizedGoal }));
+          if (derivedPlan.length > 0) {
+            await syncWaterGoalAcrossPlan(derivedPlan.length, normalizedGoal);
+          }
+        }
         break;
       case 'workout-intensity':
         setMetrics(prev => ({ ...prev, workoutIntensity: value || prev.workoutIntensity }));
         break;
+    }
+
+    if (storageKey && valueToPersist !== undefined) {
+      await storage.set(storageKey, valueToPersist);
     }
   };
 
@@ -230,22 +243,36 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateMetrics = async (updates) => {
-    setMetrics(prev => ({ ...prev, ...updates }));
+    const sanitizedUpdates = { ...updates };
 
-    if (updates.height !== undefined) {
-      await storage.set(KEYS.HEIGHT, updates.height);
-    }
-    if (updates.startWeight !== undefined) {
-      await storage.set(KEYS.START_WEIGHT, updates.startWeight);
-    }
-    if (updates.age !== undefined) {
-      await storage.set(KEYS.AGE, updates.age);
-    }
     if (updates.waterGoal !== undefined) {
-      await storage.set(KEYS.WATER_GOAL, updates.waterGoal);
+      const numericGoal = Number(updates.waterGoal);
+      if (Number.isFinite(numericGoal) && numericGoal > 0) {
+        sanitizedUpdates.waterGoal = Math.round(numericGoal);
+      } else {
+        delete sanitizedUpdates.waterGoal;
+      }
     }
-    if (updates.workoutIntensity !== undefined) {
-      await storage.set(KEYS.WORKOUT_INTENSITY, updates.workoutIntensity);
+
+    setMetrics(prev => ({ ...prev, ...sanitizedUpdates }));
+
+    if (sanitizedUpdates.height !== undefined) {
+      await storage.set(KEYS.HEIGHT, sanitizedUpdates.height);
+    }
+    if (sanitizedUpdates.startWeight !== undefined) {
+      await storage.set(KEYS.START_WEIGHT, sanitizedUpdates.startWeight);
+    }
+    if (sanitizedUpdates.age !== undefined) {
+      await storage.set(KEYS.AGE, sanitizedUpdates.age);
+    }
+    if (sanitizedUpdates.waterGoal !== undefined) {
+      await storage.set(KEYS.WATER_GOAL, sanitizedUpdates.waterGoal);
+      if (derivedPlan.length > 0) {
+        await syncWaterGoalAcrossPlan(derivedPlan.length, sanitizedUpdates.waterGoal);
+      }
+    }
+    if (sanitizedUpdates.workoutIntensity !== undefined) {
+      await storage.set(KEYS.WORKOUT_INTENSITY, sanitizedUpdates.workoutIntensity);
     }
   };
 

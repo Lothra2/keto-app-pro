@@ -27,7 +27,9 @@ const SettingsScreen = ({ navigation }) => {
     updateApiCredentials,
     resetApp,
     foodPrefs,
-    apiCredentials
+    apiCredentials,
+    updateMetrics,
+    metrics
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -39,6 +41,9 @@ const SettingsScreen = ({ navigation }) => {
   const [dislikeFoods, setDislikeFoods] = useState(foodPrefs.dislike || '');
   const [apiUser, setApiUser] = useState(apiCredentials.user || '');
   const [apiPass, setApiPass] = useState(apiCredentials.pass || '');
+  const [waterGoal, setWaterGoal] = useState(
+    metrics?.waterGoal ? String(metrics.waterGoal) : '2400'
+  );
 
   useEffect(() => {
     setName(user.name || '');
@@ -53,6 +58,10 @@ const SettingsScreen = ({ navigation }) => {
     setApiUser(apiCredentials.user || '');
     setApiPass(apiCredentials.pass || '');
   }, [apiCredentials.user, apiCredentials.pass]);
+
+  useEffect(() => {
+    setWaterGoal(metrics?.waterGoal ? String(metrics.waterGoal) : '2400');
+  }, [metrics?.waterGoal]);
 
   const handleSaveName = async () => {
     if (name.trim()) {
@@ -93,6 +102,30 @@ const SettingsScreen = ({ navigation }) => {
     Alert.alert(
       language === 'en' ? 'Saved' : 'Guardado',
       language === 'en' ? 'API credentials saved' : 'Credenciales guardadas'
+    );
+  };
+
+  const handleSaveWaterGoal = async () => {
+    const numericGoal = Number(waterGoal);
+    if (!Number.isFinite(numericGoal) || numericGoal <= 0) {
+      Alert.alert(
+        language === 'en' ? 'Check the value' : 'Revisa el valor',
+        language === 'en'
+          ? 'Enter your daily goal in milliliters, e.g. 2000.'
+          : 'Ingresa tu meta diaria en mililitros, por ejemplo 2000.'
+      );
+      return;
+    }
+
+    const normalizedGoal = Math.max(500, Math.round(numericGoal));
+    await updateMetrics({ waterGoal: normalizedGoal });
+    setWaterGoal(String(normalizedGoal));
+
+    Alert.alert(
+      language === 'en' ? 'Saved' : 'Guardado',
+      language === 'en'
+        ? 'Hydration goal updated across your plan.'
+        : 'Meta de hidratación actualizada en todo tu plan.'
     );
   };
 
@@ -307,6 +340,34 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </View>
 
+      {/* Water Goal */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {language === 'en' ? 'Water goal' : 'Meta de agua'}
+        </Text>
+        <Text style={styles.sectionDescription}>
+          {language === 'en'
+            ? 'Update your daily hydration target. Home, Day and Progress screens will follow this value.'
+            : 'Actualiza tu meta diaria de hidratación. Inicio, Día y Progreso usarán este valor.'}
+        </Text>
+        <View style={styles.inlineRow}>
+          <TextInput
+            style={[styles.input, styles.inlineInput]}
+            keyboardType="numeric"
+            placeholder="2000"
+            placeholderTextColor={theme.colors.textMuted}
+            value={waterGoal}
+            onChangeText={setWaterGoal}
+          />
+          <Text style={styles.inlineSuffix}>ml</Text>
+        </View>
+        <TouchableOpacity style={styles.button} onPress={handleSaveWaterGoal}>
+          <Text style={styles.buttonText}>
+            {language === 'en' ? 'Save hydration goal' : 'Guardar meta de agua'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Theme */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
@@ -472,6 +533,21 @@ const getStyles = (theme) => StyleSheet.create({
     ...theme.typography.body,
     color: '#fff',
     fontWeight: '600'
+  },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm
+  },
+  inlineInput: {
+    flex: 1,
+    marginBottom: 0
+  },
+  inlineSuffix: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '500'
   },
   optionsRow: {
     flexDirection: 'row',
