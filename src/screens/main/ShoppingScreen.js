@@ -15,6 +15,9 @@ import aiService from '../../api/aiService'
 import { mergePlanDay, buildWeekAiPayload } from '../../utils/plan'
 import { stripMarkdownHeadings } from '../../utils/labels'
 import ScreenBanner from '../../components/shared/ScreenBanner'
+import Button from '../../components/shared/Button'
+import Card from '../../components/shared/Card'
+import { exportShoppingWeekPdf } from '../../utils/pdf'
 
 const ShoppingScreen = () => {
   const {
@@ -33,6 +36,7 @@ const ShoppingScreen = () => {
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [showBaseList, setShowBaseList] = useState(true)
+  const [exportingPdf, setExportingPdf] = useState(false)
 
   // misma lógica de parseo, pero reusable
   const parseAiList = useCallback(
@@ -166,6 +170,31 @@ const ShoppingScreen = () => {
           { cat: 'Otros', items: 'Café sin azúcar, sal rosada, limón' }
         ]
 
+  const handleExportShoppingPdf = useCallback(async () => {
+    if (exportingPdf) return
+
+    setExportingPdf(true)
+
+    try {
+      await exportShoppingWeekPdf({
+        language,
+        weekNumber: currentWeek,
+        sections: aiSections,
+        baseSections: baseList
+      })
+    } catch (error) {
+      console.error('Shopping PDF export error', error)
+      Alert.alert(
+        language === 'en' ? 'PDF error' : 'Error al exportar PDF',
+        language === 'en'
+          ? 'We could not build the shopping PDF. Try again later.'
+          : 'No pudimos generar el PDF de compras. Intenta más tarde.'
+      )
+    } finally {
+      setExportingPdf(false)
+    }
+  }, [exportingPdf, language, currentWeek, aiSections, baseList])
+
   const prettyDate = lastUpdated ? new Date(lastUpdated).toLocaleString() : null
 
   return (
@@ -227,6 +256,26 @@ const ShoppingScreen = () => {
           )}
         </TouchableOpacity>
       </View>
+
+      <Card style={styles.pdfCard}>
+        <View style={styles.pdfHeader}>
+          <Text style={styles.pdfTitle}>
+            📄 {language === 'en' ? 'Weekly shopping PDF' : 'PDF semanal de compras'}
+          </Text>
+          <Text style={styles.pdfHint}>
+            {language === 'en'
+              ? 'Share grouped groceries for the entire week, including coach staples.'
+              : 'Comparte tus compras agrupadas de la semana y los básicos del coach.'}
+          </Text>
+        </View>
+        <Button
+          title={language === 'en' ? 'Share shopping PDF' : 'Compartir PDF de compras'}
+          onPress={handleExportShoppingPdf}
+          loading={exportingPdf}
+          disabled={exportingPdf}
+          style={styles.pdfButton}
+        />
+      </Card>
 
       {/* resultado IA */}
       <View style={styles.aiListBox}>
@@ -347,6 +396,23 @@ const getStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted,
       marginBottom: theme.spacing.sm
+    },
+    pdfCard: {
+      gap: theme.spacing.sm
+    },
+    pdfHeader: {
+      gap: 4
+    },
+    pdfTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text
+    },
+    pdfHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
+    pdfButton: {
+      alignSelf: 'flex-start'
     },
     aiButton: {
       backgroundColor: theme.colors.primary,
