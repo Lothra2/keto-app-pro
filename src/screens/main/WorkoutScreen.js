@@ -406,6 +406,13 @@ const WorkoutScreen = ({ route, navigation }) => {
           focus={`${weekLabel} · ${dayLabel}`}
           exercises={workout}
           onExercisePress={handleExercisePress}
+          collapsible
+          initiallyCollapsed={false}
+          collapsedHint={
+            language === 'en'
+              ? 'Tap to open the AI routine.'
+              : 'Toca para abrir la rutina IA.'
+          }
         />
 
         {referenceExercises.length
@@ -416,6 +423,11 @@ const WorkoutScreen = ({ route, navigation }) => {
               exercises={referenceExercises}
               collapsible
               initiallyCollapsed
+              collapsedHint={
+                language === 'en'
+                  ? 'Tap to open the reference plan.'
+                  : 'Toca para abrir el plan de referencia.'
+              }
               onExercisePress={handleExercisePress}
             />
             )

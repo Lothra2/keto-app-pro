@@ -15,7 +15,11 @@ export const getTheme = (mode = 'dark') => {
       danger: colors.danger,
       success: colors.success,
       warning: colors.warning,
-      info: colors.info
+      info: colors.info,
+      background: colorScheme.bg,
+      surface: colorScheme.card,
+      onPrimary: '#ffffff',
+      onSurface: colorScheme.text
     },
     spacing,
     typography,
