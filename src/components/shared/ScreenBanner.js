@@ -117,7 +117,7 @@ const getStyles = (theme) =>
     overlay: {
       padding: theme.spacing.lg,
       gap: theme.spacing.sm,
-      backgroundColor: 'rgba(15,23,42,0.15)'
+      backgroundColor: theme.mode === 'dark' ? 'rgba(15,23,42,0.18)' : 'rgba(255,255,255,0.32)'
     },
     headerRow: {
       flexDirection: 'row',

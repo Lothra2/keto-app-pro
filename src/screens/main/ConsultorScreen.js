@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import aiService from '../../api/aiService';
@@ -144,6 +145,18 @@ const ConsultorScreen = () => {
     }
   }, [input, loading, mode, language, creds, push]);
 
+  const bubblePalette = useMemo(() => {
+    const isDark = theme.mode === 'dark';
+
+    return {
+      userBg: isDark ? 'rgba(14,165,233,0.2)' : 'rgba(14,165,233,0.12)',
+      userBorder: isDark ? 'rgba(125,211,252,0.45)' : 'rgba(14,165,233,0.35)',
+      assistantBg: isDark ? 'rgba(15,23,42,0.72)' : theme.colors.surface,
+      assistantBorder: isDark ? 'rgba(148,163,184,0.35)' : theme.colors.border,
+      meta: isDark ? 'rgba(226,232,240,0.65)' : 'rgba(15,23,42,0.55)'
+    };
+  }, [theme]);
+
   const renderItem = ({ item }) => {
     const isUser = item.role === 'user';
     return (
@@ -151,26 +164,42 @@ const ConsultorScreen = () => {
         style={[
           styles.bubble,
           {
-            backgroundColor: isUser ? theme.colors.primarySoft : theme.colors.card,
+            backgroundColor: isUser ? bubblePalette.userBg : bubblePalette.assistantBg,
             alignSelf: isUser ? 'flex-end' : 'flex-start',
-            borderColor: isUser ? theme.colors.primary : theme.colors.border,
+            borderColor: isUser ? bubblePalette.userBorder : bubblePalette.assistantBorder,
+            shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.08,
+            shadowColor: isUser ? '#0ea5e9' : '#0f172a',
           },
         ]}
       >
+        <Text
+          style={[
+            styles.metaLabel,
+            { color: bubblePalette.meta, alignSelf: isUser ? 'flex-end' : 'flex-start' },
+          ]}
+        >
+          {isUser
+            ? language === 'en'
+              ? 'You'
+              : 'Tú'
+            : language === 'en'
+            ? 'Coach'
+            : 'Coach'}
+        </Text>
         {!!item.imageUri && (
           <Image source={{ uri: item.imageUri }} style={styles.image} resizeMode="cover" />
         )}
-        <Text style={[styles.msg, { color: theme.colors.text }]}>{item.text}</Text>
+        <Text style={[styles.msg, { color: theme.colors.onSurface }]}>{item.text}</Text>
       </View>
     );
   };
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: theme.colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={{ padding: 16 }}>
+      <View style={styles.bannerWrapper}>
         <ScreenBanner
           theme={theme}
           icon="🤖"
@@ -217,12 +246,12 @@ const ConsultorScreen = () => {
       </View>
 
       {/* chips rápidos */}
-      <View style={styles.quickRow}>
+      <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
         <FlatList
           horizontal
           data={QUICK}
           keyExtractor={(q) => q.id}
-          contentContainerStyle={{ paddingHorizontal: 12 }}
+          contentContainerStyle={styles.quickContent}
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => {
             const label = language === 'en' ? item.textEn : item.textEs;
@@ -231,10 +260,18 @@ const ConsultorScreen = () => {
                 onPress={() => handleQuick(label)}
                 style={[
                   styles.quickChip,
-                  { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+                  {
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.surface,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.06,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 2,
+                  },
                 ]}
               >
-                <Text style={{ color: theme.colors.text }}>{label}</Text>
+                <Text style={{ color: theme.colors.onSurface }}>{label}</Text>
               </TouchableOpacity>
             );
           }}
@@ -274,19 +311,38 @@ const ConsultorScreen = () => {
         data={messages}
         keyExtractor={(m) => m.id}
         renderItem={renderItem}
-        contentContainerStyle={{ padding: 12, paddingBottom: 80 }}
+        contentContainerStyle={styles.listContent}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
       />
 
       {/* input */}
-      <View
+      <LinearGradient
+        colors={
+          theme.mode === 'dark'
+            ? ['rgba(15,23,42,0.92)', 'rgba(15,23,42,0.86)']
+            : ['rgba(255,255,255,0.97)', 'rgba(248,250,252,0.92)']
+        }
         style={[
           styles.inputBar,
-          { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border },
+          {
+            borderTopColor: theme.colors.border,
+            shadowColor: '#000',
+            shadowOpacity: 0.12,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: -6 },
+            elevation: 10,
+          },
         ]}
       >
         <TextInput
-          style={[styles.input, { color: theme.colors.text }]}
+          style={[
+            styles.input,
+            {
+              color: theme.colors.onSurface,
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
           placeholder={language === 'en' ? 'Ask your coach...' : 'Pregunta a tu consultor...'}
           placeholderTextColor={theme.colors.textMuted}
           value={input}
@@ -298,22 +354,33 @@ const ConsultorScreen = () => {
           disabled={loading || input.trim().length === 0}
           style={[
             styles.sendBtn,
-            { backgroundColor: loading ? theme.colors.textMuted : theme.colors.primary },
+            {
+              backgroundColor: loading ? theme.colors.textMuted : theme.colors.primary,
+              shadowColor: '#0f766e',
+              shadowOpacity: loading ? 0 : 0.35,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: loading ? 0 : 8,
+            },
           ]}
         >
           {loading ? (
-            <ActivityIndicator />
+            <ActivityIndicator color={theme.colors.onPrimary} />
           ) : (
             <Text style={[styles.sendTxt, { color: theme.colors.onPrimary }]}>➤</Text>
           )}
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  bannerWrapper: {
+    padding: 16,
+    paddingBottom: 4,
+  },
   banner: {
     shadowColor: '#000',
     shadowOpacity: 0.25,
@@ -337,13 +404,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  quickRow: { paddingVertical: 8, paddingHorizontal: 12 },
+  quickRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  quickContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
   quickChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    marginRight: 8,
   },
   modeRow: {
     flexDirection: 'row',
@@ -359,14 +432,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   bubble: {
-    maxWidth: '85%',
+    maxWidth: '88%',
     borderWidth: 1,
-    padding: 10,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 18,
     marginVertical: 6,
+    gap: 6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  msg: { fontSize: 14, lineHeight: 20 },
-  image: { width: 220, height: 220, borderRadius: 12, marginBottom: 8 },
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  msg: { fontSize: 15, lineHeight: 22 },
+  image: { width: 240, height: 240, borderRadius: 14, marginBottom: 4 },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 120,
+    paddingTop: 12,
+  },
   inputBar: {
     position: 'absolute',
     left: 0,
@@ -377,15 +465,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     padding: 10,
     gap: 8,
+    paddingBottom: 16,
   },
-  input: { flex: 1, minHeight: 40, maxHeight: 120, padding: 10 },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 140,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
   sendBtn: {
     height: 42,
     minWidth: 42,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   sendTxt: { fontSize: 16, fontWeight: '600' },
 });

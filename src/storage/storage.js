@@ -193,8 +193,9 @@ export async function saveWaterState(dayIndex, state) {
   return await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, state);
 }
 
-export async function addWater(dayIndex, ml) {
-  const state = await getWaterState(dayIndex);
+export async function addWater(dayIndex, ml, defaultGoal = 2400) {
+  const state = await getWaterState(dayIndex, defaultGoal);
+  state.goal = state.goal || defaultGoal;
   state.ml = Math.max(0, state.ml + ml);
   return await saveWaterState(dayIndex, state);
 }
