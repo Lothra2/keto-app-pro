@@ -9,6 +9,7 @@ import {
   Alert,
   Switch
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
@@ -849,87 +850,35 @@ const HomeScreen = ({ navigation }) => {
       </View>
     </View>
 
-    <Card style={styles.pdfCard}>
-      <View style={styles.pdfHeader}>
-        <Text style={styles.sectionTitle}>
-          📄 {language === 'en' ? 'Weekly PDF' : 'PDF semanal'}
-        </Text>
-        <Text style={styles.pdfHint}>
-          {language === 'en'
-            ? 'Share all meals, macros and notes for this week.'
-            : 'Comparte todas las comidas, macros y notas de esta semana.'}
-        </Text>
-      </View>
-      <Button
-        title={language === 'en' ? 'Share weekly PDF' : 'Compartir PDF semanal'}
-        onPress={handleExportWeekPdf}
-        loading={exportingPdf}
-        disabled={exportingPdf}
-        style={styles.pdfButton}
-      />
-      <Text style={styles.pdfFootnote}>
-        {language === 'en'
-          ? `Hydration goal: ${weeklyWaterGoal} ml`
-          : `Meta de hidratación: ${weeklyWaterGoal} ml`}
-      </Text>
-    </Card>
-
-    <Card style={styles.aiActionsCard}>
-        <View style={styles.aiActionsHeader}>
-          <Text style={styles.sectionTitle}>
-            🤖 {language === 'en' ? 'AI actions' : 'Acciones IA'}
-          </Text>
-          <Text style={styles.aiActionsHint}>
-            {language === 'en'
-              ? 'Boost today with 1 tap'
-              : 'Mejora tu día con un toque'}
-          </Text>
-        </View>
-        <View style={styles.aiButtons}>
-          <Button
-            title={
-              aiDayLoading
-                ? language === 'en'
-                  ? 'Generating...'
-                  : 'Generando...'
-                : language === 'en'
-                ? 'Full day with AI'
-                : 'Día completo con IA'
-            }
-            onPress={aiDayLoading ? undefined : handleGenerateFullDay}
-            disabled={aiDayLoading}
-            style={styles.aiButton}
-          />
-          <Button
-            title={language === 'en' ? 'AI review of today' : 'Revisión IA del día'}
-            variant="secondary"
-            onPress={handleReviewDay}
-            style={styles.aiButton}
-          />
-          <TouchableOpacity
-            style={styles.ghostLink}
-            onPress={handleGenerateWeekReview}
-          >
-            <Text style={styles.ghostLinkText}>
-              {language === 'en' ? 'Weekly AI review' : 'Revisión IA semanal'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Card>
-
-      <Card style={styles.tipCard}>
+    <Card style={styles.tipCard}>
+      <LinearGradient
+        colors={
+          theme.mode === 'dark'
+            ? ['rgba(14,165,233,0.22)', 'rgba(8,47,73,0.9)']
+            : ['rgba(56,189,248,0.18)', 'rgba(191,219,254,0.22)']
+        }
+        style={styles.tipGradient}
+      >
         <View style={styles.tipMessage}>
-          <Text style={styles.tipIcon}>💡</Text>
+          <View style={styles.tipIconWrap}>
+            <Text style={styles.tipIcon}>💡</Text>
+          </View>
           <View style={{ flex: 1 }}>
+            <Text style={styles.tipLabel}>
+              {language === 'en' ? 'Daily reminder' : 'Recordatorio del día'}
+            </Text>
             <Text style={styles.tipText} numberOfLines={2}>
               {tip}
             </Text>
             {motivation ? (
-              <Text style={styles.tipBadgeText}>{motivation}</Text>
+              <View style={styles.tipBadge}>
+                <Text style={styles.tipBadgeText}>{motivation}</Text>
+              </View>
             ) : null}
           </View>
         </View>
-      </Card>
+      </LinearGradient>
+    </Card>
 
       <Card style={styles.waterCard}>
         <View style={styles.waterHeader}>
@@ -1008,67 +957,118 @@ const HomeScreen = ({ navigation }) => {
         </Text>
         <View style={styles.mealCards}>
           {meals.map((meal) => (
-            <View
-              key={meal.key}
-              style={[
-                styles.mealCard,
-                meal.isCompleted && styles.mealCardDone
-              ]}
-            >
-              <View style={styles.mealHeaderRow}>
-                <View style={styles.mealIconWrap}>
-                  <Text style={styles.mealIcon}>{meal.icon}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.mealTitleRow}>
-                    <Text style={styles.mealTitle}>{meal.title}</Text>
-                    {meal.isAI ? (
-                      <Text style={styles.mealAiPill}>
-                        IA
-                      </Text>
-                    ) : null}
+            <React.Fragment key={meal.key}>
+              <View
+                style={[
+                  styles.mealCard,
+                  meal.isCompleted && styles.mealCardDone
+                ]}
+              >
+                <View style={styles.mealHeaderRow}>
+                  <View style={styles.mealIconWrap}>
+                    <Text style={styles.mealIcon}>{meal.icon}</Text>
                   </View>
-                  <Text style={styles.mealKcal}>
-                    {meal.kcal ? `${meal.kcal} kcal` : (language === 'en' ? 'No kcal' : 'Sin kcal')}
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.mealTitleRow}>
+                      <Text style={styles.mealTitle}>{meal.title}</Text>
+                      {meal.isAI ? (
+                        <Text style={styles.mealAiPill}>
+                          IA
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text style={styles.mealKcal}>
+                      {meal.kcal
+                        ? `${meal.kcal} kcal`
+                        : language === 'en'
+                        ? 'No kcal'
+                        : 'Sin kcal'}
+                    </Text>
+                  </View>
+                  <View style={styles.mealToggleWrap}>
+                    <Switch
+                      value={meal.isCompleted}
+                      onValueChange={meal.onToggle}
+                      trackColor={mealToggleTrack}
+                      thumbColor={meal.isCompleted ? mealToggleThumbOn : mealToggleThumbOff}
+                      ios_backgroundColor={mealToggleTrack.false}
+                    />
+                  </View>
+                </View>
+                {meal.data?.qty ? (
+                  <Text style={styles.mealDesc} numberOfLines={2}>
+                    {meal.data.qty}
+                  </Text>
+                ) : null}
+                <View style={styles.mealActions}>
+                  {meal.showAIButton ? (
+                    <TouchableOpacity
+                      style={styles.mealAIButton}
+                      onPress={meal.onGenerateAI}
+                    >
+                      <Text style={styles.mealAIText}>
+                        {language === 'en' ? 'AI for this' : 'IA para esto'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ flex: 1 }} />
+                  )}
+                  <Text style={styles.mealStatusText}>
+                    {meal.isCompleted
+                      ? language === 'en'
+                        ? 'Completed'
+                        : 'Completada'
+                      : language === 'en'
+                      ? 'Pending'
+                      : 'Pendiente'}
                   </Text>
                 </View>
-                <View style={styles.mealToggleWrap}>
-                  <Switch
-                    value={meal.isCompleted}
-                    onValueChange={meal.onToggle}
-                    trackColor={mealToggleTrack}
-                    thumbColor={meal.isCompleted ? mealToggleThumbOn : mealToggleThumbOff}
-                    ios_backgroundColor={mealToggleTrack.false}
-                  />
-                </View>
               </View>
-              {meal.data?.qty ? (
-                <Text style={styles.mealDesc} numberOfLines={2}>
-                  {meal.data.qty}
-                </Text>
-              ) : null}
-              <View style={styles.mealActions}>
-                {meal.showAIButton ? (
-                  <TouchableOpacity
-                    style={styles.mealAIButton}
-                    onPress={meal.onGenerateAI}
-                  >
-                    <Text style={styles.mealAIText}>
-                      {language === 'en' ? 'AI for this' : 'IA para esto'}
+              {meal.key === 'cena' ? (
+                <Card style={styles.aiActionsCard}>
+                  <View style={styles.aiActionsHeader}>
+                    <Text style={styles.sectionTitle}>
+                      🤖 {language === 'en' ? 'AI actions' : 'Acciones IA'}
                     </Text>
-                  </TouchableOpacity>
-                ) : <View style={{ flex: 1 }} />}
-                <Text style={styles.mealStatusText}>
-                  {meal.isCompleted
-                    ? language === 'en'
-                      ? 'Completed'
-                      : 'Completada'
-                    : language === 'en'
-                    ? 'Pending'
-                    : 'Pendiente'}
-                </Text>
-              </View>
-            </View>
+                    <Text style={styles.aiActionsHint}>
+                      {language === 'en'
+                        ? 'Review or regenerate your meals'
+                        : 'Revisa o regenera tus comidas'}
+                    </Text>
+                  </View>
+                  <View style={styles.aiButtons}>
+                    <Button
+                      title={
+                        aiDayLoading
+                          ? language === 'en'
+                            ? 'Generating...'
+                            : 'Generando...'
+                          : language === 'en'
+                          ? 'Generate meals with AI'
+                          : 'Generar comidas con IA'
+                      }
+                      onPress={aiDayLoading ? undefined : handleGenerateFullDay}
+                      disabled={aiDayLoading}
+                      style={styles.aiButton}
+                    />
+                    <Button
+                      title={language === 'en' ? 'AI review of today' : 'Revisión IA del día'}
+                      variant="secondary"
+                      onPress={handleReviewDay}
+                      style={styles.aiButton}
+                    />
+                    <TouchableOpacity
+                      style={styles.ghostLink}
+                      onPress={handleGenerateWeekReview}
+                    >
+                      <Text style={styles.ghostLinkText}>
+                        {language === 'en' ? 'Weekly AI review' : 'Revisión IA semanal'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </Card>
+              ) : null}
+            </React.Fragment>
           ))}
         </View>
       </View>
@@ -1093,16 +1093,22 @@ const HomeScreen = ({ navigation }) => {
             {language === 'en' ? 'Asking AI…' : 'Consultando IA…'}
           </Text>
         ) : dayReview?.length ? (
-          <View style={styles.reviewList}>
-            {dayReview
-              .slice(0, showFullDayReview ? dayReview.length : 1)
-              .map((item, index) => (
+          showFullDayReview ? (
+            <View style={styles.reviewList}>
+              {dayReview.map((item, index) => (
                 <View key={`${item.label}-${index}`} style={styles.reviewItem}>
                   <Text style={styles.reviewLabel}>{item.label}</Text>
                   <Text style={styles.reviewText}>{item.text}</Text>
                 </View>
               ))}
-          </View>
+            </View>
+          ) : (
+            <Text style={styles.reviewCollapsed}>
+              {language === 'en'
+                ? 'Tap “Show” to open today’s full AI review.'
+                : 'Toca “Mostrar” para abrir la revisión completa de hoy.'}
+            </Text>
+          )
         ) : (
           <Text style={styles.reviewEmpty}>
             {language === 'en'
@@ -1154,6 +1160,31 @@ const HomeScreen = ({ navigation }) => {
               : 'Dispara el resumen semanal desde Acciones IA.'}
           </Text>
         )}
+      </Card>
+
+      <Card style={styles.pdfCard}>
+        <View style={styles.pdfHeader}>
+          <Text style={styles.sectionTitle}>
+            📄 {language === 'en' ? 'Weekly PDF' : 'PDF semanal'}
+          </Text>
+          <Text style={styles.pdfHint}>
+            {language === 'en'
+              ? 'Share all meals, macros and notes for this week.'
+              : 'Comparte todas las comidas, macros y notas de esta semana.'}
+          </Text>
+        </View>
+        <Button
+          title={language === 'en' ? 'Share weekly PDF' : 'Compartir PDF semanal'}
+          onPress={handleExportWeekPdf}
+          loading={exportingPdf}
+          disabled={exportingPdf}
+          style={styles.pdfButton}
+        />
+        <Text style={styles.pdfFootnote}>
+          {language === 'en'
+            ? `Hydration goal: ${weeklyWaterGoal} ml`
+            : `Meta de hidratación: ${weeklyWaterGoal} ml`}
+        </Text>
       </Card>
 
       <TouchableOpacity
@@ -1324,7 +1355,7 @@ const createStyles = (theme) =>
       borderColor: theme.colors.border,
       borderRadius: theme.radius.lg,
       padding: theme.spacing.md,
-      marginHorizontal: theme.spacing.lg
+      marginTop: theme.spacing.sm
     },
     aiActionsHeader: {
       gap: 4
@@ -1348,30 +1379,55 @@ const createStyles = (theme) =>
       color: theme.colors.primary
     },
     tipCard: {
-      gap: theme.spacing.sm,
-      backgroundColor: theme.colors.cardSoft,
-      borderRadius: theme.radius.md,
-      paddingVertical: theme.spacing.md,
-      paddingHorizontal: theme.spacing.md,
-      marginHorizontal: theme.spacing.lg
+      marginHorizontal: theme.spacing.lg,
+      borderRadius: theme.radius.lg,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.mode === 'dark' ? 'rgba(56,189,248,0.3)' : 'rgba(56,189,248,0.22)'
+    },
+    tipGradient: {
+      padding: theme.spacing.md,
+      borderRadius: theme.radius.lg
     },
     tipMessage: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: theme.spacing.sm
+      gap: theme.spacing.md
+    },
+    tipIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      backgroundColor: theme.mode === 'dark' ? 'rgba(14,165,233,0.25)' : 'rgba(14,165,233,0.18)',
+      alignItems: 'center',
+      justifyContent: 'center'
     },
     tipIcon: {
-      fontSize: 20
+      fontSize: 24
+    },
+    tipLabel: {
+      ...theme.typography.caption,
+      color: theme.mode === 'dark' ? 'rgba(224,242,254,0.85)' : 'rgba(8,47,73,0.7)',
+      textTransform: 'uppercase',
+      letterSpacing: 0.8
     },
     tipText: {
       ...theme.typography.body,
-      color: theme.colors.text,
+      color: theme.mode === 'dark' ? '#f8fafc' : theme.colors.text,
       fontWeight: '600'
+    },
+    tipBadge: {
+      marginTop: 6,
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: theme.mode === 'dark' ? 'rgba(45,212,191,0.25)' : 'rgba(45,212,191,0.18)'
     },
     tipBadgeText: {
       ...theme.typography.caption,
-      color: theme.colors.primary,
-      marginTop: 2
+      color: theme.mode === 'dark' ? '#5eead4' : '#0f766e',
+      fontWeight: '600'
     },
     waterCard: {
       gap: theme.spacing.sm,
@@ -1600,6 +1656,11 @@ const createStyles = (theme) =>
     },
     reviewList: {
       gap: theme.spacing.sm
+    },
+    reviewCollapsed: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      fontStyle: 'italic'
     },
     reviewItem: {
       borderWidth: 1,
