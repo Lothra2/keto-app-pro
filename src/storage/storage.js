@@ -173,19 +173,26 @@ export async function saveMealCompletion(dayIndex, mealKey, completed) {
 // Agua del día
 export async function getWaterState(dayIndex, defaultGoal = 2400) {
   const storage = new Storage();
+  const fallbackGoal = Number(defaultGoal) || 2400;
   const data = await storage.getJSON(DYNAMIC_KEYS.WATER + dayIndex, null);
-  
+
   if (data) {
-    return {
-      goal: data.goal || defaultGoal,
-      ml: data.ml || 0
-    };
+    const storedGoal = Number(data.goal);
+    const goal = storedGoal > 0 ? storedGoal : fallbackGoal;
+    const ml = Number(data.ml) || 0;
+
+    if (!Number.isFinite(storedGoal) || storedGoal !== goal) {
+      const updated = { goal, ml };
+      await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, updated);
+      return updated;
+    }
+
+    return { goal, ml };
   }
-  
-  return {
-    goal: defaultGoal,
-    ml: 0
-  };
+
+  const initial = { goal: fallbackGoal, ml: 0 };
+  await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, initial);
+  return initial;
 }
 
 export async function saveWaterState(dayIndex, state) {
@@ -193,15 +200,22 @@ export async function saveWaterState(dayIndex, state) {
   return await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, state);
 }
 
-export async function addWater(dayIndex, ml) {
-  const state = await getWaterState(dayIndex);
-  state.ml = Math.max(0, state.ml + ml);
-  return await saveWaterState(dayIndex, state);
+export async function addWater(dayIndex, ml, defaultGoal = 2400) {
+  const fallbackGoal = Number(defaultGoal) || 2400;
+  const state = await getWaterState(dayIndex, fallbackGoal);
+  const goal = Number(state.goal) || fallbackGoal;
+  const currentMl = Number(state.ml) || 0;
+  const updated = {
+    goal,
+    ml: Math.max(0, currentMl + ml)
+  };
+  return await saveWaterState(dayIndex, updated);
 }
 
 export async function resetWater(dayIndex, goal = 2400) {
   const storage = new Storage();
-  const state = { goal, ml: 0 };
+  const numericGoal = Number(goal) || 2400;
+  const state = { goal: numericGoal, ml: 0 };
   await storage.setJSON(DYNAMIC_KEYS.WATER + dayIndex, state);
   return state;
 }

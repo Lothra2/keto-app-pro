@@ -6,7 +6,8 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
-  Alert
+  Alert,
+  Switch
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
@@ -17,6 +18,7 @@ import CalorieBar from '../../components/meals/CalorieBar';
 import Card from '../../components/shared/Card';
 import ScreenBanner from '../../components/shared/ScreenBanner';
 import Button from '../../components/shared/Button';
+import { exportWeekPlanPdf } from '../../utils/pdf';
 import {
   getDayData,
   saveDayData,            // 👈 agregado
@@ -160,12 +162,14 @@ const HomeScreen = ({ navigation }) => {
 
   const theme = getTheme(themeMode);
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const rawWaterGoal = Number(metrics?.waterGoal);
+  const weeklyWaterGoal = Number.isFinite(rawWaterGoal) && rawWaterGoal > 0 ? rawWaterGoal : 2400;
 
   const [dayData, setDayData] = useState(null);
   const [mealStates, setMealStates] = useState(defaultMealState);
   const [calorieGoal, setCalorieGoal] = useState(1600);
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
-  const [waterInfo, setWaterInfo] = useState({ goal: metrics.waterGoal || 2400, ml: 0 });
+  const [waterInfo, setWaterInfo] = useState({ goal: weeklyWaterGoal, ml: 0 });
   const [extras, setExtras] = useState([]);
   const [extrasExpanded, setExtrasExpanded] = useState(false);
   const [dayReview, setDayReview] = useState(null);
@@ -177,6 +181,7 @@ const HomeScreen = ({ navigation }) => {
   const [isDone, setIsDone] = useState(false);
   const [showFullDayReview, setShowFullDayReview] = useState(false);
   const [aiDayLoading, setAiDayLoading] = useState(false); // 👈 nuevo
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const totalWeeks = Math.max(Math.ceil(derivedPlan.length / 7), 1);
   const safeWeek = Math.min(Math.max(currentWeek || 1, 1), totalWeeks);
@@ -206,8 +211,8 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    setWaterInfo((prev) => ({ ...prev, goal: metrics.waterGoal || prev.goal || 2400 }));
-  }, [metrics.waterGoal]);
+    setWaterInfo((prev) => ({ ...prev, goal: weeklyWaterGoal || prev.goal || 2400 }));
+  }, [weeklyWaterGoal]);
 
   const loadDayData = useCallback(async () => {
     const baseDay = derivedPlan[currentDay];
@@ -268,9 +273,9 @@ const HomeScreen = ({ navigation }) => {
       setCaloriesConsumed(consumed);
 
       // agua
-      const water = await getWaterState(currentDay, metrics.waterGoal || 2400);
+      const water = await getWaterState(currentDay, weeklyWaterGoal);
       setWaterInfo({
-        goal: water.goal || metrics.waterGoal || 2400,
+        goal: water.goal || weeklyWaterGoal,
         ml: water.ml || 0
       });
 
@@ -295,7 +300,7 @@ const HomeScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error loading day data:', error);
     }
-  }, [currentDay, derivedPlan, language, metrics.waterGoal]);
+  }, [currentDay, derivedPlan, language, weeklyWaterGoal]);
 
   useEffect(() => {
     loadDayData();
@@ -335,20 +340,20 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleAddWater = async (amount) => {
-    await addWater(currentDay, amount);
-    const water = await getWaterState(currentDay, metrics.waterGoal || 2400);
+    await addWater(currentDay, amount, weeklyWaterGoal);
+    const water = await getWaterState(currentDay, weeklyWaterGoal);
     setWaterInfo({
-      goal: water.goal || metrics.waterGoal || 2400,
+      goal: water.goal || weeklyWaterGoal,
       ml: water.ml || 0
     });
     notifyProgressUpdate();
   };
 
   const handleResetWater = async () => {
-    await resetWater(currentDay, metrics.waterGoal || 2400);
-    const water = await getWaterState(currentDay, metrics.waterGoal || 2400);
+    await resetWater(currentDay, weeklyWaterGoal);
+    const water = await getWaterState(currentDay, weeklyWaterGoal);
     setWaterInfo({
-      goal: water.goal || metrics.waterGoal || 2400,
+      goal: water.goal || weeklyWaterGoal,
       ml: water.ml || 0
     });
     notifyProgressUpdate();
@@ -568,6 +573,37 @@ const HomeScreen = ({ navigation }) => {
     setCurrentDay(firstDay);
   };
 
+  const handleExportWeekPdf = async () => {
+    if (exportingPdf) return;
+    setExportingPdf(true);
+
+    try {
+      const result = await exportWeekPlanPdf({
+        weekNumber: safeWeek,
+        derivedPlan,
+        language,
+        waterGoal: weeklyWaterGoal
+      });
+
+      if (!result.shared) {
+        Alert.alert(
+          language === 'en' ? 'PDF ready' : 'PDF listo',
+          language === 'en' ? `Saved to ${result.uri}` : `Guardado en ${result.uri}`
+        );
+      }
+    } catch (error) {
+      console.error('PDF export error', error);
+      Alert.alert(
+        language === 'en' ? 'Could not export' : 'No se pudo exportar',
+        language === 'en'
+          ? 'Try again in a few seconds.'
+          : 'Intenta nuevamente en unos segundos.'
+      );
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadDayData();
@@ -686,6 +722,12 @@ const HomeScreen = ({ navigation }) => {
     prot: dynamicMacros?.prot || dayData.macros?.prot || '--',
     fat: dynamicMacros?.fat || dayData.macros?.fat || '--'
   };
+  const mealToggleTrack = {
+    false: theme.mode === 'dark' ? 'rgba(148,163,184,0.35)' : 'rgba(148,163,184,0.3)',
+    true: theme.colors.primary
+  };
+  const mealToggleThumbOn = theme.colors.onPrimary;
+  const mealToggleThumbOff = theme.colors.card;
 
   return (
     <ScrollView
@@ -804,10 +846,35 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.statHint}>
             {language === 'en' ? 'of goal' : 'del objetivo'}
           </Text>
-        </View>
       </View>
+    </View>
 
-      <Card style={styles.aiActionsCard}>
+    <Card style={styles.pdfCard}>
+      <View style={styles.pdfHeader}>
+        <Text style={styles.sectionTitle}>
+          📄 {language === 'en' ? 'Weekly PDF' : 'PDF semanal'}
+        </Text>
+        <Text style={styles.pdfHint}>
+          {language === 'en'
+            ? 'Share all meals, macros and notes for this week.'
+            : 'Comparte todas las comidas, macros y notas de esta semana.'}
+        </Text>
+      </View>
+      <Button
+        title={language === 'en' ? 'Share weekly PDF' : 'Compartir PDF semanal'}
+        onPress={handleExportWeekPdf}
+        loading={exportingPdf}
+        disabled={exportingPdf}
+        style={styles.pdfButton}
+      />
+      <Text style={styles.pdfFootnote}>
+        {language === 'en'
+          ? `Hydration goal: ${weeklyWaterGoal} ml`
+          : `Meta de hidratación: ${weeklyWaterGoal} ml`}
+      </Text>
+    </Card>
+
+    <Card style={styles.aiActionsCard}>
         <View style={styles.aiActionsHeader}>
           <Text style={styles.sectionTitle}>
             🤖 {language === 'en' ? 'AI actions' : 'Acciones IA'}
@@ -965,14 +1032,15 @@ const HomeScreen = ({ navigation }) => {
                     {meal.kcal ? `${meal.kcal} kcal` : (language === 'en' ? 'No kcal' : 'Sin kcal')}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.mealCheck, meal.isCompleted && styles.mealCheckActive]}
-                  onPress={meal.onToggle}
-                >
-                  <Text style={styles.mealCheckText}>
-                    {meal.isCompleted ? '✓' : ''}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.mealToggleWrap}>
+                  <Switch
+                    value={meal.isCompleted}
+                    onValueChange={meal.onToggle}
+                    trackColor={mealToggleTrack}
+                    thumbColor={meal.isCompleted ? mealToggleThumbOn : mealToggleThumbOff}
+                    ios_backgroundColor={mealToggleTrack.false}
+                  />
+                </View>
               </View>
               {meal.data?.qty ? (
                 <Text style={styles.mealDesc} numberOfLines={2}>
@@ -1230,6 +1298,25 @@ const createStyles = (theme) =>
       ...theme.typography.caption,
       color: theme.colors.textMuted
     },
+    pdfCard: {
+      gap: theme.spacing.sm,
+      marginHorizontal: theme.spacing.lg
+    },
+    pdfHeader: {
+      gap: 4
+    },
+    pdfHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
+    pdfButton: {
+      marginTop: theme.spacing.sm
+    },
+    pdfFootnote: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      textAlign: 'center'
+    },
     aiActionsCard: {
       gap: theme.spacing.md,
       backgroundColor: theme.colors.card,
@@ -1462,22 +1549,10 @@ const createStyles = (theme) =>
       ...theme.typography.caption,
       color: theme.colors.textMuted
     },
-    mealCheck: {
-      width: 26,
-      height: 26,
-      borderRadius: 999,
-      borderWidth: 1.4,
-      borderColor: theme.colors.border,
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    mealCheckActive: {
-      backgroundColor: 'rgba(34,197,94,1)',
-      borderColor: 'rgba(34,197,94,1)'
-    },
-    mealCheckText: {
-      ...theme.typography.caption,
-      color: '#fff'
+    mealToggleWrap: {
+      marginLeft: theme.spacing.xs,
+      alignSelf: 'flex-start',
+      transform: [{ scale: 0.9 }]
     },
     mealDesc: {
       ...theme.typography.bodySmall,

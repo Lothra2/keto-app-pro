@@ -4,7 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
@@ -12,9 +14,9 @@ import MealList from '../../components/meals/MealList';
 import CalorieBar from '../../components/meals/CalorieBar';
 import WeekSelector from '../../components/progress/WeekSelector';
 import DayPills from '../../components/progress/DayPills';
-import { 
-  getDayData, 
-  saveMealCompletion, 
+import {
+  getDayData,
+  saveMealCompletion,
   getCalorieState,
   getWaterState,
   addWater,
@@ -24,6 +26,7 @@ import {
 } from '../../storage/storage';
 import { calculateConsumedCalories } from '../../utils/calculations';
 import { getDayDisplayName } from '../../utils/labels';
+import { exportWeekPlanPdf } from '../../utils/pdf';
 
 const DayScreen = ({ navigation }) => {
   const {
@@ -34,7 +37,8 @@ const DayScreen = ({ navigation }) => {
     currentWeek,
     setCurrentWeek,
     derivedPlan,
-    notifyProgressUpdate
+    notifyProgressUpdate,
+    metrics
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -43,12 +47,18 @@ const DayScreen = ({ navigation }) => {
   const [dayData, setDayData] = useState(null);
   const [mealStates, setMealStates] = useState({});
   const [calorieInfo, setCalorieInfo] = useState({ consumed: 0, goal: 1600 });
-  const [waterInfo, setWaterInfo] = useState({ ml: 0, goal: 2400 });
+  const baseWaterGoal = metrics?.waterGoal ? Number(metrics.waterGoal) : 2400;
+  const [waterInfo, setWaterInfo] = useState({ ml: 0, goal: baseWaterGoal });
   const [isDone, setIsDone] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   useEffect(() => {
     loadDayData();
-  }, [currentDay, language]);
+  }, [currentDay, language, baseWaterGoal]);
+
+  useEffect(() => {
+    setWaterInfo((prev) => ({ ...prev, goal: baseWaterGoal }));
+  }, [baseWaterGoal]);
 
   const loadDayData = async () => {
     const baseDay = derivedPlan[currentDay];
@@ -80,7 +90,7 @@ const DayScreen = ({ navigation }) => {
     const consumed = calculateConsumedCalories(mealsState, calState.goal);
     setCalorieInfo({ consumed, goal: calState.goal });
 
-    const water = await getWaterState(currentDay);
+    const water = await getWaterState(currentDay, baseWaterGoal);
     setWaterInfo(water);
 
     const done = await isDayCompleted(currentDay);
@@ -97,15 +107,15 @@ const DayScreen = ({ navigation }) => {
   };
 
   const handleAddWater = async (ml) => {
-    await addWater(currentDay, ml);
-    const water = await getWaterState(currentDay);
+    await addWater(currentDay, ml, baseWaterGoal);
+    const water = await getWaterState(currentDay, baseWaterGoal);
     setWaterInfo(water);
     notifyProgressUpdate();
   };
 
   const handleResetWater = async () => {
-    await resetWater(currentDay, 0);
-    const water = await getWaterState(currentDay);
+    await resetWater(currentDay, baseWaterGoal);
+    const water = await getWaterState(currentDay, baseWaterGoal);
     setWaterInfo(water);
     notifyProgressUpdate();
   };
@@ -120,6 +130,37 @@ const DayScreen = ({ navigation }) => {
     setCurrentWeek(week);
     const firstDayOfWeek = (week - 1) * 7;
     setCurrentDay(firstDayOfWeek);
+  };
+
+  const handleExportWeekPdf = async () => {
+    if (exportingPdf) return;
+    setExportingPdf(true);
+
+    try {
+      const result = await exportWeekPlanPdf({
+        weekNumber: currentWeek,
+        derivedPlan,
+        language,
+        waterGoal: baseWaterGoal
+      });
+
+      if (!result.shared) {
+        Alert.alert(
+          language === 'en' ? 'PDF ready' : 'PDF listo',
+          language === 'en' ? `Saved to ${result.uri}` : `Guardado en ${result.uri}`
+        );
+      }
+    } catch (error) {
+      console.error('PDF export error', error);
+      Alert.alert(
+        language === 'en' ? 'Could not export' : 'No se pudo exportar',
+        language === 'en'
+          ? 'Try again in a few seconds.'
+          : 'Intenta nuevamente en unos segundos.'
+      );
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   if (!dayData) {
@@ -191,6 +232,28 @@ const DayScreen = ({ navigation }) => {
           onDaySelect={setCurrentDay}
           derivedPlan={derivedPlan}
         />
+
+        <View style={styles.toolsRow}>
+          <TouchableOpacity
+            style={[styles.toolButton, exportingPdf && styles.toolButtonDisabled]}
+            onPress={handleExportWeekPdf}
+            activeOpacity={0.85}
+            disabled={exportingPdf}
+          >
+            {exportingPdf ? (
+              <ActivityIndicator color={theme.colors.onPrimary} size="small" />
+            ) : (
+              <Text style={styles.toolButtonText}>
+                📄 {language === 'en' ? 'Share weekly PDF' : 'Compartir PDF semanal'}
+              </Text>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.toolHint}>
+            {language === 'en'
+              ? 'Includes meals, macros and notes for each day.'
+              : 'Incluye comidas, macros y notas de cada día.'}
+          </Text>
+        </View>
 
         {/* Day Header */}
         <View style={styles.header}>
@@ -273,6 +336,34 @@ const getStyles = (theme) => StyleSheet.create({
   header: {
     marginBottom: theme.spacing.lg
   },
+  toolsRow: {
+    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.xs
+  },
+  toolButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+    shadowColor: '#0f766e',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4
+  },
+  toolButtonDisabled: {
+    opacity: 0.6
+  },
+  toolButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.onPrimary,
+    fontWeight: '600'
+  },
+  toolHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    textAlign: 'center'
+  },
   dayTitle: {
     ...theme.typography.h1,
     color: theme.colors.text,
@@ -308,12 +399,17 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: theme.radius.full
   },
   waterBox: {
-    backgroundColor: 'rgba(15,118,110,0.1)',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(15,118,110,0.2)',
+    borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg
+    marginBottom: theme.spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2
   },
   waterHead: {
     flexDirection: 'row',
@@ -336,10 +432,15 @@ const getStyles = (theme) => StyleSheet.create({
   },
   waterButton: {
     flex: 1,
-    backgroundColor: 'rgba(15,118,110,0.3)',
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.sm,
     padding: theme.spacing.sm,
-    alignItems: 'center'
+    alignItems: 'center',
+    shadowColor: '#0f766e',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3
   },
   waterButtonGhost: {
     backgroundColor: 'transparent',
@@ -348,7 +449,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   waterButtonText: {
     ...theme.typography.bodySmall,
-    color: '#fff',
+    color: theme.colors.onPrimary,
     fontWeight: '600'
   },
   waterButtonTextGhost: {

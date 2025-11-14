@@ -11,31 +11,48 @@ const WorkoutCard = ({
   exercises = [],
   collapsible = false,
   initiallyCollapsed = true,
-  onExercisePress
+  onExercisePress,
+  collapsedHint
 }) => {
   const { theme: themeMode, language } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
   const [expanded, setExpanded] = useState(!collapsible || !initiallyCollapsed);
 
+  const hintText = collapsedHint
+    ? collapsedHint
+    : language === 'en'
+    ? 'Tap to open the reference plan.'
+    : 'Toca para abrir el plan de referencia.';
+
+  const toggleLabel = expanded
+    ? language === 'en'
+      ? 'Hide details'
+      : 'Ocultar detalles'
+    : language === 'en'
+    ? 'Show details'
+    : 'Mostrar detalles';
+
   return (
     <Card style={styles.card}>
-      <Text style={styles.title}>{title}</Text>
-      {focus ? <Text style={styles.focus}>{focus}</Text> : null}
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>{title}</Text>
+          {focus ? <Text style={styles.focus}>{focus}</Text> : null}
+        </View>
+        {exercises?.length ? (
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{exercises.length}</Text>
+          </View>
+        ) : null}
+      </View>
       {collapsible ? (
         <TouchableOpacity
           style={styles.toggle}
           onPress={() => setExpanded((prev) => !prev)}
         >
-          <Text style={styles.toggleText}>
-            {expanded
-              ? language === 'en'
-                ? 'Hide details'
-                : 'Ocultar detalles'
-              : language === 'en'
-              ? 'Show details'
-              : 'Mostrar detalles'}
-          </Text>
+          <Text style={styles.toggleIcon}>{expanded ? '▲' : '▼'}</Text>
+          <Text style={styles.toggleText}>{toggleLabel}</Text>
         </TouchableOpacity>
       ) : null}
       {expanded ? (
@@ -55,11 +72,7 @@ const WorkoutCard = ({
         </Text>
       ) : null}
       {!expanded ? (
-        <Text style={styles.collapsedHint}>
-          {language === 'en'
-            ? 'Tap to open the reference plan.'
-            : 'Toca para abrir el plan de referencia.'}
-        </Text>
+        <Text style={styles.collapsedHint}>{hintText}</Text>
       ) : null}
     </Card>
   );
@@ -68,6 +81,16 @@ const WorkoutCard = ({
 const getStyles = (theme) =>
   StyleSheet.create({
     card: {
+      gap: theme.spacing.sm,
+      shadowColor: '#000',
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 2
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
       gap: theme.spacing.sm
     },
     title: {
@@ -77,6 +100,20 @@ const getStyles = (theme) =>
     focus: {
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted
+    },
+    countBadge: {
+      minWidth: 30,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    countBadgeText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: '600'
     },
     list: {
       gap: theme.spacing.sm
@@ -88,12 +125,20 @@ const getStyles = (theme) =>
     },
     toggle: {
       alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       paddingVertical: 4,
-      paddingHorizontal: 8,
+      paddingHorizontal: 10,
       borderRadius: theme.radius.full,
       backgroundColor: theme.colors.cardSoft
     },
     toggleText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: '600'
+    },
+    toggleIcon: {
       ...theme.typography.caption,
       color: theme.colors.primary,
       fontWeight: '600'

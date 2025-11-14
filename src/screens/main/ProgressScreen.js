@@ -23,7 +23,8 @@ import {
   calculateBMR,
   calculateBMI,
   getBMICategory,
-  calculateConsumedCalories
+  calculateConsumedCalories,
+  calculateTDEE
 } from '../../utils/calculations'
 import storage, { KEYS } from '../../storage/storage'
 import MultiMetricChart from '../../components/progress/MultiMetricChart'
@@ -41,7 +42,8 @@ const ProgressScreen = () => {
     theme: themeMode,
     language,
     derivedPlan,
-    gender
+    gender,
+    metrics
   } = useApp()
 
   const theme = getTheme(themeMode)
@@ -61,6 +63,7 @@ const ProgressScreen = () => {
   const [bmr, setBmr] = useState(null)
   const [bmi, setBmi] = useState(null)
   const [bmiCategory, setBmiCategory] = useState(null)
+  const [recommendedCalories, setRecommendedCalories] = useState(null)
 
   const [progressByDay, setProgressByDay] = useState([])
   const [selectedDay, setSelectedDay] = useState(null)
@@ -91,6 +94,7 @@ const ProgressScreen = () => {
         setBmr(null)
         setBmi(null)
         setBmiCategory(null)
+        setRecommendedCalories(null)
         return
       }
 
@@ -98,13 +102,19 @@ const ProgressScreen = () => {
       const bmrVal = calculateBMR(heightNumber, weightNumber, ageNumber, gender !== 'female')
       const bmiVal = calculateBMI(heightNumber, weightNumber)
       const category = getBMICategory(bmiVal, language)
+      const intensityLevel = metrics?.workoutIntensity || 'medium'
+      const activityMap = { soft: 'light', medium: 'moderate', hard: 'active' }
+      const activityLevel = activityMap[intensityLevel] || 'light'
+      const tdee = bmrVal ? calculateTDEE(bmrVal, activityLevel) : null
+      const recommended = tdee ? Math.round(tdee * 0.85) : null
 
       setBodyFat(bf)
       setBmr(bmrVal)
       setBmi(bmiVal)
       setBmiCategory(category)
+      setRecommendedCalories(recommended)
     },
-    [gender, language]
+    [gender, language, metrics?.workoutIntensity]
   )
 
   const loadAllProgress = useCallback(
@@ -526,15 +536,30 @@ const ProgressScreen = () => {
             </View>
           </View>
 
-          {bodyFat && (
+          {(bodyFat || bmr || recommendedCalories || bmi) && (
             <View style={styles.calculatedStats}>
-              <Text style={styles.calculatedStat}>
-                {language === 'en' ? 'Body Fat' : '% Grasa'}: {bodyFat}%
-              </Text>
-              <Text style={styles.calculatedStat}>BMR: {bmr} kcal/día</Text>
-              <Text style={styles.calculatedStat}>
-                BMI: {bmi} ({bmiCategory})
-              </Text>
+              {bodyFat ? (
+                <Text style={styles.calculatedStat}>
+                  {language === 'en' ? 'Body Fat' : '% Grasa'}: {bodyFat}%
+                </Text>
+              ) : null}
+              {bmr ? (
+                <Text style={styles.calculatedStat}>
+                  BMR: {bmr} kcal/{language === 'en' ? 'day' : 'día'}
+                </Text>
+              ) : null}
+              {recommendedCalories ? (
+                <Text style={styles.calculatedStat}>
+                  {language === 'en'
+                    ? 'Recommended kcal/day'
+                    : 'Calorías recomendadas/día'}: {recommendedCalories}
+                </Text>
+              ) : null}
+              {bmi ? (
+                <Text style={styles.calculatedStat}>
+                  BMI: {bmi} {bmiCategory ? `(${bmiCategory})` : ''}
+                </Text>
+              ) : null}
             </View>
           )}
 
