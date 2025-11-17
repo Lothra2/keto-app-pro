@@ -109,17 +109,17 @@ const OnboardingScreen = ({ navigation }) => {
           : 'Usamos estos datos para ajustar tus comidas y entrenos.'}
       </Text>
 
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.cardSpacing]}>
         <Text style={styles.sectionTitle}>{language === 'en' ? 'About you' : 'Sobre ti'}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, styles.fieldSpacing]}
           placeholder={language === 'en' ? 'Your name' : 'Tu nombre'}
           placeholderTextColor={theme.colors.textMuted}
           value={name}
           onChangeText={setName}
         />
 
-        <View style={styles.genderRow}>
+        <View style={[styles.genderRow, styles.fieldSpacing]}>
           <TouchableOpacity
             style={[styles.genderButton, selectedGender === 'male' && styles.genderButtonActive]}
             onPress={() => handleSelectGender('male')}
@@ -142,7 +142,7 @@ const OnboardingScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.dateRow}>
+        <View style={[styles.dateRow, styles.fieldSpacing]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.sectionDescription}>
               {language === 'en'
@@ -165,7 +165,7 @@ const OnboardingScreen = ({ navigation }) => {
         </View>
       </Card>
 
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.cardSpacing]}>
         <Text style={styles.sectionTitle}>
           {language === 'en' ? 'Plan duration' : 'Duración del plan'}
         </Text>
@@ -197,7 +197,7 @@ const OnboardingScreen = ({ navigation }) => {
         </Text>
       </Card>
 
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.cardSpacing]}>
         <Text style={styles.sectionTitle}>{language === 'en' ? 'Key metrics' : 'Métricas clave'}</Text>
         <View style={styles.row}>
           <View style={styles.field}>
@@ -249,7 +249,7 @@ const OnboardingScreen = ({ navigation }) => {
         </View>
       </Card>
 
-      <Card style={styles.card}>
+      <Card style={[styles.card, styles.cardSpacing]}>
         <Text style={styles.sectionTitle}>{language === 'en' ? 'Tips' : 'Tips'}</Text>
         {tips.map((tip, index) => (
           <View key={tip} style={styles.tipRow}>
@@ -286,8 +286,7 @@ const getStyles = (theme) =>
     content: {
       padding: theme.spacing.lg,
       paddingBottom: 120,
-      alignItems: 'stretch',
-      gap: theme.spacing.lg
+      alignItems: 'stretch'
     },
     emoji: {
       fontSize: 64,
@@ -306,6 +305,13 @@ const getStyles = (theme) =>
     },
     card: {
       gap: theme.spacing.md
+    },
+    cardSpacing: {
+      marginBottom: theme.spacing.lg
+    },
+    fieldSpacing: {
+      marginTop: theme.spacing.sm,
+      marginBottom: theme.spacing.sm
     },
     sectionTitle: {
       ...theme.typography.h3,

@@ -2,7 +2,7 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { ThemeProvider } from './src/context/ThemeContext';
@@ -16,13 +16,23 @@ const Stack = createStackNavigator();
 
 // Navegación raíz
 const RootNavigator = () => {
-  const { loading, theme: themeMode } = useApp();
+  const { loading, theme: themeMode, language } = useApp();
   const theme = getTheme(themeMode);
 
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.colors.bg }]}>
-        <LoadingSpinner color={theme.colors.primary} />
+        <View style={[styles.loadingCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <Text style={[styles.loadingTitle, { color: theme.colors.text }]}>
+            {language === 'en' ? 'Syncing your plan…' : 'Sincronizando tu plan…'}
+          </Text>
+          <Text style={[styles.loadingSubtitle, { color: theme.colors.textMuted }]}>
+            {language === 'en'
+              ? 'Loading your data and preferences to start fresh.'
+              : 'Cargando tus datos y preferencias para comenzar sin ruido.'}
+          </Text>
+          <LoadingSpinner color={theme.colors.primary} />
+        </View>
       </View>
     );
   }
@@ -65,5 +75,29 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center'
+  },
+  loadingCard: {
+    width: '82%',
+    maxWidth: 400,
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6
+  },
+  loadingTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center'
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 6
   }
 });
