@@ -1,5 +1,6 @@
 import { basePlan } from '../data/basePlan';
 import { basePlanEn } from '../data/basePlanEn';
+import { MEAL_KCAL_SPLIT_MAP } from './plan';
 
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
@@ -91,19 +92,11 @@ export function calculateTDEE(bmr, activityLevel = 'sedentary') {
  * Calcular calorías consumidas según comidas marcadas
  */
 export function calculateConsumedCalories(mealStates, goalKcal = 1600) {
-  const mealPercents = {
-    desayuno: 0.25,
-    snackAM: 0.10,
-    almuerzo: 0.35,
-    snackPM: 0.10,
-    cena: 0.20
-  };
-
   let consumed = 0;
 
   Object.keys(mealStates).forEach(mealKey => {
     if (mealStates[mealKey]) {
-      consumed += Math.round(goalKcal * (mealPercents[mealKey] || 0));
+      consumed += Math.round(goalKcal * (MEAL_KCAL_SPLIT_MAP[mealKey] || 0));
     }
   });
 

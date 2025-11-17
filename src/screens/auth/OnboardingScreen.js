@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import Button from '../../components/shared/Button';
 import Card from '../../components/shared/Card';
+import { parseDateInput } from '../../utils/validation';
 
 const OnboardingScreen = ({ navigation }) => {
   const {
@@ -28,6 +29,13 @@ const OnboardingScreen = ({ navigation }) => {
   const [age, setAge] = useState(metrics.age ? String(metrics.age) : '');
   const [waterGoal, setWaterGoal] = useState(metrics.waterGoal ? String(metrics.waterGoal) : '2400');
   const [selectedWeeks, setSelectedWeeks] = useState(planWeeks || 2);
+  const [startDateInput, setStartDateInput] = useState(() => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    return `${day}/${month}/${year}`;
+  });
   const [saving, setSaving] = useState(false);
 
   const tips = useMemo(() => {
@@ -69,8 +77,8 @@ const OnboardingScreen = ({ navigation }) => {
 
     setSaving(true);
     try {
-      const today = new Date().toISOString();
-      await updateUser({ name: name.trim(), startDate: today });
+      const parsedStartDate = parseDateInput(startDateInput) || new Date().toISOString();
+      await updateUser({ name: name.trim(), startDate: parsedStartDate });
       await updateMetrics({
         height: height.trim(),
         startWeight: weight.trim(),
@@ -168,6 +176,22 @@ const OnboardingScreen = ({ navigation }) => {
           {language === 'en'
             ? 'You can adjust this anytime from Settings.'
             : 'Podrás ajustarlo cuando quieras desde Ajustes.'}
+        </Text>
+
+        <Text style={styles.label}>
+          {language === 'en' ? 'Plan start date (dd/mm)' : 'Fecha de inicio (dd/mm)'}
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={startDateInput}
+          onChangeText={setStartDateInput}
+          placeholder={language === 'en' ? '12/03/2025' : '12/03/2025'}
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <Text style={styles.weeksHint}>
+          {language === 'en'
+            ? 'We will replace Day 1 with this date across the app.'
+            : 'Usaremos esta fecha en lugar de "Día 1" en toda la app.'}
         </Text>
       </Card>
 

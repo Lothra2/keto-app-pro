@@ -46,11 +46,39 @@ export const toIntOrNull = (value) => {
   return Math.round(n)
 }
 
+export const parseDateInput = (value) => {
+  if (!value && value !== 0) return null
+  const raw = String(value).trim()
+  if (!raw) return null
+
+  const parts = raw.split(/[\/\-]/).filter(Boolean)
+  const today = new Date()
+
+  if (parts.length >= 2) {
+    const day = Number(parts[0])
+    const month = Number(parts[1])
+    const year = parts[2] ? Number(parts[2]) : today.getFullYear()
+
+    if (Number.isFinite(day) && Number.isFinite(month) && Number.isFinite(year)) {
+      const parsed = new Date(year, month - 1, day)
+      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString()
+    }
+  }
+
+  const fallback = new Date(raw)
+  if (!Number.isNaN(fallback.getTime())) {
+    return fallback.toISOString()
+  }
+
+  return null
+}
+
 export default {
   isNumberInRange,
   validateMetrics,
   isEmpty,
   toNumberOrNull,
   toOneDecimal,
-  toIntOrNull
+  toIntOrNull,
+  parseDateInput
 }

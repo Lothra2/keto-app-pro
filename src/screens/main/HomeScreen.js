@@ -39,7 +39,7 @@ import {
 import { getDailyTip, getMotivationalMessage } from '../../data/tips';
 import aiService from '../../api/aiService';
 import { calculateConsumedCalories, calculateDynamicMacros } from '../../utils/calculations';
-import { mergePlanDay, MEAL_KEYS, buildWeekAiPayload } from '../../utils/plan';
+import { mergePlanDay, MEAL_KEYS, MEAL_KCAL_SPLIT_MAP, buildWeekAiPayload } from '../../utils/plan';
 import { getDayDisplayName, sanitizeReviewBullet, stripMarkdownHeadings } from '../../utils/labels';
 
 const defaultMealState = {
@@ -190,13 +190,6 @@ const HomeScreen = ({ navigation }) => {
   const computeConsumedFromDay = (mergedDay, mealsStateObj, fallbackGoal) => {
     const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena'];
     const dayKcal = mergedDay?.kcal ? Number(mergedDay.kcal) : fallbackGoal;
-    const dist = {
-      desayuno: 0.25,
-      snackAM: 0.1,
-      almuerzo: 0.35,
-      snackPM: 0.1,
-      cena: 0.2
-    };
 
     let consumed = 0;
     mealKeys.forEach((key) => {
@@ -204,7 +197,7 @@ const HomeScreen = ({ navigation }) => {
       const mealObj = mergedDay?.[key];
       const kcal = mealObj?.kcal
         ? Number(mealObj.kcal)
-        : Math.round(dayKcal * (dist[key] || 0.2));
+        : Math.round(dayKcal * (MEAL_KCAL_SPLIT_MAP[key] || 0.2));
       consumed += kcal;
     });
 
@@ -252,7 +245,8 @@ const HomeScreen = ({ navigation }) => {
       merged.dia = getDayDisplayName({
         label: merged.dia,
         index: currentDay,
-        language
+        language,
+        startDate: user?.startDate
       });
 
       // calorías guardadas
@@ -324,6 +318,18 @@ const HomeScreen = ({ navigation }) => {
     [language, currentDay]
   );
 
+  const getTargetKcal = useCallback(
+    (dayKcal, mealKey) => Math.round(dayKcal * (MEAL_KCAL_SPLIT_MAP[mealKey] || 0.2)),
+    []
+  );
+
+  const clampMealKcal = useCallback((value, target) => {
+    const numeric = Number.isFinite(Number(value)) ? Math.round(Number(value)) : target;
+    const lower = Math.round(target * 0.85);
+    const upper = Math.round(target * 1.15);
+    return Math.min(upper, Math.max(lower, numeric));
+  }, []);
+
   const handleToggleMeal = async (mealKey) => {
     const newState = !mealStates[mealKey];
     const updatedMeals = { ...mealStates, [mealKey]: newState };
@@ -387,14 +393,6 @@ const HomeScreen = ({ navigation }) => {
     try {
       const dayKcal = baseDay.kcal || 1600;
 
-      const dist = {
-        desayuno: 0.3,
-        snackAM: 0.1,
-        almuerzo: 0.3,
-        snackPM: 0.1,
-        cena: 0.2
-      };
-
       const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena'];
 
       // intentamos sacar preferencias del usuario si las tuviera
@@ -407,7 +405,7 @@ const HomeScreen = ({ navigation }) => {
       const usedNames = [];
 
       for (const key of mealKeys) {
-        const targetKcal = Math.round(dayKcal * (dist[key] || 0.2));
+        const targetKcal = getTargetKcal(dayKcal, key);
 
         const meal = await aiService.generateMeal({
           mealType: key,
@@ -418,7 +416,8 @@ const HomeScreen = ({ navigation }) => {
           existingMeals: usedNames
         });
 
-        generatedMeals[key] = meal;
+        const safeKcal = clampMealKcal(meal?.kcal, targetKcal);
+        generatedMeals[key] = { ...meal, kcal: safeKcal };
 
         if (meal?.nombre) {
           usedNames.push(meal.nombre);
@@ -583,7 +582,8 @@ const HomeScreen = ({ navigation }) => {
         weekNumber: safeWeek,
         derivedPlan,
         language,
-        waterGoal: weeklyWaterGoal
+        waterGoal: weeklyWaterGoal,
+        startDate: user?.startDate
       });
 
       if (!result.shared) {
@@ -628,14 +628,7 @@ const HomeScreen = ({ navigation }) => {
     const getKcal = (mealObj, mealKey) => {
       if (mealObj?.kcal) return Number(mealObj.kcal);
       const dayKcal = dayData?.kcal ? Number(dayData.kcal) : calorieGoal;
-      const dist = {
-        desayuno: 0.25,
-        snackAM: 0.1,
-        almuerzo: 0.35,
-        snackPM: 0.1,
-        cena: 0.2
-      };
-      return Math.round(dayKcal * (dist[mealKey] || 0.2));
+      return getTargetKcal(dayKcal, mealKey);
     };
 
     return [
@@ -748,6 +741,7 @@ const HomeScreen = ({ navigation }) => {
             currentDay={currentDay}
             onDaySelect={setCurrentDay}
             derivedPlan={derivedPlan}
+            startDate={user?.startDate}
           />
         </View>
       </View>
