@@ -115,6 +115,18 @@ const ProgressScreen = () => {
   const [showPdfWeekModal, setShowPdfWeekModal] = useState(false)
   const [aiInsight, setAiInsight] = useState('')
   const [aiInsightLoading, setAiInsightLoading] = useState(false)
+  const [showAiInsight, setShowAiInsight] = useState(false)
+
+  const parsedAiInsight = useMemo(
+    () =>
+      aiInsight
+        ? aiInsight
+            .split(/\n+/)
+            .map((line) => line.replace(/\*+/g, '').trim())
+            .filter(Boolean)
+        : [],
+    [aiInsight]
+  )
 
   const calculateStats = useCallback(
     (h, w, a) => {
@@ -550,6 +562,7 @@ const ProgressScreen = () => {
       })
 
       setAiInsight(res?.text || '')
+      setShowAiInsight(true)
     } catch (error) {
       console.error('AI insight error', error)
       Alert.alert(
@@ -769,9 +782,9 @@ const ProgressScreen = () => {
             <Text style={styles.sectionTitle}>
               🚀 {language === 'en' ? 'Next-level analytics' : 'Analítica avanzada'}
             </Text>
-            <View style={styles.scorePill}>
-              <Text style={styles.scoreText}>{consistencyScore}%</Text>
+            <View style={styles.scoreBadge}>
               <Text style={styles.scoreLabel}>{language === 'en' ? 'Consistency' : 'Constancia'}</Text>
+              <Text style={styles.scoreText}>{consistencyScore}%</Text>
             </View>
           </View>
 
@@ -813,10 +826,38 @@ const ProgressScreen = () => {
               title={language === 'en' ? 'AI weekly insight' : 'Insight semanal IA'}
               onPress={handleGenerateAiInsight}
               loading={aiInsightLoading}
-              variant="glass"
+              variant="secondary"
               style={styles.aiButton}
             />
-            {aiInsight ? <Text style={styles.aiInsightText}>{aiInsight}</Text> : null}
+            {parsedAiInsight.length ? (
+              <View style={styles.aiInsightPanel}>
+                <TouchableOpacity
+                  style={styles.aiToggle}
+                  onPress={() => setShowAiInsight((prev) => !prev)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.aiToggleIcon}>{showAiInsight ? '▲' : '▼'}</Text>
+                  <Text style={styles.aiToggleText}>
+                    {showAiInsight
+                      ? language === 'en'
+                        ? 'Hide insight'
+                        : 'Ocultar insight'
+                      : language === 'en'
+                      ? 'Show insight'
+                      : 'Mostrar insight'}
+                  </Text>
+                </TouchableOpacity>
+                {showAiInsight ? (
+                  <View style={styles.aiInsightBox}>
+                    {parsedAiInsight.map((line, index) => (
+                      <Text key={`${line}-${index}`} style={styles.aiInsightText}>
+                        {line.startsWith('•') ? line : `• ${line}`}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         </Card>
 
@@ -1425,9 +1466,11 @@ const getStyles = (theme) =>
     },
     analyticsHeader: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: theme.spacing.sm,
+      flexWrap: 'wrap',
+      marginBottom: theme.spacing.xs,
     },
     analyticsGrid: {
       flexDirection: 'row',
@@ -1458,14 +1501,20 @@ const getStyles = (theme) =>
       color: theme.colors.textMuted,
       marginTop: 2,
     },
-    scorePill: {
-      backgroundColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+    scoreBadge: {
+      backgroundColor: theme.mode === 'dark' ? 'rgba(56,189,248,0.12)' : 'rgba(56,189,248,0.18)',
       paddingHorizontal: theme.spacing.md,
-      paddingVertical: 6,
-      borderRadius: theme.radius.full,
+      paddingVertical: 8,
+      borderRadius: theme.radius.lg,
       borderWidth: 1,
       borderColor: theme.colors.border,
+      minWidth: 120,
       alignItems: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 2,
     },
     scoreText: {
       ...theme.typography.h3,
@@ -1475,13 +1524,49 @@ const getStyles = (theme) =>
     },
     scoreLabel: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted,
+      color: theme.colors.text,
+      fontWeight: '600',
     },
     aiRow: {
-      gap: theme.spacing.xs,
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
     },
     aiButton: {
       alignSelf: 'flex-start',
+    },
+    aiInsightPanel: {
+      gap: theme.spacing.xs,
+      alignSelf: 'stretch',
+    },
+    aiToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      gap: 6,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.cardSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    aiToggleIcon: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: '700',
+    },
+    aiToggleText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: '700',
+    },
+    aiInsightBox: {
+      backgroundColor: theme.colors.bgSoft,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.sm,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     aiInsightText: {
       ...theme.typography.body,
@@ -1494,7 +1579,8 @@ const getStyles = (theme) =>
     },
     pdfHint: {
       ...theme.typography.bodySmall,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      marginBottom: 2,
     },
     pdfButtonsRow: {
       flexDirection: 'row',
@@ -1506,7 +1592,8 @@ const getStyles = (theme) =>
     },
     pdfFootnote: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      marginTop: 2,
     },
     section: {
       marginTop: theme.spacing.md,

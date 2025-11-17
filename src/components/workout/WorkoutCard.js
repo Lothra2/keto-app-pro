@@ -128,10 +128,13 @@ const getStyles = (theme) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingVertical: 4,
-      paddingHorizontal: 10,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
       borderRadius: theme.radius.full,
-      backgroundColor: theme.colors.cardSoft
+      backgroundColor: theme.colors.cardSoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: theme.spacing.xs
     },
     toggleText: {
       ...theme.typography.caption,
@@ -146,7 +149,7 @@ const getStyles = (theme) =>
     collapsedHint: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
-      marginTop: -4
+      marginTop: theme.spacing.xs,
     }
   });
 
