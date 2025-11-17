@@ -74,17 +74,6 @@ const TabNavigator = () => {
         }}
       />
 
-      {/* Nuevo tab Consultor */}
-      <Tab.Screen
-        name="Consultor"
-        component={ConsultorScreen}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🤖" focused={focused} label={labels.consultor} />
-          ),
-        }}
-      />
-
       <Tab.Screen
         name="Shopping"
         component={ShoppingScreen}
@@ -111,6 +100,17 @@ const TabNavigator = () => {
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon emoji="📈" focused={focused} label={labels.progress} />
+          ),
+        }}
+      />
+
+      {/* Coach tab */}
+      <Tab.Screen
+        name="Consultor"
+        component={ConsultorScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="🤖" focused={focused} label={labels.consultor} />
           ),
         }}
       />

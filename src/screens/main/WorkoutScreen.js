@@ -45,8 +45,9 @@ const WorkoutScreen = ({ route, navigation }) => {
   }
   const selectedIntensity = metrics.workoutIntensity || 'medium'
 
-  const totalDays = derivedPlan.length || 14
-  const clampDay = day => Math.min(Math.max(day ?? 0, 0), Math.max(totalDays - 1, 0))
+  const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0
+  const safeTotalDays = totalDays || 14
+  const clampDay = day => Math.min(Math.max(day ?? 0, 0), Math.max(safeTotalDays - 1, 0))
 
   // 1. calculamos el día inicial una sola vez
   const initialDay = clampDay(
