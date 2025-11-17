@@ -252,7 +252,8 @@ const HomeScreen = ({ navigation }) => {
       merged.dia = getDayDisplayName({
         label: merged.dia,
         index: currentDay,
-        language
+        language,
+        startDate: user?.startDate
       });
 
       // calorías guardadas
@@ -301,7 +302,7 @@ const HomeScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error loading day data:', error);
     }
-  }, [currentDay, derivedPlan, language, weeklyWaterGoal]);
+  }, [currentDay, derivedPlan, language, weeklyWaterGoal, user?.startDate]);
 
   useEffect(() => {
     loadDayData();
@@ -583,7 +584,8 @@ const HomeScreen = ({ navigation }) => {
         weekNumber: safeWeek,
         derivedPlan,
         language,
-        waterGoal: weeklyWaterGoal
+        waterGoal: weeklyWaterGoal,
+        startDate: user?.startDate
       });
 
       if (!result.shared) {
