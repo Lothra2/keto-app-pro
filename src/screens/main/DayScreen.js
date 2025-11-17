@@ -38,7 +38,8 @@ const DayScreen = ({ navigation }) => {
     setCurrentWeek,
     derivedPlan,
     notifyProgressUpdate,
-    metrics
+    metrics,
+    user
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -72,7 +73,8 @@ const DayScreen = ({ navigation }) => {
     merged.dia = getDayDisplayName({
       label: merged.dia || baseDay?.dia,
       index: currentDay,
-      language
+      language,
+      startDate: user?.startDate
     });
     
     setDayData(merged);
@@ -141,7 +143,8 @@ const DayScreen = ({ navigation }) => {
         weekNumber: currentWeek,
         derivedPlan,
         language,
-        waterGoal: baseWaterGoal
+        waterGoal: baseWaterGoal,
+        startDate: user?.startDate
       });
 
       if (!result.shared) {

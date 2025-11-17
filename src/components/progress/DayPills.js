@@ -5,12 +5,13 @@ import { getTheme } from '../../theme';
 import { getDayDisplayName } from '../../utils/labels';
 
 const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
-  const { theme: themeMode, language } = useApp();
+  const { theme: themeMode, language, user } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
 
   const startIdx = (week - 1) * 7;
-  const endIdx = Math.min(week * 7, derivedPlan.length);
+  const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0;
+  const endIdx = Math.min(week * 7, totalDays);
 
   return (
     <ScrollView
@@ -30,7 +31,12 @@ const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
             onPress={() => onDaySelect(dayIndex)}
           >
             <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-              {getDayDisplayName({ label: day.dia, index: dayIndex, language })}
+              {getDayDisplayName({
+                label: day.dia,
+                index: dayIndex,
+                language,
+                startDate: user?.startDate
+              })}
             </Text>
           </TouchableOpacity>
         );
