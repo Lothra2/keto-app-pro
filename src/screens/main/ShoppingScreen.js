@@ -463,10 +463,12 @@ const getStyles = (theme) =>
     },
     pdfHint: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      marginBottom: theme.spacing.xs,
     },
     pdfButton: {
-      alignSelf: 'flex-start'
+      alignSelf: 'flex-start',
+      marginTop: theme.spacing.xs,
     },
     aiButton: {
       backgroundColor: theme.colors.primary,
