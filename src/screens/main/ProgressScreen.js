@@ -116,6 +116,17 @@ const ProgressScreen = () => {
   const [aiInsight, setAiInsight] = useState('')
   const [aiInsightLoading, setAiInsightLoading] = useState(false)
 
+  const formattedAiInsight = useMemo(
+    () =>
+      aiInsight
+        ? aiInsight
+            .split(/\n+/)
+            .map((line) => line.replace(/\*+/g, '').trim())
+            .filter(Boolean)
+        : [],
+    [aiInsight]
+  )
+
   const calculateStats = useCallback(
     (h, w, a) => {
       const heightNumber = toNumberOrNull(h)
@@ -816,7 +827,15 @@ const ProgressScreen = () => {
               variant="glass"
               style={styles.aiButton}
             />
-            {aiInsight ? <Text style={styles.aiInsightText}>{aiInsight}</Text> : null}
+            {formattedAiInsight.length ? (
+              <View style={styles.aiInsightBox}>
+                {formattedAiInsight.map((line, index) => (
+                  <Text key={`${line}-${index}`} style={styles.aiInsightText}>
+                    {line.startsWith('•') ? line : `• ${line}`}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
           </View>
         </Card>
 
@@ -1425,9 +1444,11 @@ const getStyles = (theme) =>
     },
     analyticsHeader: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: theme.spacing.sm,
+      flexWrap: 'wrap',
+      marginBottom: theme.spacing.xs,
     },
     analyticsGrid: {
       flexDirection: 'row',
@@ -1466,6 +1487,7 @@ const getStyles = (theme) =>
       borderWidth: 1,
       borderColor: theme.colors.border,
       alignItems: 'center',
+      alignSelf: 'flex-start',
     },
     scoreText: {
       ...theme.typography.h3,
@@ -1479,9 +1501,18 @@ const getStyles = (theme) =>
     },
     aiRow: {
       gap: theme.spacing.xs,
+      marginTop: theme.spacing.xs,
     },
     aiButton: {
       alignSelf: 'flex-start',
+    },
+    aiInsightBox: {
+      backgroundColor: theme.colors.bgSoft,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.sm,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     aiInsightText: {
       ...theme.typography.body,
@@ -1494,7 +1525,8 @@ const getStyles = (theme) =>
     },
     pdfHint: {
       ...theme.typography.bodySmall,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      marginBottom: 2,
     },
     pdfButtonsRow: {
       flexDirection: 'row',
@@ -1506,7 +1538,8 @@ const getStyles = (theme) =>
     },
     pdfFootnote: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      marginTop: 2,
     },
     section: {
       marginTop: theme.spacing.md,

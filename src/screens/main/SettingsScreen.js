@@ -417,7 +417,10 @@ const SettingsScreen = ({ navigation }) => {
           />
           <Text style={styles.inlineSuffix}>ml</Text>
         </View>
-        <TouchableOpacity style={styles.button} onPress={handleSaveWaterGoal}>
+        <TouchableOpacity
+          style={[styles.button, styles.compactButton]}
+          onPress={handleSaveWaterGoal}
+        >
           <Text style={styles.buttonText}>
             {language === 'en' ? 'Save hydration goal' : 'Guardar meta de agua'}
           </Text>
@@ -603,7 +606,13 @@ const getStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.bgSoft,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   inlineInput: {
     flex: 1,
@@ -613,6 +622,12 @@ const getStyles = (theme) => StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text,
     fontWeight: '500'
+  },
+  compactButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.xs,
   },
   dateRow: {
     flexDirection: 'row',
