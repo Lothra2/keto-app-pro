@@ -75,8 +75,11 @@ const DatePickerModal = ({
           </View>
 
           <View style={styles.weekRow}>
-            {dayNames.map((name) => (
-              <Text key={name} style={[styles.weekLabel, { color: theme.colors.textMuted }]}>
+            {dayNames.map((name, index) => (
+              <Text
+                key={`${name}-${index}`}
+                style={[styles.weekLabel, { color: theme.colors.textMuted }]}
+              >
                 {name}
               </Text>
             ))}
