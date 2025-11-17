@@ -415,9 +415,7 @@ const ProgressScreen = () => {
     )
   }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan, user?.startDate])
 
-  const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
-
-  const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
+  const weeksInPlan = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
 
   const metricConfig = useMemo(
     () => [
@@ -829,7 +827,7 @@ const ProgressScreen = () => {
               title={language === 'en' ? 'Full plan PDF' : 'PDF del plan completo'}
               variant="secondary"
               onPress={() =>
-                handleShareProgressPdf({ scope: 'plan', weekNumber: totalWeeks })
+                handleShareProgressPdf({ scope: 'plan', weekNumber: weeksInPlan })
               }
               disabled={exportingPdf}
               style={styles.pdfButton}
@@ -1147,7 +1145,7 @@ const ProgressScreen = () => {
               {language === 'en' ? 'Select a week' : 'Selecciona una semana'}
             </Text>
             <View style={styles.pdfModalList}>
-              {Array.from({ length: totalWeeks }).map((_, index) => {
+              {Array.from({ length: weeksInPlan }).map((_, index) => {
                 const weekNumber = index + 1
                 return (
                   <TouchableOpacity
