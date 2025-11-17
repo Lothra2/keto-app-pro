@@ -1,4 +1,12 @@
-const MEAL_KEYS = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena'];
+export const MEAL_KEYS = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena'];
+
+export const MEAL_KCAL_SPLIT = {
+  desayuno: 0.3,
+  snackAM: 0.1,
+  almuerzo: 0.3,
+  snackPM: 0.1,
+  cena: 0.2
+};
 
 export const mergePlanDay = (baseDay = {}, storedDay = {}) => {
   const merged = { ...baseDay };
@@ -40,5 +48,3 @@ export const buildWeekAiPayload = (days = []) =>
     snackPM: day.snackPM ? day.snackPM.qty || day.snackPM.nombre || '' : '',
     dinner: day.cena ? day.cena.qty || day.cena.nombre || '' : ''
   }));
-
-export { MEAL_KEYS };

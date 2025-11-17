@@ -36,6 +36,7 @@ const ShoppingScreen = () => {
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [showBaseList, setShowBaseList] = useState(true)
+  const [showAiList, setShowAiList] = useState(true)
   const [exportingPdf, setExportingPdf] = useState(false)
 
   // misma lógica de parseo, pero reusable
@@ -53,9 +54,11 @@ const ShoppingScreen = () => {
       let current = null
 
       const pushSection = (title) => {
-        current = { title, items: [] }
+        current = { title, items: [], notes: [] }
         sections.push(current)
       }
+
+      const noteRegex = /(nota|note|incluye|includes|recuerda|tip)/i
 
       lines.forEach((line) => {
         const headingMatch = line.match(/^([^•]+):$/)
@@ -64,22 +67,52 @@ const ShoppingScreen = () => {
           return
         }
 
-        if (line.startsWith('•')) {
-          const cleaned = line.replace(/^•\s*/, '').trim()
+        const isBullet = line.startsWith('•') || line.startsWith('-')
+        const cleanedLine = line.replace(/^[-•]\s*/, '').trim()
+
+        const colonSplit = cleanedLine.split(/:\s*/)
+        if (colonSplit.length > 1 && colonSplit[0] && colonSplit[1]) {
+          pushSection(colonSplit[0])
+          const parts = colonSplit[1].split(/[,;]/).map((p) => p.trim()).filter(Boolean)
+          current.items.push(...parts)
+          return
+        }
+
+        if (isBullet) {
           if (!current) {
             pushSection(language === 'en' ? 'Items' : 'Artículos')
           }
-          current.items.push(cleaned)
+          const parts = cleanedLine.split(/[,;]/).map((p) => p.trim()).filter(Boolean)
+          if (noteRegex.test(cleanedLine) || cleanedLine.split(' ').length > 12) {
+            current.notes.push(cleanedLine)
+            return
+          }
+          if (parts.length) {
+            current.items.push(...parts)
+          } else {
+            current.items.push(cleanedLine)
+          }
           return
         }
 
         if (!current) {
           pushSection(language === 'en' ? 'Notes' : 'Notas')
         }
-        current.items.push(line)
+
+        if (noteRegex.test(cleanedLine) || cleanedLine.split(' ').length > 12) {
+          current.notes.push(cleanedLine)
+        } else {
+          current.items.push(cleanedLine)
+        }
       })
 
-      return sections.filter((section) => section.items.length)
+      return sections
+        .map((section) => ({
+          ...section,
+          items: Array.from(new Set(section.items)),
+          notes: Array.from(new Set(section.notes))
+        }))
+        .filter((section) => section.items.length || section.notes.length)
     },
     [language]
   )
@@ -283,34 +316,73 @@ const ShoppingScreen = () => {
           <Text style={styles.aiListTitle}>
             {language === 'en' ? 'AI Shopping List' : 'Lista IA'}
           </Text>
-          {aiList ? (
-            <Text style={styles.aiChip}>
-              {language === 'en' ? 'Ready' : 'Lista'}
-            </Text>
-          ) : (
-            <Text style={[styles.aiChip, styles.aiChipEmpty]}>
-              {language === 'en' ? 'Empty' : 'Vacía'}
-            </Text>
-          )}
+          <View style={styles.aiHeaderActions}>
+            {aiList ? (
+              <Text style={styles.aiChip}>
+                {language === 'en' ? 'Ready' : 'Lista'}
+              </Text>
+            ) : (
+              <Text style={[styles.aiChip, styles.aiChipEmpty]}>
+                {language === 'en' ? 'Empty' : 'Vacía'}
+              </Text>
+            )}
+            <TouchableOpacity
+              onPress={() => setShowAiList((prev) => !prev)}
+              style={styles.aiToggle}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.aiToggleText}>
+                {showAiList
+                  ? language === 'en'
+                    ? 'Hide'
+                    : 'Ocultar'
+                  : language === 'en'
+                  ? 'Show'
+                  : 'Mostrar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {aiList ? (
-          aiSections && aiSections.length ? (
-            <View style={styles.aiListSections}>
-              {aiSections.map((section, sectionIndex) => (
-                <View key={`${section.title}-${sectionIndex}`} style={styles.aiListSection}>
-                  <Text style={styles.aiListSectionTitle}>{section.title}</Text>
-                  {section.items.map((item, itemIndex) => (
-                    <View key={`${item}-${itemIndex}`} style={styles.aiListItem}>
-                      <Text style={styles.aiListBullet}>•</Text>
-                      <Text style={styles.aiListItemText}>{item}</Text>
+          showAiList ? (
+            aiSections && aiSections.length ? (
+              <View style={styles.aiListSections}>
+                {aiSections.map((section, sectionIndex) => (
+                  <View key={`${section.title}-${sectionIndex}`} style={styles.aiListSection}>
+                    <View style={styles.aiListSectionHeader}>
+                      <Text style={styles.aiListSectionTitle}>{section.title}</Text>
+                      {section.items.length ? (
+                        <Text style={styles.aiListCount}>
+                          {section.items.length}{' '}
+                          {language === 'en' ? 'items' : 'artículos'}
+                        </Text>
+                      ) : null}
                     </View>
-                  ))}
-                </View>
-              ))}
-            </View>
+                    <View style={styles.aiItemsGrid}>
+                      {section.items.map((item, itemIndex) => (
+                        <View key={`${item}-${itemIndex}`} style={styles.aiItemPill}>
+                          <Text style={styles.aiItemText}>{item}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    {section.notes?.map((note, noteIndex) => (
+                      <Text key={`${note}-${noteIndex}`} style={styles.aiNoteText}>
+                        {note}
+                      </Text>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.aiListText}>{aiList}</Text>
+            )
           ) : (
-            <Text style={styles.aiListText}>{aiList}</Text>
+            <Text style={styles.collapsedHint}>
+              {language === 'en'
+                ? 'Collapsed. Tap “Show” to see your AI shopping list.'
+                : 'Lista plegada. Toca “Mostrar” para ver tu lista IA.'}
+            </Text>
           )
         ) : (
           <Text style={styles.emptyText}>
@@ -438,6 +510,11 @@ const getStyles = (theme) =>
       alignItems: 'center',
       marginBottom: theme.spacing.sm
     },
+    aiHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs
+    },
     aiListTitle: {
       ...theme.typography.h3,
       color: theme.colors.text
@@ -461,10 +538,19 @@ const getStyles = (theme) =>
     aiListSection: {
       gap: theme.spacing.xs
     },
+    aiListSectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    },
     aiListSectionTitle: {
       ...theme.typography.body,
       color: theme.colors.text,
       fontWeight: '600'
+    },
+    aiListCount: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted
     },
     aiListItem: {
       flexDirection: 'row',
@@ -481,6 +567,39 @@ const getStyles = (theme) =>
       color: theme.colors.text,
       flex: 1,
       lineHeight: 18
+    },
+    aiItemsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8
+    },
+    aiItemPill: {
+      borderRadius: theme.radius.full,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border
+    },
+    aiItemText: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.text
+    },
+    aiNoteText: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      marginTop: 4
+    },
+    aiToggle: {
+      backgroundColor: theme.colors.primarySoft,
+      borderRadius: theme.radius.full,
+      paddingHorizontal: 10,
+      paddingVertical: 6
+    },
+    aiToggleText: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.primary,
+      fontWeight: '700'
     },
     aiListText: {
       ...theme.typography.bodySmall,
