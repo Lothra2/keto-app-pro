@@ -408,9 +408,14 @@ const ProgressScreen = () => {
     )
   }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan, user?.startDate])
 
-  const planLength = useMemo(
-    () => (Array.isArray(derivedPlan) ? derivedPlan.length : 0),
+  const safePlan = useMemo(
+    () => (Array.isArray(derivedPlan) ? derivedPlan : []),
     [derivedPlan]
+  )
+
+  const planLength = useMemo(
+    () => safePlan.length,
+    [safePlan.length]
   )
 
   const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
@@ -851,7 +856,7 @@ const ProgressScreen = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.dayScroll}
         >
-          {derivedPlan.map((day, index) => {
+          {safePlan.map((day, index) => {
             const hasData = progressByDay.find((p) => p.dayIndex === index)
             const dayName = getDayDisplayName({
               label: day.dia,
