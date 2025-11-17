@@ -184,7 +184,8 @@ const HomeScreen = ({ navigation }) => {
   const [aiDayLoading, setAiDayLoading] = useState(false); // 👈 nuevo
   const [exportingPdf, setExportingPdf] = useState(false);
 
-  const totalWeeks = Math.max(Math.ceil(derivedPlan.length / 7), 1);
+  const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0;
+  const totalWeeks = Math.max(Math.ceil(totalDays / 7), 1);
   const safeWeek = Math.min(Math.max(currentWeek || 1, 1), totalWeeks);
 
   const computeConsumedFromDay = (mergedDay, mealsStateObj, fallbackGoal) => {
@@ -252,7 +253,8 @@ const HomeScreen = ({ navigation }) => {
       merged.dia = getDayDisplayName({
         label: merged.dia,
         index: currentDay,
-        language
+        language,
+        startDate: user?.startDate
       });
 
       // calorías guardadas
@@ -301,7 +303,7 @@ const HomeScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error loading day data:', error);
     }
-  }, [currentDay, derivedPlan, language, weeklyWaterGoal]);
+  }, [currentDay, derivedPlan, language, weeklyWaterGoal, user?.startDate]);
 
   useEffect(() => {
     loadDayData();
@@ -512,7 +514,7 @@ const HomeScreen = ({ navigation }) => {
     setWeekReviewLoading(true);
     try {
       const startIdx = (safeWeek - 1) * 7;
-      const endIdx = Math.min(safeWeek * 7, derivedPlan.length);
+      const endIdx = Math.min(safeWeek * 7, totalDays);
       const weekDays = [];
 
       for (let index = startIdx; index < endIdx; index++) {
@@ -583,7 +585,8 @@ const HomeScreen = ({ navigation }) => {
         weekNumber: safeWeek,
         derivedPlan,
         language,
-        waterGoal: weeklyWaterGoal
+        waterGoal: weeklyWaterGoal,
+        startDate: user?.startDate
       });
 
       if (!result.shared) {
