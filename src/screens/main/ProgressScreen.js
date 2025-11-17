@@ -1564,8 +1564,7 @@ const getStyles = (theme) =>
       gap: theme.spacing.md,
       marginTop: theme.spacing.md,
       alignItems: 'stretch',
-      flexDirection: 'row',
-      flexWrap: 'wrap'
+      flexDirection: 'column'
     },
     aiButton: {
       alignSelf: 'flex-start',
