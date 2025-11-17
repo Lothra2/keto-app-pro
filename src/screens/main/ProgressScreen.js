@@ -128,6 +128,17 @@ const ProgressScreen = () => {
     [aiInsight]
   )
 
+  const formattedAiInsight = useMemo(
+    () =>
+      aiInsight
+        ? aiInsight
+            .split(/\n+/)
+            .map((line) => line.replace(/\*+/g, '').trim())
+            .filter(Boolean)
+        : [],
+    [aiInsight]
+  )
+
   const calculateStats = useCallback(
     (h, w, a) => {
       const heightNumber = toNumberOrNull(h)
