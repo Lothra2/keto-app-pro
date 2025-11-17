@@ -275,8 +275,12 @@ export const exportWorkoutPlanPdf = async ({
                 .map((exercise) => {
                   const details = [
                     exercise.series && `${language === 'en' ? 'Sets' : 'Series'}: ${exercise.series}`,
+                    (exercise.repeticiones || exercise.reps || exercise.rep) &&
+                      `${language === 'en' ? 'Reps' : 'Repeticiones'}: ${exercise.repeticiones || exercise.reps || exercise.rep}`,
                     exercise.duracion && `${language === 'en' ? 'Duration' : 'Duración'}: ${exercise.duracion}`,
-                    exercise.descanso && `${language === 'en' ? 'Rest' : 'Descanso'}: ${exercise.descanso}`,
+                    (exercise.descanso || exercise.rest || exercise.pausa) &&
+                      `${language === 'en' ? 'Rest' : 'Descanso'}: ${exercise.descanso || exercise.rest || exercise.pausa}`,
+                    exercise.tempo && `${language === 'en' ? 'Tempo' : 'Ritmo'}: ${exercise.tempo}`,
                     exercise.descripcion || exercise.detalle,
                     exercise.notas
                   ]

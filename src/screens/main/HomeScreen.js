@@ -1341,7 +1341,8 @@ const createStyles = (theme) =>
     },
     pdfHint: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      marginBottom: theme.spacing.xs,
     },
     pdfButton: {
       marginTop: theme.spacing.sm
@@ -1361,14 +1362,17 @@ const createStyles = (theme) =>
       marginTop: theme.spacing.sm
     },
     aiActionsHeader: {
-      gap: 4
+      gap: theme.spacing.xs,
+      marginBottom: theme.spacing.sm,
     },
     aiActionsHint: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      lineHeight: 18
     },
     aiButtons: {
-      gap: theme.spacing.sm
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.xs
     },
     aiButton: {
       width: '100%'
@@ -1454,7 +1458,8 @@ const createStyles = (theme) =>
       height: 8,
       backgroundColor: theme.colors.bgSoft,
       borderRadius: theme.radius.full,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      marginBottom: theme.spacing.sm,
     },
     progressFill: {
       height: '100%',
@@ -1463,7 +1468,8 @@ const createStyles = (theme) =>
     },
     waterButtons: {
       flexDirection: 'row',
-      gap: theme.spacing.sm
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
     },
     waterButton: {
       flex: 1,
