@@ -56,6 +56,13 @@ const ProgressScreen = () => {
   const theme = getTheme(themeMode)
   const styles = getStyles(theme)
 
+  const safePlan = useMemo(
+    () => (Array.isArray(derivedPlan) ? derivedPlan : []),
+    [derivedPlan]
+  )
+
+  const planLength = safePlan.length || 0
+
   const userWaterGoal = useMemo(
     () => {
       const parsed = Number(metrics?.waterGoal)
@@ -408,10 +415,7 @@ const ProgressScreen = () => {
     )
   }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan, user?.startDate])
 
-  const safePlan = useMemo(
-    () => (Array.isArray(derivedPlan) ? derivedPlan : []),
-    [derivedPlan]
-  )
+  const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
 
   const planLength = useMemo(
     () => safePlan.length,
