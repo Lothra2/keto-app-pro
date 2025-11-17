@@ -1,6 +1,6 @@
 import callNetlifyAI from './netlifyClient'
 import { stripMarkdownHeadings, sanitizeReviewBullet } from '../utils/labels'
-import { MEAL_KCAL_SPLIT } from '../utils/plan'
+import { MEAL_KCAL_SPLIT_MAP } from '../utils/plan'
 
 class AIService {
   /**
@@ -622,7 +622,7 @@ Responde SOLO en JSON:
 
     const getTargetKcal = (totalKcal, key) => {
       const base = Number(totalKcal) || 1600
-      return Math.round(base * (MEAL_KCAL_SPLIT[key] || 0.2))
+      return Math.round(base * (MEAL_KCAL_SPLIT_MAP[key] || 0.2))
     }
 
     const clampKcal = (value, target) => {

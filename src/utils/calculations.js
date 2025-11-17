@@ -1,6 +1,6 @@
 import { basePlan } from '../data/basePlan';
 import { basePlanEn } from '../data/basePlanEn';
-import { MEAL_KCAL_SPLIT } from './plan';
+import { MEAL_KCAL_SPLIT_MAP } from './plan';
 
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
@@ -96,7 +96,7 @@ export function calculateConsumedCalories(mealStates, goalKcal = 1600) {
 
   Object.keys(mealStates).forEach(mealKey => {
     if (mealStates[mealKey]) {
-      consumed += Math.round(goalKcal * (MEAL_KCAL_SPLIT[mealKey] || 0));
+      consumed += Math.round(goalKcal * (MEAL_KCAL_SPLIT_MAP[mealKey] || 0));
     }
   });
 

@@ -39,7 +39,7 @@ import {
 import { getDailyTip, getMotivationalMessage } from '../../data/tips';
 import aiService from '../../api/aiService';
 import { calculateConsumedCalories, calculateDynamicMacros } from '../../utils/calculations';
-import { mergePlanDay, MEAL_KEYS, MEAL_KCAL_SPLIT, buildWeekAiPayload } from '../../utils/plan';
+import { mergePlanDay, MEAL_KEYS, MEAL_KCAL_SPLIT_MAP, buildWeekAiPayload } from '../../utils/plan';
 import { getDayDisplayName, sanitizeReviewBullet, stripMarkdownHeadings } from '../../utils/labels';
 
 const defaultMealState = {
@@ -197,7 +197,7 @@ const HomeScreen = ({ navigation }) => {
       const mealObj = mergedDay?.[key];
       const kcal = mealObj?.kcal
         ? Number(mealObj.kcal)
-        : Math.round(dayKcal * (MEAL_KCAL_SPLIT[key] || 0.2));
+        : Math.round(dayKcal * (MEAL_KCAL_SPLIT_MAP[key] || 0.2));
       consumed += kcal;
     });
 
@@ -319,7 +319,7 @@ const HomeScreen = ({ navigation }) => {
   );
 
   const getTargetKcal = useCallback(
-    (dayKcal, mealKey) => Math.round(dayKcal * (MEAL_KCAL_SPLIT[mealKey] || 0.2)),
+    (dayKcal, mealKey) => Math.round(dayKcal * (MEAL_KCAL_SPLIT_MAP[mealKey] || 0.2)),
     []
   );
 
