@@ -519,6 +519,10 @@ const ProgressScreen = () => {
 
     setAiInsightLoading(true)
 
+    const totalTracked = Array.isArray(calorieHistory)
+      ? calorieHistory.length
+      : 0
+
     const summaryPayload = {
       hydration: { daysWithWater: hydration.daysWithWater, avgMl: avgWaterMl },
       workouts: {
@@ -528,7 +532,7 @@ const ProgressScreen = () => {
       },
       calories: {
         adherenceDays,
-        totalTracked: calorieHistory.length || daysInPlan,
+        totalTracked: totalTracked || daysInPlan,
       },
       weight: { start: startWeightNumber, latest: lastWeightNumber, delta: weightDelta },
     }
@@ -567,12 +571,13 @@ const ProgressScreen = () => {
     avgWorkoutKcal,
     maxWorkout,
     adherenceDays,
-    calorieHistory.length,
+    calorieHistory,
     daysInPlan,
     startWeightNumber,
     lastWeightNumber,
     weightDelta,
   ])
+
 
   const selectedMetric =
     metricConfig.find((m) => m.key === selectedMetricKey) || metricConfig[0]
