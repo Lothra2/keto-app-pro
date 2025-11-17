@@ -36,6 +36,7 @@ import ScreenBanner from '../../components/shared/ScreenBanner'
 import Button from '../../components/shared/Button'
 import Card from '../../components/shared/Card'
 import { exportProgressPdf } from '../../utils/pdf'
+import aiService from '../../api/aiService'
 
 const USER_HEIGHT_KEY = 'USER_HEIGHT_OVERRIDE'
 const USER_WEIGHT_KEY = 'USER_WEIGHT_OVERRIDE'
@@ -47,7 +48,9 @@ const ProgressScreen = () => {
     language,
     derivedPlan,
     gender,
-    metrics
+    metrics,
+    user,
+    apiCredentials
   } = useApp()
 
   const theme = getTheme(themeMode)
@@ -96,6 +99,8 @@ const ProgressScreen = () => {
   const [selectedTracker, setSelectedTracker] = useState('water') // water | workout | calories
   const [exportingPdf, setExportingPdf] = useState(false)
   const [showPdfWeekModal, setShowPdfWeekModal] = useState(false)
+  const [aiInsight, setAiInsight] = useState('')
+  const [aiInsightLoading, setAiInsightLoading] = useState(false)
 
   const calculateStats = useCallback(
     (h, w, a) => {
@@ -152,10 +157,6 @@ const ProgressScreen = () => {
         )
         const hasCalories = consumedCalories > 0
 
-        if (!hasProgress && !hasWater && !hasCalories) {
-          continue
-        }
-
         const pesoNumber = dayProgress.peso !== undefined && dayProgress.peso !== null
           ? toNumberOrNull(dayProgress.peso)
           : null
@@ -175,7 +176,12 @@ const ProgressScreen = () => {
 
         data.push({
           dayIndex: i,
-          displayName: getDayDisplayName({ label: derivedPlan[i]?.dia, index: i, language }),
+          displayName: getDayDisplayName({
+            label: derivedPlan[i]?.dia,
+            index: i,
+            language,
+            startDate: user?.startDate
+          }),
           ...dayProgress,
           pesoNumber,
           energiaNumber,
@@ -194,7 +200,7 @@ const ProgressScreen = () => {
         totalKcal: Math.round(totalExerciseKcal)
       })
     },
-    [age, derivedPlan, gender, height, language, userWaterGoal]
+    [age, derivedPlan, gender, height, language, userWaterGoal, user?.startDate]
   )
 
   const hydrationStats = useCallback(
@@ -368,7 +374,7 @@ const ProgressScreen = () => {
     }
 
     progressByDay.forEach((entry) => {
-      const label = getDayTag(entry.dayIndex, language)
+      const label = getDayTag(entry.dayIndex, language, user?.startDate)
       points.push({
         label,
         displayName:
@@ -376,7 +382,8 @@ const ProgressScreen = () => {
           getDayDisplayName({
             label: derivedPlan[entry.dayIndex]?.dia,
             index: entry.dayIndex,
-            language
+            language,
+            startDate: user?.startDate
           }),
         weight:
           entry.pesoNumber !== null && entry.pesoNumber !== undefined
@@ -398,7 +405,7 @@ const ProgressScreen = () => {
     return points.filter(
       (point) => point.weight !== null || point.energy !== null || point.bodyFat !== null
     )
-  }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan])
+  }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan, user?.startDate])
 
   const totalWeeks = useMemo(
     () => Math.max(1, Math.ceil((derivedPlan.length || 0) / 7)),
@@ -447,7 +454,8 @@ const ProgressScreen = () => {
           exerciseSummary,
           baseStats: { height, startWeight, age },
           metricsSummary: { bodyFat, bmr, recommendedCalories, bmi, bmiCategory },
-          chartPoints
+          chartPoints,
+          startDate: user?.startDate
         })
       } catch (error) {
         console.error('Progress PDF export error', error)
@@ -477,33 +485,100 @@ const ProgressScreen = () => {
       recommendedCalories,
       bmi,
       bmiCategory,
-      chartPoints
+      chartPoints,
+      user?.startDate
     ]
   )
+
+  const handleGenerateAiInsight = useCallback(async () => {
+    if (aiInsightLoading) return
+
+    if (!apiCredentials?.user || !apiCredentials?.pass) {
+      Alert.alert(
+        language === 'en' ? 'Missing credentials' : 'Faltan credenciales',
+        language === 'en'
+          ? 'Add your AI credentials in Settings to request insights.'
+          : 'Agrega tus credenciales en Ajustes para pedir ideas a la IA.'
+      )
+      return
+    }
+
+    setAiInsightLoading(true)
+
+    const summaryPayload = {
+      hydration: { daysWithWater: hydration.daysWithWater, avgMl: avgWaterMl },
+      workouts: {
+        daysLogged: exerciseSummary.daysLogged,
+        avgKcal: avgWorkoutKcal,
+        maxWorkout,
+      },
+      calories: {
+        adherenceDays,
+        totalTracked: calorieHistory.length || daysInPlan,
+      },
+      weight: { start: startWeightNumber, latest: lastWeightNumber, delta: weightDelta },
+    }
+
+    try {
+      const res = await aiService.chat({
+        prompt:
+          (language === 'en'
+            ? 'Create a short, motivating review of this week. Highlight one win, one risk, and one precise next action.'
+            : 'Crea un breve resumen motivador de esta semana. Destaca un logro, un riesgo y una acción precisa para mejorar.') +
+          `\nData: ${JSON.stringify(summaryPayload)}`,
+        language,
+        credentials: apiCredentials,
+        context: { domain: 'keto-progress', focus: 'analytics' },
+      })
+
+      setAiInsight(res?.text || '')
+    } catch (error) {
+      console.error('AI insight error', error)
+      Alert.alert(
+        language === 'en' ? 'AI unavailable' : 'IA no disponible',
+        language === 'en'
+          ? 'We could not fetch the insight right now.'
+          : 'No pudimos obtener el insight en este momento.'
+      )
+    } finally {
+      setAiInsightLoading(false)
+    }
+  }, [
+    aiInsightLoading,
+    apiCredentials,
+    language,
+    hydration.daysWithWater,
+    avgWaterMl,
+    exerciseSummary.daysLogged,
+    avgWorkoutKcal,
+    maxWorkout,
+    adherenceDays,
+    calorieHistory.length,
+    daysInPlan,
+    startWeightNumber,
+    lastWeightNumber,
+    weightDelta,
+  ])
 
   const selectedMetric =
     metricConfig.find((m) => m.key === selectedMetricKey) || metricConfig[0]
 
   const hydrationHistory = useMemo(
     () =>
-      progressByDay
-        .map((entry) => ({
-          label: getDayTag(entry.dayIndex, language),
-          water: entry.water || 0,
-          goal: entry.waterGoal || 2400
-        }))
-        .filter((item) => item.water > 0),
-    [progressByDay, language]
+      progressByDay.map((entry) => ({
+        label: getDayTag(entry.dayIndex, language, user?.startDate),
+        water: entry.water || 0,
+        goal: entry.waterGoal || 2400
+      })),
+    [progressByDay, language, user?.startDate]
   )
 
   const exerciseHistory = useMemo(() => {
-    return progressByDay
-      .filter((entry) => entry.burnedKcal && entry.burnedKcal > 0)
-      .map((entry) => ({
-        label: getDayTag(entry.dayIndex, language),
-        kcal: Math.round(entry.burnedKcal)
-      }))
-  }, [progressByDay, language])
+    return progressByDay.map((entry) => ({
+      label: getDayTag(entry.dayIndex, language, user?.startDate),
+      kcal: Math.max(0, Math.round(entry.burnedKcal || 0))
+    }))
+  }, [progressByDay, language, user?.startDate])
 
   const calorieHistory = useMemo(
     () =>
@@ -513,13 +588,13 @@ const ProgressScreen = () => {
           const goal = itemEntry.calGoal || derivedPlan[itemEntry.dayIndex]?.kcal || 1600
           const consumed = itemEntry.calConsumed || 0
           return {
-            label: getDayTag(itemEntry.dayIndex, language),
+            label: getDayTag(itemEntry.dayIndex, language, user?.startDate),
             goal,
             consumed,
             percent: goal ? Math.round((consumed / goal) * 100) : 0
           }
         }),
-    [progressByDay, language, derivedPlan]
+    [progressByDay, language, derivedPlan, user?.startDate]
   )
 
   const maxCalPercent = calorieHistory.length
@@ -533,6 +608,26 @@ const ProgressScreen = () => {
     (item) => item.percent >= 90 && item.percent <= 110
   ).length
   const adherenceSummary = `${adherenceDays}/${calorieHistory.length || daysInPlan}`
+
+  const avgWaterMl = Math.round(hydration.totalMl / daysInPlan)
+  const avgWorkoutKcal = Math.round(exerciseSummary.totalKcal / daysInPlan)
+  const startWeightNumber = toNumberOrNull(startWeight)
+  const lastWeightEntry = [...progressByDay]
+    .reverse()
+    .find((entry) => toNumberOrNull(entry.peso ?? entry.pesoNumber) !== null)
+  const lastWeightNumber = toNumberOrNull(lastWeightEntry?.peso ?? lastWeightEntry?.pesoNumber)
+  const weightDelta =
+    startWeightNumber !== null && lastWeightNumber !== null
+      ? Math.round((lastWeightNumber - startWeightNumber) * 10) / 10
+      : null
+  const maxWorkout = exerciseHistory.length
+    ? Math.max(...exerciseHistory.map((item) => item.kcal || 0), 0)
+    : 0
+  const consistencyScore = Math.round(
+    (adherenceDays / Math.max(calorieHistory.length, 1)) * 40 +
+      (hydration.daysWithWater / daysInPlan) * 30 +
+      (exerciseSummary.daysLogged / daysInPlan) * 30
+  )
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -648,38 +743,94 @@ const ProgressScreen = () => {
               : '+ Agregar datos base (estatura, peso, edad)'}
           </Text>
         </TouchableOpacity>
-      )}
+        )}
 
-      {/* Daily Progress arriba */}
-      <Card style={styles.pdfCard}>
-        <Text style={styles.sectionTitle}>
-          📄 {language === 'en' ? 'Progress reports' : 'Reportes de progreso'}
-        </Text>
-        <Text style={styles.pdfHint}>
-          {language === 'en'
-            ? 'Export your progress with all metrics, either by week or for the full program.'
-            : 'Exporta tu progreso con todas las métricas, por semana o de todo el programa.'}
-        </Text>
-        <View style={styles.pdfButtonsRow}>
-          <Button
-            title={language === 'en' ? 'Weekly PDF' : 'PDF semanal'}
-            onPress={() => setShowPdfWeekModal(true)}
-            disabled={exportingPdf}
-            style={styles.pdfButton}
-          />
-          <Button
-            title={language === 'en' ? 'Full plan PDF' : 'PDF del plan completo'}
-            variant="secondary"
-            onPress={() =>
-              handleShareProgressPdf({ scope: 'plan', weekNumber: totalWeeks })
-            }
-            disabled={exportingPdf}
-            style={styles.pdfButton}
-          />
-        </View>
-        <Text style={styles.pdfFootnote}>
-          {exportingPdf
-            ? language === 'en'
+        <Card tone="info" style={styles.analyticsCard}>
+          <View style={styles.analyticsHeader}>
+            <Text style={styles.sectionTitle}>
+              🚀 {language === 'en' ? 'Next-level analytics' : 'Analítica avanzada'}
+            </Text>
+            <View style={styles.scorePill}>
+              <Text style={styles.scoreText}>{consistencyScore}%</Text>
+              <Text style={styles.scoreLabel}>{language === 'en' ? 'Consistency' : 'Constancia'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.analyticsGrid}>
+            <View style={styles.analyticsItem}>
+              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Avg hydration' : 'Hidratación prom.'}</Text>
+              <Text style={styles.analyticsValue}>{avgWaterMl} ml</Text>
+              <Text style={styles.analyticsHint}>{waterSummary} {language === 'en' ? 'days on goal' : 'días en meta'}</Text>
+            </View>
+            <View style={styles.analyticsItem}>
+              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Workout effort' : 'Esfuerzo entreno'}</Text>
+              <Text style={styles.analyticsValue}>{avgWorkoutKcal} kcal</Text>
+              <Text style={styles.analyticsHint}>{language === 'en' ? 'Peak' : 'Pico'}: {maxWorkout} kcal</Text>
+            </View>
+            <View style={styles.analyticsItem}>
+              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Weight trend' : 'Tendencia de peso'}</Text>
+              <Text style={styles.analyticsValue}>
+                {weightDelta === null
+                  ? '—'
+                  : `${weightDelta > 0 ? '+' : ''}${weightDelta} kg`}
+              </Text>
+              <Text style={styles.analyticsHint}>
+                {lastWeightNumber !== null
+                  ? `${language === 'en' ? 'Latest' : 'Último'}: ${lastWeightNumber} kg`
+                  : language === 'en'
+                  ? 'Log a weight to unlock trend'
+                  : 'Registra un peso para ver la tendencia'}
+              </Text>
+            </View>
+            <View style={styles.analyticsItem}>
+              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Adherence' : 'Adherencia'}</Text>
+              <Text style={styles.analyticsValue}>{adherenceSummary}</Text>
+              <Text style={styles.analyticsHint}>{language === 'en' ? 'food log days' : 'días con registro'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.aiRow}>
+            <Button
+              title={language === 'en' ? 'AI weekly insight' : 'Insight semanal IA'}
+              onPress={handleGenerateAiInsight}
+              loading={aiInsightLoading}
+              variant="glass"
+              style={styles.aiButton}
+            />
+            {aiInsight ? <Text style={styles.aiInsightText}>{aiInsight}</Text> : null}
+          </View>
+        </Card>
+
+        {/* Daily Progress arriba */}
+        <Card style={styles.pdfCard}>
+          <Text style={styles.sectionTitle}>
+            📄 {language === 'en' ? 'Progress reports' : 'Reportes de progreso'}
+          </Text>
+          <Text style={styles.pdfHint}>
+            {language === 'en'
+              ? 'Export your progress with all metrics, either by week or for the full program.'
+              : 'Exporta tu progreso con todas las métricas, por semana o de todo el programa.'}
+          </Text>
+          <View style={styles.pdfButtonsRow}>
+            <Button
+              title={language === 'en' ? 'Weekly PDF' : 'PDF semanal'}
+              onPress={() => setShowPdfWeekModal(true)}
+              disabled={exportingPdf}
+              style={styles.pdfButton}
+            />
+            <Button
+              title={language === 'en' ? 'Full plan PDF' : 'PDF del plan completo'}
+              variant="secondary"
+              onPress={() =>
+                handleShareProgressPdf({ scope: 'plan', weekNumber: totalWeeks })
+              }
+              disabled={exportingPdf}
+              style={styles.pdfButton}
+            />
+          </View>
+          <Text style={styles.pdfFootnote}>
+            {exportingPdf
+              ? language === 'en'
               ? 'Preparing PDF…'
               : 'Preparando PDF…'
             : language === 'en'
@@ -699,7 +850,12 @@ const ProgressScreen = () => {
         >
           {derivedPlan.map((day, index) => {
             const hasData = progressByDay.find((p) => p.dayIndex === index)
-            const dayName = getDayDisplayName({ label: day.dia, index, language })
+            const dayName = getDayDisplayName({
+              label: day.dia,
+              index,
+              language,
+              startDate: user?.startDate
+            })
             const calorieValue =
               hasData && typeof hasData.calConsumed === 'number' ? hasData.calConsumed : 0
             const calorieGoal =
@@ -1243,6 +1399,75 @@ const getStyles = (theme) =>
       ...theme.typography.body,
       color: theme.colors.primary,
       fontWeight: '600'
+    },
+    analyticsCard: {
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    analyticsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: theme.spacing.sm,
+    },
+    analyticsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
+    },
+    analyticsItem: {
+      flex: 1,
+      minWidth: 150,
+      backgroundColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.04)',
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    analyticsLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2,
+    },
+    analyticsValue: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      fontWeight: '700',
+    },
+    analyticsHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: 2,
+    },
+    scorePill: {
+      backgroundColor: theme.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 6,
+      borderRadius: theme.radius.full,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: 'center',
+    },
+    scoreText: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      fontWeight: '800',
+      lineHeight: 28,
+    },
+    scoreLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+    },
+    aiRow: {
+      gap: theme.spacing.xs,
+    },
+    aiButton: {
+      alignSelf: 'flex-start',
+    },
+    aiInsightText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      lineHeight: 20,
     },
     pdfCard: {
       marginBottom: theme.spacing.md,
