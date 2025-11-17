@@ -61,7 +61,7 @@ const ProgressScreen = () => {
     [derivedPlan]
   )
 
-  const planLength = safePlan.length || 0
+  const planLength = useMemo(() => safePlan.length || 0, [safePlan.length])
 
   const userWaterGoal = useMemo(
     () => {
@@ -416,11 +416,6 @@ const ProgressScreen = () => {
   }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan, user?.startDate])
 
   const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
-
-  const planLength = useMemo(
-    () => safePlan.length,
-    [safePlan.length]
-  )
 
   const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
 
