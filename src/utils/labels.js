@@ -1,35 +1,58 @@
-export const getDayDisplayName = ({ label, index = 0, language = 'es' }) => {
-  const fallback = language === 'en' ? `Day ${index + 1}` : `Día ${index + 1}`;
+import { addDays, format, isValid } from 'date-fns'
+
+const getDateLabel = (startDate, index, language) => {
+  if (!startDate) return null
+
+  const base = new Date(startDate)
+  if (!isValid(base)) return null
+
+  const computed = addDays(base, index)
+  if (!isValid(computed)) return null
+
+  const formatter = language === 'en' ? 'MMM d' : 'dd/MM'
+  return format(computed, formatter)
+}
+
+export const getDayDisplayName = ({ label, index = 0, language = 'es', startDate }) => {
+  const dateLabel = getDateLabel(startDate, index, language)
+  const fallback = dateLabel || (language === 'en' ? `Day ${index + 1}` : `Día ${index + 1}`)
 
   if (typeof label !== 'string') {
-    return fallback;
+    return fallback
   }
 
-  const trimmed = label.trim();
+  const trimmed = label.trim()
   if (!trimmed) {
-    return fallback;
+    return fallback
+  }
+
+  if (dateLabel) {
+    return dateLabel
   }
 
   if (language === 'en') {
-    const numberMatch = trimmed.match(/\d+/);
+    const numberMatch = trimmed.match(/\d+/)
     if (numberMatch) {
-      return `Day ${Number(numberMatch[0])}`;
+      return `Day ${Number(numberMatch[0])}`
     }
 
     if (/día/i.test(trimmed)) {
-      return trimmed.replace(/día/gi, 'Day');
+      return trimmed.replace(/día/gi, 'Day')
     }
 
-    return trimmed;
+    return trimmed
   }
 
-  return trimmed || fallback;
-};
+  return trimmed || fallback
+}
 
-export const getDayTag = (index = 0, language = 'es') => {
-  const prefix = language === 'en' ? 'D' : 'D';
-  return `${prefix}${index + 1}`;
-};
+export const getDayTag = (index = 0, language = 'es', startDate) => {
+  const dateLabel = getDateLabel(startDate, index, language)
+  if (dateLabel) return dateLabel
+
+  const prefix = language === 'en' ? 'D' : 'D'
+  return `${prefix}${index + 1}`
+}
 
 export const sanitizeReviewBullet = (text = '') => {
   return text

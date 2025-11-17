@@ -45,7 +45,8 @@ export const exportWeekPlanPdf = async ({
   weekNumber = 1,
   derivedPlan = [],
   language = 'es',
-  waterGoal = 2400
+  waterGoal = 2400,
+  startDate
 }) => {
   const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0;
   const safeWeek = Number.isFinite(Number(weekNumber)) ? Number(weekNumber) : 1;
@@ -71,7 +72,8 @@ export const exportWeekPlanPdf = async ({
       const dayTitle = getDayDisplayName({
         label: merged.dia || base?.dia,
         index,
-        language
+        language,
+        startDate
       });
 
       const macros = merged.macros || base.macros || {};
@@ -641,7 +643,8 @@ export const exportProgressPdf = async ({
   exerciseSummary = {},
   baseStats = {},
   metricsSummary = {},
-  chartPoints = []
+  chartPoints = [],
+  startDate
 }) => {
   const safeWeek = Number.isFinite(Number(weekNumber)) ? Number(weekNumber) : 1;
   const title =
@@ -667,7 +670,8 @@ export const exportProgressPdf = async ({
           const label = getDayDisplayName({
             label: planDay.dia,
             index: entry.dayIndex,
-            language
+            language,
+            startDate
           });
 
           return `

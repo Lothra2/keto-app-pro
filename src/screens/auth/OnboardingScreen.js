@@ -4,6 +4,8 @@ import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import Button from '../../components/shared/Button';
 import Card from '../../components/shared/Card';
+import DatePickerModal from '../../components/shared/DatePickerModal';
+import { format } from 'date-fns';
 
 const OnboardingScreen = ({ navigation }) => {
   const {
@@ -29,6 +31,8 @@ const OnboardingScreen = ({ navigation }) => {
   const [waterGoal, setWaterGoal] = useState(metrics.waterGoal ? String(metrics.waterGoal) : '2400');
   const [selectedWeeks, setSelectedWeeks] = useState(planWeeks || 2);
   const [saving, setSaving] = useState(false);
+  const [startDate, setStartDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const tips = useMemo(() => {
     if (language === 'en') {
@@ -69,8 +73,8 @@ const OnboardingScreen = ({ navigation }) => {
 
     setSaving(true);
     try {
-      const today = new Date().toISOString();
-      await updateUser({ name: name.trim(), startDate: today });
+      const normalizedStart = startDate ? new Date(startDate).toISOString() : new Date().toISOString();
+      await updateUser({ name: name.trim(), startDate: normalizedStart });
       await updateMetrics({
         height: height.trim(),
         startWeight: weight.trim(),
@@ -134,6 +138,28 @@ const OnboardingScreen = ({ navigation }) => {
               style={[styles.genderText, selectedGender === 'female' && styles.genderTextActive]}
             >
               {language === 'en' ? 'Female' : 'Mujer'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dateRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sectionDescription}>
+              {language === 'en'
+                ? 'When will you start your plan? We will tag days with this date.'
+                : '¿Cuándo iniciarás tu plan? Usaremos esta fecha para nombrar los días.'}
+            </Text>
+            <Text style={styles.dateValue}>
+              {format(startDate, language === 'en' ? 'MMM d, yyyy' : 'dd/MM/yyyy')}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.dateButtonText}>
+              {language === 'en' ? 'Pick date' : 'Elegir fecha'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -239,6 +265,15 @@ const OnboardingScreen = ({ navigation }) => {
         loading={saving}
         style={styles.continueButton}
       />
+
+      <DatePickerModal
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={(date) => setStartDate(date)}
+        initialDate={startDate}
+        theme={theme}
+        language={language}
+      />
     </ScrollView>
   );
 };
@@ -325,6 +360,34 @@ const getStyles = (theme) =>
     genderTextActive: {
       color: theme.colors.primary,
       fontWeight: '600'
+    },
+    dateRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+      padding: theme.spacing.sm,
+      backgroundColor: theme.colors.cardSoft,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border
+    },
+    dateValue: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '600'
+    },
+    dateButton: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: theme.colors.primarySoft,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.primary
+    },
+    dateButtonText: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.primary,
+      fontWeight: '700'
     },
     tipRow: {
       flexDirection: 'row',

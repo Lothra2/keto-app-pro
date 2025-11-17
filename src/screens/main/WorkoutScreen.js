@@ -23,7 +23,8 @@ const WorkoutScreen = ({ route, navigation }) => {
     metrics,
     derivedPlan,
     setCurrentDay,
-    updateSettings
+    updateSettings,
+    user
   } = useApp()
 
   const theme = getTheme(themeMode)
@@ -201,7 +202,12 @@ const WorkoutScreen = ({ route, navigation }) => {
       for (let day = startOfWeek; day < endOfWeek; day += 1) {
         const planDay = derivedPlan[day] || {}
         const label =
-          getDayDisplayName({ label: planDay.dia, index: day, language }) ||
+          getDayDisplayName({
+            label: planDay.dia,
+            index: day,
+            language,
+            startDate: user?.startDate
+          }) ||
           (language === 'en' ? `Day ${day + 1}` : `Día ${day + 1}`)
         const saved = await getWorkoutData(day)
         const exercises = Array.isArray(saved) ? saved : []
@@ -297,7 +303,13 @@ const WorkoutScreen = ({ route, navigation }) => {
     }))
   }, [localPlan, safeActiveDay, language])
 
-  const dayLabel = language === 'en' ? `Day ${safeActiveDay + 1}` : `Día ${safeActiveDay + 1}`
+  const dayDisplayName =
+    getDayDisplayName({
+      label: derivedPlan[safeActiveDay]?.dia,
+      index: safeActiveDay,
+      language,
+      startDate: user?.startDate
+    }) || (language === 'en' ? `Day ${safeActiveDay + 1}` : `Día ${safeActiveDay + 1}`)
   const weekLabel = language === 'en' ? `Week ${week}` : `Semana ${week}`
   const intensityLabel = intensityLabels[selectedIntensity] || intensityLabels.medium
 
@@ -369,7 +381,7 @@ const WorkoutScreen = ({ route, navigation }) => {
         theme={theme}
         icon="🏋️"
         title={language === 'en' ? 'Workouts' : 'Entrenos'}
-        subtitle={`${weekLabel} · ${dayLabel}`}
+        subtitle={`${weekLabel} · ${dayDisplayName}`}
         description={
           language === 'en'
             ? `Intensity: ${intensityLabel}`
@@ -386,7 +398,7 @@ const WorkoutScreen = ({ route, navigation }) => {
             >
               <Text style={styles.bannerControlText}>−</Text>
             </TouchableOpacity>
-            <Text style={styles.bannerControlBadge}>{dayLabel}</Text>
+            <Text style={styles.bannerControlBadge}>{dayDisplayName}</Text>
             <TouchableOpacity
               onPress={() => handleChangeDay(1)}
               style={[
@@ -506,7 +518,7 @@ const WorkoutScreen = ({ route, navigation }) => {
 
         <WorkoutCard
           title={language === 'en' ? 'AI workout' : 'Entreno IA'}
-          focus={`${weekLabel} · ${dayLabel}`}
+          focus={`${weekLabel} · ${dayDisplayName}`}
           exercises={workout}
           onExercisePress={handleExercisePress}
           collapsible

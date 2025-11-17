@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import { CommonActions } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import ScreenBanner from '../../components/shared/ScreenBanner';
+import DatePickerModal from '../../components/shared/DatePickerModal';
+import { format } from 'date-fns';
 
 const SettingsScreen = ({ navigation }) => {
   const {
@@ -44,10 +46,18 @@ const SettingsScreen = ({ navigation }) => {
   const [waterGoal, setWaterGoal] = useState(
     metrics?.waterGoal ? String(metrics.waterGoal) : '2400'
   );
+  const [planStartDate, setPlanStartDate] = useState(
+    user?.startDate ? new Date(user.startDate) : new Date()
+  );
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     setName(user.name || '');
   }, [user?.name]);
+
+  useEffect(() => {
+    setPlanStartDate(user?.startDate ? new Date(user.startDate) : new Date());
+  }, [user?.startDate]);
 
   useEffect(() => {
     setLikeFoods(foodPrefs.like || '');
@@ -62,6 +72,11 @@ const SettingsScreen = ({ navigation }) => {
   useEffect(() => {
     setWaterGoal(metrics?.waterGoal ? String(metrics.waterGoal) : '2400');
   }, [metrics?.waterGoal]);
+
+  const formattedStartDate = useMemo(
+    () => format(planStartDate, language === 'en' ? 'MMM d, yyyy' : 'dd/MM/yyyy'),
+    [planStartDate, language]
+  );
 
   const handleSaveName = async () => {
     if (name.trim()) {
@@ -126,6 +141,18 @@ const SettingsScreen = ({ navigation }) => {
       language === 'en'
         ? 'Hydration goal updated across your plan.'
         : 'Meta de hidratación actualizada en todo tu plan.'
+    );
+  };
+
+  const handleChangeStartDate = async (date) => {
+    const normalized = date ? new Date(date).toISOString() : new Date().toISOString();
+    setPlanStartDate(date || new Date());
+    await updateUser({ startDate: normalized });
+    Alert.alert(
+      language === 'en' ? 'Saved' : 'Guardado',
+      language === 'en'
+        ? 'Plan start date updated. Day labels now use this date.'
+        : 'Fecha de inicio actualizada. Los días usarán esta fecha.'
     );
   };
 
@@ -340,6 +367,35 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </View>
 
+      {/* Plan start date */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {language === 'en' ? 'Plan start date' : 'Fecha de inicio'}
+        </Text>
+        <Text style={styles.sectionDescription}>
+          {language === 'en'
+            ? 'We will label D1, D2, and reports using this date.'
+            : 'Usaremos esta fecha para etiquetar D1, D2 y los reportes.'}
+        </Text>
+        <View style={styles.dateRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.dateValue}>{formattedStartDate}</Text>
+            <Text style={styles.dateHelper}>
+              {language === 'en'
+                ? 'Tap to adjust if you started another day.'
+                : 'Toca para ajustar si empezaste otro día.'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.dateButtonText}>{language === 'en' ? 'Change' : 'Cambiar'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Water Goal */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
@@ -475,6 +531,15 @@ const SettingsScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      <DatePickerModal
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={handleChangeStartDate}
+        initialDate={planStartDate}
+        theme={theme}
+        language={language}
+      />
+
       <Text style={styles.version}>Keto Pro v1.0.0</Text>
     </ScrollView>
   );
@@ -548,6 +613,39 @@ const getStyles = (theme) => StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text,
     fontWeight: '500'
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md
+  },
+  dateValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '600'
+  },
+  dateHelper: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginTop: 2
+  },
+  dateButton: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.primarySoft,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary
+  },
+  dateButtonText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.primary,
+    fontWeight: '700'
   },
   optionsRow: {
     flexDirection: 'row',
