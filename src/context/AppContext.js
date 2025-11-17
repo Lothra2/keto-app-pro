@@ -162,7 +162,10 @@ export const AppProvider = ({ children }) => {
     setIsOnboarded(hasName && hasMetrics);
   }, [user, metrics]);
 
-  const calculateCurrentDay = (startDate, planLength = derivedPlan.length) => {
+  const calculateCurrentDay = (
+    startDate,
+    planLength = Array.isArray(derivedPlan) ? derivedPlan.length : 0
+  ) => {
     const start = new Date(startDate);
     const today = new Date();
     const diffMs = today - start;
@@ -177,7 +180,18 @@ export const AppProvider = ({ children }) => {
   const updateUser = async (updates) => {
     setUser(prev => ({ ...prev, ...updates }));
     if (updates.name !== undefined) await storage.set(KEYS.NAME, updates.name || '');
-    if (updates.startDate !== undefined) await storage.set(KEYS.START_DATE, updates.startDate || '');
+    if (updates.startDate !== undefined) {
+      await storage.set(KEYS.START_DATE, updates.startDate || '');
+
+      if (updates.startDate) {
+        const updatedDay = calculateCurrentDay(updates.startDate)
+        const updatedWeek = Math.min(Math.floor(updatedDay / 7) + 1, planWeeks)
+        setCurrentDayState(updatedDay)
+        setCurrentWeekState(updatedWeek)
+        storage.set(KEYS.SELECTED_DAY, updatedDay)
+        storage.set(KEYS.SELECTED_WEEK, updatedWeek)
+      }
+    }
   };
 
   const updateSettings = async (key, value) => {
