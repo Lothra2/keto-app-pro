@@ -177,7 +177,16 @@ export const AppProvider = ({ children }) => {
   const updateUser = async (updates) => {
     setUser(prev => ({ ...prev, ...updates }));
     if (updates.name !== undefined) await storage.set(KEYS.NAME, updates.name || '');
-    if (updates.startDate !== undefined) await storage.set(KEYS.START_DATE, updates.startDate || '');
+    if (updates.startDate !== undefined) {
+      await storage.set(KEYS.START_DATE, updates.startDate || '');
+
+      const recalculatedDay = calculateCurrentDay(updates.startDate || new Date(), derivedPlan.length);
+      setCurrentDayState(recalculatedDay);
+      const recalculatedWeek = Math.floor(recalculatedDay / 7) + 1;
+      setCurrentWeekState(recalculatedWeek);
+      await storage.set(KEYS.SELECTED_DAY, recalculatedDay);
+      await storage.set(KEYS.SELECTED_WEEK, recalculatedWeek);
+    }
   };
 
   const updateSettings = async (key, value) => {
