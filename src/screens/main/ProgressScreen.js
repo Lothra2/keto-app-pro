@@ -47,7 +47,8 @@ const ProgressScreen = () => {
     language,
     derivedPlan,
     gender,
-    metrics
+    metrics,
+    user
   } = useApp()
 
   const theme = getTheme(themeMode)
@@ -175,7 +176,12 @@ const ProgressScreen = () => {
 
         data.push({
           dayIndex: i,
-          displayName: getDayDisplayName({ label: derivedPlan[i]?.dia, index: i, language }),
+          displayName: getDayDisplayName({
+            label: derivedPlan[i]?.dia,
+            index: i,
+            language,
+            startDate: user?.startDate
+          }),
           ...dayProgress,
           pesoNumber,
           energiaNumber,
@@ -194,7 +200,7 @@ const ProgressScreen = () => {
         totalKcal: Math.round(totalExerciseKcal)
       })
     },
-    [age, derivedPlan, gender, height, language, userWaterGoal]
+    [age, derivedPlan, gender, height, language, userWaterGoal, user?.startDate]
   )
 
   const hydrationStats = useCallback(
@@ -368,7 +374,7 @@ const ProgressScreen = () => {
     }
 
     progressByDay.forEach((entry) => {
-      const label = getDayTag(entry.dayIndex, language)
+      const label = getDayTag(entry.dayIndex, language, user?.startDate)
       points.push({
         label,
         displayName:
@@ -376,7 +382,8 @@ const ProgressScreen = () => {
           getDayDisplayName({
             label: derivedPlan[entry.dayIndex]?.dia,
             index: entry.dayIndex,
-            language
+            language,
+            startDate: user?.startDate
           }),
         weight:
           entry.pesoNumber !== null && entry.pesoNumber !== undefined
@@ -398,7 +405,7 @@ const ProgressScreen = () => {
     return points.filter(
       (point) => point.weight !== null || point.energy !== null || point.bodyFat !== null
     )
-  }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan])
+  }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan, user?.startDate])
 
   const totalWeeks = useMemo(
     () => Math.max(1, Math.ceil((derivedPlan.length || 0) / 7)),
@@ -447,7 +454,8 @@ const ProgressScreen = () => {
           exerciseSummary,
           baseStats: { height, startWeight, age },
           metricsSummary: { bodyFat, bmr, recommendedCalories, bmi, bmiCategory },
-          chartPoints
+          chartPoints,
+          startDate: user?.startDate
         })
       } catch (error) {
         console.error('Progress PDF export error', error)
@@ -477,7 +485,8 @@ const ProgressScreen = () => {
       recommendedCalories,
       bmi,
       bmiCategory,
-      chartPoints
+      chartPoints,
+      user?.startDate
     ]
   )
 
@@ -488,22 +497,20 @@ const ProgressScreen = () => {
     () =>
       progressByDay
         .map((entry) => ({
-          label: getDayTag(entry.dayIndex, language),
+          label: getDayTag(entry.dayIndex, language, user?.startDate),
           water: entry.water || 0,
           goal: entry.waterGoal || 2400
         }))
         .filter((item) => item.water > 0),
-    [progressByDay, language]
+    [progressByDay, language, user?.startDate]
   )
 
   const exerciseHistory = useMemo(() => {
-    return progressByDay
-      .filter((entry) => entry.burnedKcal && entry.burnedKcal > 0)
-      .map((entry) => ({
-        label: getDayTag(entry.dayIndex, language),
-        kcal: Math.round(entry.burnedKcal)
-      }))
-  }, [progressByDay, language])
+    return progressByDay.map((entry) => ({
+      label: getDayTag(entry.dayIndex, language, user?.startDate),
+      kcal: Math.max(0, Math.round(entry.burnedKcal || 0))
+    }))
+  }, [progressByDay, language, user?.startDate])
 
   const calorieHistory = useMemo(
     () =>
@@ -513,13 +520,13 @@ const ProgressScreen = () => {
           const goal = itemEntry.calGoal || derivedPlan[itemEntry.dayIndex]?.kcal || 1600
           const consumed = itemEntry.calConsumed || 0
           return {
-            label: getDayTag(itemEntry.dayIndex, language),
+            label: getDayTag(itemEntry.dayIndex, language, user?.startDate),
             goal,
             consumed,
             percent: goal ? Math.round((consumed / goal) * 100) : 0
           }
         }),
-    [progressByDay, language, derivedPlan]
+    [progressByDay, language, derivedPlan, user?.startDate]
   )
 
   const maxCalPercent = calorieHistory.length
@@ -699,7 +706,12 @@ const ProgressScreen = () => {
         >
           {derivedPlan.map((day, index) => {
             const hasData = progressByDay.find((p) => p.dayIndex === index)
-            const dayName = getDayDisplayName({ label: day.dia, index, language })
+            const dayName = getDayDisplayName({
+              label: day.dia,
+              index,
+              language,
+              startDate: user?.startDate
+            })
             const calorieValue =
               hasData && typeof hasData.calConsumed === 'number' ? hasData.calConsumed : 0
             const calorieGoal =
