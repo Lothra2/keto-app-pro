@@ -1,5 +1,21 @@
-export const getDayDisplayName = ({ label, index = 0, language = 'es' }) => {
-  const fallback = language === 'en' ? `Day ${index + 1}` : `Día ${index + 1}`;
+const buildPlanDateLabel = (startDate, index, language) => {
+  if (!startDate) return null;
+
+  const base = new Date(startDate);
+  if (Number.isNaN(base.getTime())) return null;
+
+  const target = new Date(base);
+  target.setDate(base.getDate() + index);
+
+  const day = String(target.getDate()).padStart(2, '0');
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+
+  return language === 'en' ? `${month}/${day}` : `${day}/${month}`;
+};
+
+export const getDayDisplayName = ({ label, index = 0, language = 'es', startDate }) => {
+  const dateLabel = buildPlanDateLabel(startDate, index, language);
+  const fallback = dateLabel || (language === 'en' ? `Day ${index + 1}` : `Día ${index + 1}`);
 
   if (typeof label !== 'string') {
     return fallback;
@@ -8,6 +24,11 @@ export const getDayDisplayName = ({ label, index = 0, language = 'es' }) => {
   const trimmed = label.trim();
   if (!trimmed) {
     return fallback;
+  }
+
+  const genericMatch = /^(d[ií]a|day)\s*\d+/i.test(trimmed) || /^d\d+$/i.test(trimmed);
+  if (dateLabel && genericMatch) {
+    return dateLabel;
   }
 
   if (language === 'en') {
@@ -26,7 +47,10 @@ export const getDayDisplayName = ({ label, index = 0, language = 'es' }) => {
   return trimmed || fallback;
 };
 
-export const getDayTag = (index = 0, language = 'es') => {
+export const getDayTag = (index = 0, language = 'es', startDate) => {
+  const dateLabel = buildPlanDateLabel(startDate, index, language);
+  if (dateLabel) return dateLabel;
+
   const prefix = language === 'en' ? 'D' : 'D';
   return `${prefix}${index + 1}`;
 };
