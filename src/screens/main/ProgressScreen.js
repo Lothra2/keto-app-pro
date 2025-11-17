@@ -117,18 +117,7 @@ const ProgressScreen = () => {
   const [aiInsightLoading, setAiInsightLoading] = useState(false)
   const [showAiInsight, setShowAiInsight] = useState(false)
 
-  const formattedAiInsight = useMemo(
-    () =>
-      aiInsight
-        ? aiInsight
-            .split(/\n+/)
-            .map((line) => line.replace(/\*+/g, '').trim())
-            .filter(Boolean)
-        : [],
-    [aiInsight]
-  )
-
-  const formattedAiInsight = useMemo(
+  const parsedAiInsight = useMemo(
     () =>
       aiInsight
         ? aiInsight
@@ -840,7 +829,7 @@ const ProgressScreen = () => {
               variant="secondary"
               style={styles.aiButton}
             />
-            {formattedAiInsight.length ? (
+            {parsedAiInsight.length ? (
               <View style={styles.aiInsightPanel}>
                 <TouchableOpacity
                   style={styles.aiToggle}
@@ -860,7 +849,7 @@ const ProgressScreen = () => {
                 </TouchableOpacity>
                 {showAiInsight ? (
                   <View style={styles.aiInsightBox}>
-                    {formattedAiInsight.map((line, index) => (
+                    {parsedAiInsight.map((line, index) => (
                       <Text key={`${line}-${index}`} style={styles.aiInsightText}>
                         {line.startsWith('•') ? line : `• ${line}`}
                       </Text>

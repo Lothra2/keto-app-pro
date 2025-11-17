@@ -659,12 +659,6 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: '700'
   },
-  compactButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.xs,
-  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
