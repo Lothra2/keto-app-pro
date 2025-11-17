@@ -1,5 +1,6 @@
 import callNetlifyAI from './netlifyClient'
 import { stripMarkdownHeadings, sanitizeReviewBullet } from '../utils/labels'
+import { MEAL_KCAL_SPLIT } from '../utils/plan'
 
 class AIService {
   /**
@@ -619,6 +620,18 @@ Responde SOLO en JSON:
       return fixed.join(', ')
     }
 
+    const getTargetKcal = (totalKcal, key) => {
+      const base = Number(totalKcal) || 1600
+      return Math.round(base * (MEAL_KCAL_SPLIT[key] || 0.2))
+    }
+
+    const clampKcal = (value, target) => {
+      const numeric = Number.isFinite(Number(value)) ? Math.round(Number(value)) : target
+      const lower = Math.round(target * 0.85)
+      const upper = Math.round(target * 1.15)
+      return Math.min(upper, Math.max(lower, numeric))
+    }
+
     const enhanceMeal = (meal, key) => {
       if (!meal || typeof meal !== 'object') return meal
 
@@ -665,20 +678,25 @@ Responde SOLO en JSON:
       }
     }
 
+    const dayTotal = structured.totalKcal || structured.kcal
     const desayuno = enhanceMeal(structured.desayuno, 'desayuno')
     const snackAM = enhanceMeal(structured.snackAM, 'snackAM')
     const almuerzo = enhanceMeal(structured.almuerzo, 'almuerzo')
     const snackPM = enhanceMeal(structured.snackPM, 'snackPM')
     const cena = enhanceMeal(structured.cena, 'cena')
 
+    const normalized = {
+      desayuno: desayuno ? { ...desayuno, kcal: clampKcal(desayuno.kcal, getTargetKcal(dayTotal, 'desayuno')) } : desayuno,
+      snackAM: snackAM ? { ...snackAM, kcal: clampKcal(snackAM.kcal, getTargetKcal(dayTotal, 'snackAM')) } : snackAM,
+      almuerzo: almuerzo ? { ...almuerzo, kcal: clampKcal(almuerzo.kcal, getTargetKcal(dayTotal, 'almuerzo')) } : almuerzo,
+      snackPM: snackPM ? { ...snackPM, kcal: clampKcal(snackPM.kcal, getTargetKcal(dayTotal, 'snackPM')) } : snackPM,
+      cena: cena ? { ...cena, kcal: clampKcal(cena.kcal, getTargetKcal(dayTotal, 'cena')) } : cena
+    }
+
     return {
       kcal: structured.totalKcal || structured.kcal,
       macros: structured.macros,
-      desayuno,
-      snackAM,
-      almuerzo,
-      snackPM,
-      cena,
+      ...normalized,
       isAI: true
     }
   }
