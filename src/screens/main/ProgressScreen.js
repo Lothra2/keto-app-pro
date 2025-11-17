@@ -138,22 +138,23 @@ const ProgressScreen = () => {
 
   const loadAllProgress = useCallback(
     async (baseMetrics = {}) => {
+      const plan = Array.isArray(derivedPlan) ? derivedPlan : []
       const data = []
       const baseHeight = toNumberOrNull(baseMetrics.height ?? height)
       const baseAge = toNumberOrNull(baseMetrics.age ?? age)
       let daysWithExercise = 0
       let totalExerciseKcal = 0
 
-      for (let i = 0; i < derivedPlan.length; i++) {
+      for (let i = 0; i < plan.length; i++) {
         const dayProgress = await getProgressData(i)
         const water = await getWaterState(i, userWaterGoal)
-        const calorieState = await getCalorieState(i, derivedPlan[i]?.kcal || 1600)
+        const calorieState = await getCalorieState(i, plan[i]?.kcal || 1600)
         const hasProgress = Object.keys(dayProgress).length > 0
         const hasWater = water.ml > 0
         const mealsState = calorieState.meals || {}
         const consumedCalories = calculateConsumedCalories(
           mealsState,
-          calorieState.goal || derivedPlan[i]?.kcal || 1600
+          calorieState.goal || plan[i]?.kcal || 1600
         )
         const hasCalories = consumedCalories > 0
 
@@ -177,7 +178,7 @@ const ProgressScreen = () => {
         data.push({
           dayIndex: i,
           displayName: getDayDisplayName({
-            label: derivedPlan[i]?.dia,
+            label: plan[i]?.dia,
             index: i,
             language,
             startDate: user?.startDate
@@ -188,7 +189,7 @@ const ProgressScreen = () => {
           bodyFat: computedBodyFat,
           water: water.ml,
           waterGoal: water.goal,
-          calGoal: calorieState.goal || derivedPlan[i]?.kcal || 1600,
+          calGoal: calorieState.goal || plan[i]?.kcal || 1600,
           calConsumed: consumedCalories,
           burnedKcal
         })
@@ -208,7 +209,7 @@ const ProgressScreen = () => {
       let daysWithWater = 0
       let totalMl = 0
 
-      for (let i = 0; i < derivedPlan.length; i++) {
+      for (let i = 0; i < planLength; i++) {
         const water = await getWaterState(i, userWaterGoal)
         totalMl += water.ml
         if (water.ml >= water.goal * 0.8) {
@@ -218,7 +219,7 @@ const ProgressScreen = () => {
 
       return { daysWithWater, totalMl }
     },
-    [derivedPlan, userWaterGoal]
+    [planLength, userWaterGoal]
   )
 
   // 1) cargar base data solo una vez
@@ -263,13 +264,13 @@ const ProgressScreen = () => {
 
   // 2) cargar progreso cuando la pantalla esté activa
   const loadProgressOnly = useCallback(async () => {
-    const completed = await getCompletedDaysCount(derivedPlan.length)
+    const completed = await getCompletedDaysCount(planLength)
     setCompletedDays(completed)
 
     await loadAllProgress({ height, age })
     const hydraStats = await hydrationStats()
     setHydration(hydraStats)
-  }, [derivedPlan.length, loadAllProgress, hydrationStats, height, age, userWaterGoal])
+  }, [planLength, loadAllProgress, hydrationStats, height, age, userWaterGoal])
 
   useFocusEffect(
     useCallback(() => {
@@ -407,10 +408,12 @@ const ProgressScreen = () => {
     )
   }, [progressByDay, startWeight, language, initialBodyFat, derivedPlan, user?.startDate])
 
-  const totalWeeks = useMemo(
-    () => Math.max(1, Math.ceil((derivedPlan.length || 0) / 7)),
-    [derivedPlan.length]
+  const planLength = useMemo(
+    () => (Array.isArray(derivedPlan) ? derivedPlan.length : 0),
+    [derivedPlan]
   )
+
+  const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
 
   const metricConfig = useMemo(
     () => [
@@ -601,7 +604,7 @@ const ProgressScreen = () => {
     ? Math.max(...calorieHistory.map((item) => Math.min(140, Math.max(item.percent, 0))), 1)
     : 1
 
-  const daysInPlan = derivedPlan.length || 1
+  const daysInPlan = planLength || 1
   const waterSummary = `${hydration.daysWithWater}/${daysInPlan}`
   const workoutSummary = `${exerciseSummary.daysLogged}/${daysInPlan}`
   const adherenceDays = calorieHistory.filter(
@@ -637,8 +640,8 @@ const ProgressScreen = () => {
         title={language === 'en' ? 'Progress' : 'Progreso'}
         subtitle={
           language === 'en'
-            ? `${completedDays} of ${derivedPlan.length} days completed`
-            : `${completedDays} de ${derivedPlan.length} días completados`
+            ? `${completedDays} of ${planLength} days completed`
+            : `${completedDays} de ${planLength} días completados`
         }
         description={
           language === 'en'
@@ -646,7 +649,7 @@ const ProgressScreen = () => {
             : 'Registra tus métricas para ver tendencias y mantener el enfoque.'
         }
         badge={
-          `${Math.min(100, Math.round((completedDays / Math.max(derivedPlan.length || 1, 1)) * 100))}%`
+          `${Math.min(100, Math.round((completedDays / Math.max(planLength || 1, 1)) * 100))}%`
         }
         badgeTone="info"
         style={styles.banner}
