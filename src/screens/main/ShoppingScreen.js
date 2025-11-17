@@ -31,12 +31,14 @@ const ShoppingScreen = () => {
 
   const theme = getTheme(themeMode)
   const styles = getStyles(theme)
+  const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0
 
   const [aiList, setAiList] = useState('')
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [showBaseList, setShowBaseList] = useState(true)
   const [exportingPdf, setExportingPdf] = useState(false)
+  const [showAiList, setShowAiList] = useState(true)
 
   // misma lógica de parseo, pero reusable
   const parseAiList = useCallback(
@@ -53,7 +55,7 @@ const ShoppingScreen = () => {
       let current = null
 
       const pushSection = (title) => {
-        current = { title, items: [] }
+        current = { title, items: [], note: '' }
         sections.push(current)
       }
 
@@ -61,6 +63,17 @@ const ShoppingScreen = () => {
         const headingMatch = line.match(/^([^•]+):$/)
         if (headingMatch) {
           pushSection(headingMatch[1])
+          return
+        }
+
+        const noteMatch = line.match(/^(note|nota)[:\-]?\s*(.*)/i)
+        if (noteMatch) {
+          if (!current) {
+            pushSection(language === 'en' ? 'Notes' : 'Notas')
+          }
+          const content = noteMatch[2] || ''
+          const value = content.trim() || line.replace(/^(note|nota)[:\-]?/i, '').trim()
+          current.note = current.note ? `${current.note} ${value}`.trim() : value
           return
         }
 
@@ -76,10 +89,11 @@ const ShoppingScreen = () => {
         if (!current) {
           pushSection(language === 'en' ? 'Notes' : 'Notas')
         }
-        current.items.push(line)
+
+        current.note = current.note ? `${current.note} ${line}`.trim() : line
       })
 
-      return sections.filter((section) => section.items.length)
+      return sections.filter((section) => section.items.length || section.note)
     },
     [language]
   )
@@ -92,6 +106,12 @@ const ShoppingScreen = () => {
   useEffect(() => {
     loadSavedList()
   }, [currentWeek])
+
+  useEffect(() => {
+    if (aiList) {
+      setShowAiList(true)
+    }
+  }, [aiList])
 
   const loadSavedList = async () => {
     const saved = await getShoppingList(currentWeek)
@@ -118,7 +138,7 @@ const ShoppingScreen = () => {
     setLoading(true)
     try {
       const startIdx = (currentWeek - 1) * 7
-      const endIdx = Math.min(currentWeek * 7, derivedPlan.length)
+      const endIdx = Math.min(currentWeek * 7, totalDays)
       const days = []
 
       for (let index = startIdx; index < endIdx; index++) {
@@ -279,10 +299,25 @@ const ShoppingScreen = () => {
 
       {/* resultado IA */}
       <View style={styles.aiListBox}>
-        <View style={styles.aiHeaderRow}>
-          <Text style={styles.aiListTitle}>
-            {language === 'en' ? 'AI Shopping List' : 'Lista IA'}
-          </Text>
+        <TouchableOpacity
+          style={styles.aiHeaderRow}
+          onPress={() => setShowAiList((prev) => !prev)}
+          activeOpacity={0.85}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.aiListTitle}>
+              {language === 'en' ? 'AI Shopping List' : 'Lista IA'}
+            </Text>
+            <Text style={styles.aiHeaderHint}>
+              {showAiList
+                ? language === 'en'
+                  ? 'Tap to hide if you only need the base list.'
+                  : 'Toca para ocultarla si solo usarás la lista base.'
+                : language === 'en'
+                ? 'Show AI list for this week.'
+                : 'Mostrar la lista IA de esta semana.'}
+            </Text>
+          </View>
           {aiList ? (
             <Text style={styles.aiChip}>
               {language === 'en' ? 'Ready' : 'Lista'}
@@ -292,31 +327,50 @@ const ShoppingScreen = () => {
               {language === 'en' ? 'Empty' : 'Vacía'}
             </Text>
           )}
-        </View>
+          <View style={styles.sectionToggle}>
+            <Text style={styles.sectionToggleText}>{showAiList ? '−' : '+'}</Text>
+          </View>
+        </TouchableOpacity>
 
-        {aiList ? (
-          aiSections && aiSections.length ? (
-            <View style={styles.aiListSections}>
-              {aiSections.map((section, sectionIndex) => (
-                <View key={`${section.title}-${sectionIndex}`} style={styles.aiListSection}>
-                  <Text style={styles.aiListSectionTitle}>{section.title}</Text>
-                  {section.items.map((item, itemIndex) => (
-                    <View key={`${item}-${itemIndex}`} style={styles.aiListItem}>
-                      <Text style={styles.aiListBullet}>•</Text>
-                      <Text style={styles.aiListItemText}>{item}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </View>
+        {showAiList ? (
+          aiList ? (
+            aiSections && aiSections.length ? (
+              <View style={styles.aiListSections}>
+                {aiSections.map((section, sectionIndex) => (
+                  <View key={`${section.title}-${sectionIndex}`} style={styles.aiListSection}>
+                    <Text style={styles.aiListSectionTitle}>{section.title}</Text>
+                    {section.items.map((item, itemIndex) => (
+                      <View key={`${item}-${itemIndex}`} style={styles.aiListItem}>
+                        <Text style={styles.aiListBullet}>•</Text>
+                        <Text style={styles.aiListItemText}>{item}</Text>
+                      </View>
+                    ))}
+                    {section.note ? (
+                      <View style={styles.aiNoteBox}>
+                        <Text style={styles.aiNoteLabel}>
+                          {language === 'en' ? 'Coach note' : 'Nota del coach'}
+                        </Text>
+                        <Text style={styles.aiNoteText}>{section.note}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.aiListText}>{aiList}</Text>
+            )
           ) : (
-            <Text style={styles.aiListText}>{aiList}</Text>
+            <Text style={styles.emptyText}>
+              {language === 'en'
+                ? 'You don’t have an AI list yet. Tap the button above.'
+                : 'Aún no tienes una lista de IA. Toca el botón de arriba.'}
+            </Text>
           )
         ) : (
-          <Text style={styles.emptyText}>
+          <Text style={styles.collapsedHint}>
             {language === 'en'
-              ? 'You don’t have an AI list yet. Tap the button above.'
-              : 'Aún no tienes una lista de IA. Toca el botón de arriba.'}
+              ? 'Collapsed. Tap to see your AI ingredients.'
+              : 'Colapsada. Toca para ver los ingredientes IA.'}
           </Text>
         )}
       </View>
@@ -436,15 +490,21 @@ const getStyles = (theme) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: theme.spacing.sm
+      marginBottom: theme.spacing.sm,
+      gap: theme.spacing.sm
     },
     aiListTitle: {
       ...theme.typography.h3,
       color: theme.colors.text
     },
+    aiHeaderHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: 2
+    },
     aiChip: {
       backgroundColor: 'rgba(34,197,94,0.15)',
-      color: '#fff',
+      color: theme.colors.primary,
       fontSize: 11,
       paddingHorizontal: 10,
       paddingVertical: 3,
@@ -459,7 +519,12 @@ const getStyles = (theme) =>
       gap: theme.spacing.md
     },
     aiListSection: {
-      gap: theme.spacing.xs
+      gap: theme.spacing.xs,
+      backgroundColor: theme.colors.cardSoft,
+      padding: theme.spacing.sm,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border
     },
     aiListSectionTitle: {
       ...theme.typography.body,
@@ -481,6 +546,24 @@ const getStyles = (theme) =>
       color: theme.colors.text,
       flex: 1,
       lineHeight: 18
+    },
+    aiNoteBox: {
+      marginTop: theme.spacing.xs,
+      padding: theme.spacing.sm,
+      backgroundColor: 'rgba(56,189,248,0.08)',
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: 'rgba(56,189,248,0.24)'
+    },
+    aiNoteLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+      fontWeight: '700',
+      marginBottom: 2
+    },
+    aiNoteText: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.text
     },
     aiListText: {
       ...theme.typography.bodySmall,

@@ -5,12 +5,14 @@ import { getTheme } from '../../theme';
 import { getDayDisplayName } from '../../utils/labels';
 
 const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
-  const { theme: themeMode, language } = useApp();
+  const { theme: themeMode, language, user } = useApp();
   const theme = getTheme(themeMode);
   const styles = getStyles(theme);
 
+  const safePlan = Array.isArray(derivedPlan) ? derivedPlan : [];
   const startIdx = (week - 1) * 7;
-  const endIdx = Math.min(week * 7, derivedPlan.length);
+  const totalDays = safePlan.length;
+  const endIdx = Math.min(week * 7, totalDays);
 
   return (
     <ScrollView
@@ -19,7 +21,7 @@ const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
       style={styles.container}
       contentContainerStyle={styles.content}
     >
-      {derivedPlan.slice(startIdx, endIdx).map((day, index) => {
+      {safePlan.slice(startIdx, endIdx).map((day, index) => {
         const dayIndex = startIdx + index;
         const isActive = dayIndex === currentDay;
 
@@ -30,7 +32,12 @@ const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
             onPress={() => onDaySelect(dayIndex)}
           >
             <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-              {getDayDisplayName({ label: day.dia, index: dayIndex, language })}
+              {getDayDisplayName({
+                label: day.dia,
+                index: dayIndex,
+                language,
+                startDate: user?.startDate
+              })}
             </Text>
           </TouchableOpacity>
         );
