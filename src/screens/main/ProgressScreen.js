@@ -417,6 +417,13 @@ const ProgressScreen = () => {
 
   const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
 
+  const planLength = useMemo(
+    () => safePlan.length,
+    [safePlan.length]
+  )
+
+  const totalWeeks = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
+
   const metricConfig = useMemo(
     () => [
       {
