@@ -10,7 +10,8 @@ const DayPills = ({ week, currentDay, onDaySelect, derivedPlan }) => {
   const styles = getStyles(theme);
 
   const startIdx = (week - 1) * 7;
-  const endIdx = Math.min(week * 7, derivedPlan.length);
+  const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0;
+  const endIdx = Math.min(week * 7, totalDays);
 
   return (
     <ScrollView

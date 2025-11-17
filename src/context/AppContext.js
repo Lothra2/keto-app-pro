@@ -162,7 +162,10 @@ export const AppProvider = ({ children }) => {
     setIsOnboarded(hasName && hasMetrics);
   }, [user, metrics]);
 
-  const calculateCurrentDay = (startDate, planLength = derivedPlan.length) => {
+  const calculateCurrentDay = (
+    startDate,
+    planLength = Array.isArray(derivedPlan) ? derivedPlan.length : 0
+  ) => {
     const start = new Date(startDate);
     const today = new Date();
     const diffMs = today - start;

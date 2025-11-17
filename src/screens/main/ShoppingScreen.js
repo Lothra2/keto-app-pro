@@ -31,6 +31,7 @@ const ShoppingScreen = () => {
 
   const theme = getTheme(themeMode)
   const styles = getStyles(theme)
+  const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0
 
   const [aiList, setAiList] = useState('')
   const [loading, setLoading] = useState(false)
@@ -137,7 +138,7 @@ const ShoppingScreen = () => {
     setLoading(true)
     try {
       const startIdx = (currentWeek - 1) * 7
-      const endIdx = Math.min(currentWeek * 7, derivedPlan.length)
+      const endIdx = Math.min(currentWeek * 7, totalDays)
       const days = []
 
       for (let index = startIdx; index < endIdx; index++) {
