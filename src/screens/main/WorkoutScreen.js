@@ -23,7 +23,8 @@ const WorkoutScreen = ({ route, navigation }) => {
     metrics,
     derivedPlan,
     setCurrentDay,
-    updateSettings
+    updateSettings,
+    user
   } = useApp()
 
   const theme = getTheme(themeMode)
@@ -201,7 +202,7 @@ const WorkoutScreen = ({ route, navigation }) => {
       for (let day = startOfWeek; day < endOfWeek; day += 1) {
         const planDay = derivedPlan[day] || {}
         const label =
-          getDayDisplayName({ label: planDay.dia, index: day, language }) ||
+          getDayDisplayName({ label: planDay.dia, index: day, language, startDate: user?.startDate }) ||
           (language === 'en' ? `Day ${day + 1}` : `Día ${day + 1}`)
         const saved = await getWorkoutData(day)
         const exercises = Array.isArray(saved) ? saved : []

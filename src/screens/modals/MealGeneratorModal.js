@@ -18,14 +18,7 @@ import {
   getLocalMealTip,
   getMotivationalMessage
 } from '../../data/tips'
-
-const mealPercents = {
-  desayuno: 0.25,
-  snackAM: 0.1,
-  almuerzo: 0.35,
-  snackPM: 0.1,
-  cena: 0.2
-}
+import { MEAL_KCAL_SPLIT_MAP } from '../../utils/plan'
 
 const MealGeneratorModal = ({ route, navigation }) => {
   const { dayIndex = 0, mealKey, mode = 'meal' } = route.params || {}
@@ -142,7 +135,7 @@ const MealGeneratorModal = ({ route, navigation }) => {
         setResult(payload)
       } else if (mealKey) {
         const mealTarget = Math.round(
-          (baseDay.kcal || 1600) * (mealPercents[mealKey] || 0.3)
+          (baseDay.kcal || 1600) * (MEAL_KCAL_SPLIT_MAP[mealKey] || 0.3)
         )
         const existingMeals = buildExistingMeals()
         const payload = await aiService.generateMeal({

@@ -13,6 +13,7 @@ import { CommonActions } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import ScreenBanner from '../../components/shared/ScreenBanner';
+import { parseDateInput } from '../../utils/validation';
 
 const SettingsScreen = ({ navigation }) => {
   const {
@@ -44,6 +45,15 @@ const SettingsScreen = ({ navigation }) => {
   const [waterGoal, setWaterGoal] = useState(
     metrics?.waterGoal ? String(metrics.waterGoal) : '2400'
   );
+  const [startDateInput, setStartDateInput] = useState(() => {
+    if (!user?.startDate) return '';
+    const date = new Date(user.startDate);
+    if (Number.isNaN(date.getTime())) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  });
 
   useEffect(() => {
     setName(user.name || '');
@@ -62,6 +72,19 @@ const SettingsScreen = ({ navigation }) => {
   useEffect(() => {
     setWaterGoal(metrics?.waterGoal ? String(metrics.waterGoal) : '2400');
   }, [metrics?.waterGoal]);
+
+  useEffect(() => {
+    if (!user?.startDate) {
+      setStartDateInput('');
+      return;
+    }
+    const parsed = new Date(user.startDate);
+    if (Number.isNaN(parsed.getTime())) return;
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    setStartDateInput(`${day}/${month}/${year}`);
+  }, [user?.startDate]);
 
   const handleSaveName = async () => {
     if (name.trim()) {
@@ -102,6 +125,28 @@ const SettingsScreen = ({ navigation }) => {
     Alert.alert(
       language === 'en' ? 'Saved' : 'Guardado',
       language === 'en' ? 'API credentials saved' : 'Credenciales guardadas'
+    );
+  };
+
+  const handleSaveStartDate = async () => {
+    const parsed = parseDateInput(startDateInput);
+
+    if (!parsed) {
+      Alert.alert(
+        language === 'en' ? 'Check the date' : 'Revisa la fecha',
+        language === 'en'
+          ? 'Use format dd/mm to set when your plan starts.'
+          : 'Usa el formato dd/mm para definir cuándo arranca tu plan.'
+      );
+      return;
+    }
+
+    await updateUser({ startDate: parsed });
+    Alert.alert(
+      language === 'en' ? 'Saved' : 'Guardado',
+      language === 'en'
+        ? 'We updated your plan dates and current day.'
+        : 'Actualizamos tus fechas de plan y el día actual.'
     );
   };
 
@@ -243,6 +288,29 @@ const SettingsScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.button} onPress={handleSaveName}>
           <Text style={styles.buttonText}>
             {language === 'en' ? 'Save Name' : 'Guardar Nombre'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {language === 'en' ? 'Plan start date' : 'Fecha de inicio del plan'}
+        </Text>
+        <Text style={styles.sectionDescription}>
+          {language === 'en'
+            ? 'Replace Day 1, Day 2… with real dates across your plan.'
+            : 'Reemplaza Día 1, Día 2… por fechas reales en todo el plan.'}
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder={language === 'en' ? 'dd/mm/yyyy' : 'dd/mm/aaaa'}
+          placeholderTextColor={theme.colors.textMuted}
+          value={startDateInput}
+          onChangeText={setStartDateInput}
+        />
+        <TouchableOpacity style={styles.button} onPress={handleSaveStartDate}>
+          <Text style={styles.buttonText}>
+            {language === 'en' ? 'Save start date' : 'Guardar fecha de inicio'}
           </Text>
         </TouchableOpacity>
       </View>
