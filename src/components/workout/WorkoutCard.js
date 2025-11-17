@@ -134,7 +134,8 @@ const getStyles = (theme) =>
       backgroundColor: theme.colors.cardSoft,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      marginBottom: theme.spacing.xs
+      marginBottom: theme.spacing.sm,
+      marginTop: theme.spacing.xs
     },
     toggleText: {
       ...theme.typography.caption,
@@ -149,7 +150,8 @@ const getStyles = (theme) =>
     collapsedHint: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
-      marginTop: theme.spacing.xs,
+      marginTop: theme.spacing.sm,
+      marginBottom: 2
     }
   });
 

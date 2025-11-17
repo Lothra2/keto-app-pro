@@ -504,8 +504,8 @@ const WorkoutScreen = ({ route, navigation }) => {
             </Text>
             <Text style={styles.pdfHint}>
               {language === 'en'
-                ? 'Share the full routine for this week, including AI exercises.'
-                : 'Comparte la rutina completa de la semana, con los ejercicios IA.'}
+                ? 'Share the full routine for this week with sets, reps, pauses and AI tips.'
+                : 'Comparte la rutina completa de la semana con series, repeticiones, pausas y tips IA.'}
             </Text>
           </View>
           <Button
@@ -731,17 +731,19 @@ const getStyles = theme => StyleSheet.create({
     width: '100%'
   },
   pdfCard: {
-    gap: theme.spacing.sm
+    gap: theme.spacing.md
   },
   pdfHeader: {
-    gap: 4
+    gap: theme.spacing.xs
   },
   pdfHint: {
     ...theme.typography.caption,
-    color: theme.colors.textMuted
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.xs
   },
   pdfButton: {
-    alignSelf: 'flex-start'
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.xs
   },
   loadingHint: {
     ...theme.typography.caption,

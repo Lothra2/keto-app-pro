@@ -1363,14 +1363,16 @@ const createStyles = (theme) =>
     },
     aiActionsHeader: {
       gap: theme.spacing.xs,
-      marginBottom: theme.spacing.xs,
+      marginBottom: theme.spacing.sm,
     },
     aiActionsHint: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
+      lineHeight: 18
     },
     aiButtons: {
-      gap: theme.spacing.sm
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.xs
     },
     aiButton: {
       width: '100%'

@@ -783,8 +783,13 @@ const ProgressScreen = () => {
               🚀 {language === 'en' ? 'Next-level analytics' : 'Analítica avanzada'}
             </Text>
             <View style={styles.scoreBadge}>
-              <Text style={styles.scoreLabel}>{language === 'en' ? 'Consistency' : 'Constancia'}</Text>
-              <Text style={styles.scoreText}>{consistencyScore}%</Text>
+              <View style={styles.scoreBadgeIcon}>
+                <Text style={styles.scoreBadgeIconText}>✓</Text>
+              </View>
+              <View>
+                <Text style={styles.scoreLabel}>{language === 'en' ? 'Consistency' : 'Constancia'}</Text>
+                <Text style={styles.scoreText}>{consistencyScore}%</Text>
+              </View>
             </View>
           </View>
 
@@ -831,22 +836,27 @@ const ProgressScreen = () => {
             />
             {parsedAiInsight.length ? (
               <View style={styles.aiInsightPanel}>
-                <TouchableOpacity
-                  style={styles.aiToggle}
-                  onPress={() => setShowAiInsight((prev) => !prev)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.aiToggleIcon}>{showAiInsight ? '▲' : '▼'}</Text>
-                  <Text style={styles.aiToggleText}>
-                    {showAiInsight
-                      ? language === 'en'
-                        ? 'Hide insight'
-                        : 'Ocultar insight'
-                      : language === 'en'
-                      ? 'Show insight'
-                      : 'Mostrar insight'}
+                <View style={styles.aiInsightHeader}>
+                  <Text style={styles.aiInsightTitle}>
+                    {language === 'en' ? 'AI weekly insight' : 'Insight semanal IA'}
                   </Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.aiToggle}
+                    onPress={() => setShowAiInsight((prev) => !prev)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.aiToggleIcon}>{showAiInsight ? '▲' : '▼'}</Text>
+                    <Text style={styles.aiToggleText}>
+                      {showAiInsight
+                        ? language === 'en'
+                          ? 'Hide insight'
+                          : 'Ocultar insight'
+                        : language === 'en'
+                        ? 'Show insight'
+                        : 'Mostrar insight'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 {showAiInsight ? (
                   <View style={styles.aiInsightBox}>
                     {parsedAiInsight.map((line, index) => (
@@ -1502,19 +1512,42 @@ const getStyles = (theme) =>
       marginTop: 2,
     },
     scoreBadge: {
-      backgroundColor: theme.mode === 'dark' ? 'rgba(56,189,248,0.12)' : 'rgba(56,189,248,0.18)',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      backgroundColor: theme.colors.cardSoft,
       paddingHorizontal: theme.spacing.md,
-      paddingVertical: 8,
-      borderRadius: theme.radius.lg,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.full,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      minWidth: 120,
-      alignItems: 'center',
+      minWidth: 140,
       shadowColor: '#000',
       shadowOpacity: 0.05,
-      shadowRadius: 6,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3,
+    },
+    scoreBadgeIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+      shadowColor: '#000',
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
       shadowOffset: { width: 0, height: 3 },
       elevation: 2,
+    },
+    scoreBadgeIconText: {
+      ...theme.typography.body,
+      color: theme.colors.primary,
+      fontWeight: '800',
+      lineHeight: 18,
     },
     scoreText: {
       ...theme.typography.h3,
@@ -1524,19 +1557,40 @@ const getStyles = (theme) =>
     },
     scoreLabel: {
       ...theme.typography.caption,
-      color: theme.colors.text,
+      color: theme.colors.textMuted,
       fontWeight: '600',
     },
     aiRow: {
-      gap: theme.spacing.sm,
-      marginTop: theme.spacing.sm,
+      gap: theme.spacing.md,
+      marginTop: theme.spacing.md,
+      alignItems: 'stretch',
+      flexDirection: 'row',
+      flexWrap: 'wrap'
     },
     aiButton: {
       alignSelf: 'flex-start',
     },
     aiInsightPanel: {
-      gap: theme.spacing.xs,
+      gap: theme.spacing.sm,
       alignSelf: 'stretch',
+      flex: 1,
+      backgroundColor: theme.colors.cardSoft,
+      padding: theme.spacing.sm,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    aiInsightHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    aiInsightTitle: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '700',
+      flex: 1
     },
     aiToggle: {
       flexDirection: 'row',
