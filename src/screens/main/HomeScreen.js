@@ -1362,11 +1362,12 @@ const createStyles = (theme) =>
       marginTop: theme.spacing.sm
     },
     aiActionsHeader: {
-      gap: 4
+      gap: theme.spacing.xs,
+      marginBottom: theme.spacing.xs,
     },
     aiActionsHint: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
     },
     aiButtons: {
       gap: theme.spacing.sm
@@ -1456,7 +1457,7 @@ const createStyles = (theme) =>
       backgroundColor: theme.colors.bgSoft,
       borderRadius: theme.radius.full,
       overflow: 'hidden',
-      marginBottom: theme.spacing.xs,
+      marginBottom: theme.spacing.sm,
     },
     progressFill: {
       height: '100%',
@@ -1466,7 +1467,7 @@ const createStyles = (theme) =>
     waterButtons: {
       flexDirection: 'row',
       gap: theme.spacing.sm,
-      marginTop: theme.spacing.xs,
+      marginTop: theme.spacing.sm,
     },
     waterButton: {
       flex: 1,

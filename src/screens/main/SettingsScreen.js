@@ -406,25 +406,30 @@ const SettingsScreen = ({ navigation }) => {
             ? 'Update your daily hydration target. Home, Day and Progress screens will follow this value.'
             : 'Actualiza tu meta diaria de hidratación. Inicio, Día y Progreso usarán este valor.'}
         </Text>
-        <View style={styles.inlineRow}>
-          <TextInput
-            style={[styles.input, styles.inlineInput]}
-            keyboardType="numeric"
-            placeholder="2000"
-            placeholderTextColor={theme.colors.textMuted}
-            value={waterGoal}
-            onChangeText={setWaterGoal}
-          />
-          <Text style={styles.inlineSuffix}>ml</Text>
+        <View style={styles.waterRow}>
+          <View style={styles.inlineRow}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              keyboardType="numeric"
+              placeholder="2000"
+              placeholderTextColor={theme.colors.textMuted}
+              value={waterGoal}
+              onChangeText={setWaterGoal}
+            />
+            <View style={styles.inlineSuffixPill}>
+              <Text style={styles.inlineSuffix}>ml</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.inlineAction}
+            onPress={handleSaveWaterGoal}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.inlineActionText}>
+              {language === 'en' ? 'Save goal' : 'Guardar meta'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.button, styles.compactButton]}
-          onPress={handleSaveWaterGoal}
-        >
-          <Text style={styles.buttonText}>
-            {language === 'en' ? 'Save hydration goal' : 'Guardar meta de agua'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Theme */}
@@ -602,12 +607,22 @@ const getStyles = (theme) => StyleSheet.create({
     color: '#fff',
     fontWeight: '600'
   },
-  inlineRow: {
+  waterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
     backgroundColor: theme.colors.bgSoft,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  inlineRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.card,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 6,
@@ -618,10 +633,31 @@ const getStyles = (theme) => StyleSheet.create({
     flex: 1,
     marginBottom: 0
   },
+  inlineSuffixPill: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: theme.colors.bgSoft,
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   inlineSuffix: {
-    ...theme.typography.body,
+    ...theme.typography.caption,
     color: theme.colors.text,
-    fontWeight: '500'
+    fontWeight: '700'
+  },
+  inlineAction: {
+    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primarySoft,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  inlineActionText: {
+    ...theme.typography.caption,
+    color: theme.colors.primary,
+    fontWeight: '700'
   },
   compactButton: {
     alignSelf: 'flex-start',
