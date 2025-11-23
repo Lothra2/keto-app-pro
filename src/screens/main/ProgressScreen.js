@@ -9,6 +9,7 @@ import {
   Modal,
   Alert
 } from 'react-native'
+import { differenceInCalendarDays, isValid, startOfDay } from 'date-fns'
 import { useFocusEffect } from '@react-navigation/native'
 import { useApp } from '../../context/AppContext'
 import { getTheme } from '../../theme'
@@ -65,6 +66,23 @@ const ProgressScreen = () => {
     () => (Array.isArray(safePlan) ? safePlan.length : 0),
     [safePlan]
   )
+
+  const daysElapsed = useMemo(() => {
+    if (!planLength) return 0
+
+    if (user?.startDate) {
+      const start = startOfDay(new Date(user.startDate))
+      const today = startOfDay(new Date())
+
+      if (isValid(start) && isValid(today)) {
+        const diff = differenceInCalendarDays(today, start)
+        const elapsed = diff + 1
+        return Math.min(planLength, Math.max(0, elapsed))
+      }
+    }
+
+    return Math.min(planLength, Math.max(completedDays, 0))
+  }, [completedDays, planLength, user?.startDate])
 
   const userWaterGoal = useMemo(
     () => {
@@ -170,8 +188,9 @@ const ProgressScreen = () => {
       const baseAge = toNumberOrNull(baseMetrics.age ?? age)
       let daysWithExercise = 0
       let totalExerciseKcal = 0
+      const limit = Math.min(plan.length, Math.max(daysElapsed, 0) || 0)
 
-      for (let i = 0; i < plan.length; i++) {
+      for (let i = 0; i < limit; i++) {
         const dayProgress = await getProgressData(i)
         const water = await getWaterState(i, userWaterGoal)
         const calorieState = await getCalorieState(i, plan[i]?.kcal || 1600)
@@ -228,7 +247,7 @@ const ProgressScreen = () => {
         totalKcal: Math.round(totalExerciseKcal)
       })
     },
-    [age, safePlan, gender, height, language, userWaterGoal, user?.startDate]
+    [age, safePlan, gender, height, language, userWaterGoal, user?.startDate, daysElapsed]
   )
 
   const hydrationStats = useCallback(
@@ -236,7 +255,7 @@ const ProgressScreen = () => {
       let daysWithWater = 0
       let totalMl = 0
 
-      const totalDays = Number.isFinite(planLength) ? planLength : 0
+      const totalDays = Number.isFinite(daysElapsed) ? daysElapsed : 0
 
       for (let i = 0; i < totalDays; i++) {
         const water = await getWaterState(i, userWaterGoal)
@@ -248,7 +267,7 @@ const ProgressScreen = () => {
 
       return { daysWithWater, totalMl }
     },
-    [planLength, userWaterGoal]
+    [daysElapsed, userWaterGoal]
   )
 
   // 1) cargar base data solo una vez
@@ -437,6 +456,11 @@ const ProgressScreen = () => {
     )
   }, [safeProgress, startWeight, language, initialBodyFat, safePlan, user?.startDate])
 
+  const progressToDate = useMemo(
+    () => safeProgress.filter((entry) => entry.dayIndex < daysElapsed),
+    [safeProgress, daysElapsed]
+  )
+
   const weeksInPlan = useMemo(() => Math.max(1, Math.ceil((planLength || 0) / 7)), [planLength])
 
   const metricConfig = useMemo(
@@ -598,24 +622,24 @@ const ProgressScreen = () => {
 
   const hydrationHistory = useMemo(
     () =>
-      safeProgress.map((entry) => ({
+      progressToDate.map((entry) => ({
         label: getDayTag(entry.dayIndex, language, user?.startDate),
         water: entry.water || 0,
         goal: entry.waterGoal || 2400
       })),
-    [safeProgress, language, user?.startDate]
+    [progressToDate, language, user?.startDate]
   )
 
   const exerciseHistory = useMemo(() => {
-    return safeProgress.map((entry) => ({
+    return progressToDate.map((entry) => ({
       label: getDayTag(entry.dayIndex, language, user?.startDate),
       kcal: Math.max(0, Math.round(entry.burnedKcal || 0))
     }))
-  }, [safeProgress, language, user?.startDate])
+  }, [progressToDate, language, user?.startDate])
 
   const calorieHistory = useMemo(
     () =>
-      safeProgress
+      progressToDate
         .filter((entry) => entry.calGoal)
         .map((itemEntry) => {
           const goal = itemEntry.calGoal || safePlan[itemEntry.dayIndex]?.kcal || 1600
@@ -627,20 +651,21 @@ const ProgressScreen = () => {
             percent: goal ? Math.round((consumed / goal) * 100) : 0
           }
         }),
-    [safeProgress, language, safePlan, user?.startDate]
+    [progressToDate, language, safePlan, user?.startDate]
   )
 
   const maxCalPercent = calorieHistory.length
     ? Math.max(...calorieHistory.map((item) => Math.min(140, Math.max(item.percent, 0))), 1)
     : 1
 
-  const daysInPlan = planLength || 1
-  const waterSummary = `${hydration.daysWithWater}/${daysInPlan}`
-  const workoutSummary = `${exerciseSummary.daysLogged}/${daysInPlan}`
+  const trackedDays = Math.max(daysElapsed, 0)
+  const daysInPlan = Math.max(trackedDays, 1)
+  const waterSummary = `${hydration.daysWithWater}/${trackedDays || 1}`
+  const workoutSummary = `${exerciseSummary.daysLogged}/${trackedDays || 1}`
   const adherenceDays = calorieHistory.filter(
     (item) => item.percent >= 90 && item.percent <= 110
   ).length
-  const adherenceSummary = `${adherenceDays}/${calorieHistory.length || daysInPlan}`
+  const adherenceSummary = `${adherenceDays}/${calorieHistory.length || (trackedDays || 1)}`
 
   const avgWaterMl = Math.round(hydration.totalMl / daysInPlan)
   const avgWorkoutKcal = Math.round(exerciseSummary.totalKcal / daysInPlan)
