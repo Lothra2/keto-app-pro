@@ -104,6 +104,16 @@ const SettingsScreen = ({ navigation }) => {
     await updateSettings('theme', newTheme);
   };
 
+  const themeLabel = useMemo(() => {
+    if (themeMode === 'light') {
+      return language === 'en' ? 'Light' : 'Claro';
+    }
+    if (themeMode === 'navy') {
+      return language === 'en' ? 'Navy' : 'Azul marino';
+    }
+    return language === 'en' ? 'Dark' : 'Oscuro';
+  }, [language, themeMode]);
+
   const handleSaveFoodPrefs = async () => {
     await updateFoodPrefs(likeFoods, dislikeFoods);
     Alert.alert(
@@ -211,12 +221,8 @@ const SettingsScreen = ({ navigation }) => {
         }
         description={
           language === 'en'
-            ? `Language: ${language === 'en' ? 'English' : 'Español'} · Theme: ${
-                themeMode === 'dark' ? 'Dark' : 'Light'
-              }`
-            : `Idioma: ${language === 'en' ? 'English' : 'Español'} · Tema: ${
-                themeMode === 'dark' ? 'Oscuro' : 'Claro'
-              }`
+            ? `Language: ${language === 'en' ? 'English' : 'Español'} · Theme: ${themeLabel}`
+            : `Idioma: ${language === 'en' ? 'English' : 'Español'} · Tema: ${themeLabel}`
         }
         badge={
           user?.name
@@ -443,7 +449,7 @@ const SettingsScreen = ({ navigation }) => {
             onPress={() => handleChangeTheme('dark')}
           >
             <Text style={[styles.optionText, themeMode === 'dark' && styles.optionTextActive]}>
-              🌙 {language === 'en' ? 'Dark' : 'Oscuro'}
+              🌙 {language === 'en' ? 'Dark (Green)' : 'Oscuro (Verde)'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -452,6 +458,14 @@ const SettingsScreen = ({ navigation }) => {
           >
             <Text style={[styles.optionText, themeMode === 'light' && styles.optionTextActive]}>
               ☀️ {language === 'en' ? 'Light' : 'Claro'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.option, themeMode === 'navy' && styles.optionActive]}
+            onPress={() => handleChangeTheme('navy')}
+          >
+            <Text style={[styles.optionText, themeMode === 'navy' && styles.optionTextActive]}>
+              💎 {language === 'en' ? 'Navy glass' : 'Azul marino'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -694,10 +708,12 @@ const getStyles = (theme) => StyleSheet.create({
   },
   optionsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap'
   },
   option: {
     flex: 1,
+    minWidth: '30%',
     backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
