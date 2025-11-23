@@ -12,7 +12,7 @@ import Card from '../../components/shared/Card'
 import ScreenBanner from '../../components/shared/ScreenBanner'
 import { exportWorkoutPlanPdf } from '../../utils/pdf'
 import { getDayDisplayName } from '../../utils/labels'
-import { calculateEstimatedWorkoutKcal, estimateAiWorkoutCalories, estimateBaseWorkoutCalories } from '../../utils/calculations'
+import { calculateEstimatedWorkoutKcal, estimateAiWorkoutCalories } from '../../utils/calculations'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}
@@ -445,10 +445,6 @@ const WorkoutScreen = ({ route, navigation }) => {
     }) || (language === 'en' ? `Day ${safeActiveDay + 1}` : `Día ${safeActiveDay + 1}`)
   const weekLabel = language === 'en' ? `Week ${week}` : `Semana ${week}`
   const intensityLabel = intensityLabels[selectedIntensity] || intensityLabels.medium
-
-  useEffect(() => {
-    setEstimatedKcal((prev) => prev || calculateEstimated(selectedIntensity))
-  }, [calculateEstimated, selectedIntensity])
 
   const handleChangeDay = direction => {
     const next = clampDay(safeActiveDay + direction)
