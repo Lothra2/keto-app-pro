@@ -100,6 +100,12 @@ const WorkoutScreen = ({ route, navigation }) => {
     loadWorkout(safeActiveDay)
   }, [safeActiveDay, selectedIntensity, language, metrics.startWeight])
 
+  const calculateEstimated = useCallback(
+    (intensityLevel) =>
+      estimateWorkoutCalories(intensityLevel || selectedIntensity, metrics.startWeight || 75),
+    [metrics.startWeight, selectedIntensity]
+  )
+
   const loadWorkout = async day => {
     const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
     const baseKcal = estimateBaseWorkoutCalories({
@@ -415,6 +421,10 @@ const WorkoutScreen = ({ route, navigation }) => {
     }) || (language === 'en' ? `Day ${safeActiveDay + 1}` : `Día ${safeActiveDay + 1}`)
   const weekLabel = language === 'en' ? `Week ${week}` : `Semana ${week}`
   const intensityLabel = intensityLabels[selectedIntensity] || intensityLabels.medium
+
+  useEffect(() => {
+    setEstimatedKcal((prev) => prev || calculateEstimated(selectedIntensity))
+  }, [calculateEstimated, selectedIntensity])
 
   const handleChangeDay = direction => {
     const next = clampDay(safeActiveDay + direction)
