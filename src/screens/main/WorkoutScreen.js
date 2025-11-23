@@ -441,6 +441,10 @@ const WorkoutScreen = ({ route, navigation }) => {
   const weekLabel = language === 'en' ? `Week ${week}` : `Semana ${week}`
   const intensityLabel = intensityLabels[selectedIntensity] || intensityLabels.medium
 
+  useEffect(() => {
+    setEstimatedKcal((prev) => prev || calculateEstimated(selectedIntensity))
+  }, [calculateEstimated, selectedIntensity])
+
   const handleChangeDay = direction => {
     const next = clampDay(safeActiveDay + direction)
     if (next !== safeActiveDay) {
