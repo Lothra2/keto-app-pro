@@ -562,6 +562,20 @@ const WorkoutScreen = ({ route, navigation }) => {
             : null}
         </View>
 
+        <WorkoutCard
+          title={language === 'en' ? 'AI workout' : 'Entreno IA'}
+          focus={`${weekLabel} · ${dayDisplayName}`}
+          exercises={workout}
+          onExercisePress={handleExercisePress}
+          collapsible
+          initiallyCollapsed={false}
+          collapsedHint={
+            language === 'en'
+              ? 'Tap to open the AI routine.'
+              : 'Toca para abrir la rutina IA.'
+          }
+        />
+
         <Card style={styles.statusCard}>
           <View style={styles.statusHeader}>
             <Text style={styles.sectionSubtitle}>
@@ -570,8 +584,13 @@ const WorkoutScreen = ({ route, navigation }) => {
             <Switch
               value={workoutDone}
               onValueChange={handleToggleWorkoutDone}
-              trackColor={{ false: theme.colors.border, true: theme.colors.primarySoft }}
-              thumbColor={workoutDone ? theme.colors.primary : theme.colors.card}
+              trackColor={{
+                false: theme.mode === 'dark' ? 'rgba(148,163,184,0.45)' : theme.colors.border,
+                true: theme.colors.primarySoft
+              }}
+              thumbColor={
+                workoutDone ? theme.colors.primary : theme.mode === 'dark' ? '#e2e8f0' : theme.colors.card
+              }
             />
           </View>
           <Text style={styles.statusText}>
@@ -614,20 +633,6 @@ const WorkoutScreen = ({ route, navigation }) => {
             style={styles.pdfButton}
           />
         </Card>
-
-        <WorkoutCard
-          title={language === 'en' ? 'AI workout' : 'Entreno IA'}
-          focus={`${weekLabel} · ${dayDisplayName}`}
-          exercises={workout}
-          onExercisePress={handleExercisePress}
-          collapsible
-          initiallyCollapsed={false}
-          collapsedHint={
-            language === 'en'
-              ? 'Tap to open the AI routine.'
-              : 'Toca para abrir la rutina IA.'
-          }
-        />
 
         {referenceExercises.length
           ? (

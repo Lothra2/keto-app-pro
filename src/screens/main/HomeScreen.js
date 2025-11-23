@@ -38,7 +38,11 @@ import {
 } from '../../storage/storage';
 import { getDailyTip, getMotivationalMessage } from '../../data/tips';
 import aiService from '../../api/aiService';
-import { calculateConsumedCalories, calculateDynamicMacros } from '../../utils/calculations';
+import {
+  calculateConsumedCalories,
+  calculateDynamicMacros,
+  getMealDistribution
+} from '../../utils/calculations';
 import { mergePlanDay, MEAL_KEYS, buildWeekAiPayload } from '../../utils/plan';
 import { getDayDisplayName, sanitizeReviewBullet, stripMarkdownHeadings } from '../../utils/labels';
 
@@ -154,6 +158,7 @@ const HomeScreen = ({ navigation }) => {
     derivedPlan,
     user,
     language,
+    gender,
     setCurrentDay,
     setCurrentWeek,
     apiCredentials,
@@ -191,13 +196,7 @@ const HomeScreen = ({ navigation }) => {
   const computeConsumedFromDay = (mergedDay, mealsStateObj, fallbackGoal) => {
     const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena'];
     const dayKcal = mergedDay?.kcal ? Number(mergedDay.kcal) : fallbackGoal;
-    const dist = {
-      desayuno: 0.25,
-      snackAM: 0.1,
-      almuerzo: 0.35,
-      snackPM: 0.1,
-      cena: 0.2
-    };
+    const dist = getMealDistribution(gender);
 
     let consumed = 0;
     mealKeys.forEach((key) => {
@@ -336,7 +335,7 @@ const HomeScreen = ({ navigation }) => {
       const consumed = computeConsumedFromDay(dayData, updatedMeals, calorieGoal);
       setCaloriesConsumed(consumed);
     } else {
-      const consumed = calculateConsumedCalories(updatedMeals, calorieGoal);
+      const consumed = calculateConsumedCalories(updatedMeals, calorieGoal, gender);
       setCaloriesConsumed(consumed);
     }
     await saveCalorieState(currentDay, { goal: calorieGoal, meals: updatedMeals });
@@ -389,13 +388,7 @@ const HomeScreen = ({ navigation }) => {
     try {
       const dayKcal = baseDay.kcal || 1600;
 
-      const dist = {
-        desayuno: 0.3,
-        snackAM: 0.1,
-        almuerzo: 0.3,
-        snackPM: 0.1,
-        cena: 0.2
-      };
+      const dist = getMealDistribution(gender);
 
       const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena'];
 
@@ -631,13 +624,7 @@ const HomeScreen = ({ navigation }) => {
     const getKcal = (mealObj, mealKey) => {
       if (mealObj?.kcal) return Number(mealObj.kcal);
       const dayKcal = dayData?.kcal ? Number(dayData.kcal) : calorieGoal;
-      const dist = {
-        desayuno: 0.25,
-        snackAM: 0.1,
-        almuerzo: 0.35,
-        snackPM: 0.1,
-        cena: 0.2
-      };
+      const dist = getMealDistribution(gender);
       return Math.round(dayKcal * (dist[mealKey] || 0.2));
     };
 

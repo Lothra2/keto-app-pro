@@ -1,6 +1,22 @@
 import { basePlan } from '../data/basePlan';
 import { basePlanEn } from '../data/basePlanEn';
 
+const defaultMealDistribution = {
+  desayuno: 0.25,
+  snackAM: 0.10,
+  almuerzo: 0.35,
+  snackPM: 0.10,
+  cena: 0.20
+};
+
+const femaleMealDistribution = {
+  desayuno: 0.30,
+  snackAM: 0.10,
+  almuerzo: 0.30,
+  snackPM: 0.10,
+  cena: 0.20
+};
+
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
  */
@@ -26,6 +42,10 @@ export function buildPlan(weeks = 2, gender = 'male', language = 'en') {
   }
 
   return plan;
+}
+
+export function getMealDistribution(gender = 'male') {
+  return gender === 'female' ? femaleMealDistribution : defaultMealDistribution;
 }
 
 /**
@@ -100,14 +120,8 @@ export function estimateWorkoutCalories(intensity = 'medium', weightKg = 75) {
 /**
  * Calcular calorías consumidas según comidas marcadas
  */
-export function calculateConsumedCalories(mealStates, goalKcal = 1600) {
-  const mealPercents = {
-    desayuno: 0.25,
-    snackAM: 0.10,
-    almuerzo: 0.35,
-    snackPM: 0.10,
-    cena: 0.20
-  };
+export function calculateConsumedCalories(mealStates, goalKcal = 1600, gender = 'male') {
+  const mealPercents = getMealDistribution(gender);
 
   let consumed = 0;
 
