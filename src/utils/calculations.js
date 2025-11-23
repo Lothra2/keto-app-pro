@@ -186,7 +186,7 @@ export function estimateBaseWorkoutCalories({
 }
 
 export function estimateAiWorkoutCalories(exercises = [], intensity = 'medium', weightKg = 75) {
-  const baseDurationMap = { soft: 26, medium: 36, hard: 50 };
+  const baseDurationMap = { soft: 22, medium: 32, hard: 44 };
   const baseDuration = baseDurationMap[intensity] || baseDurationMap.medium;
 
   const durationFromExercises = exercises
@@ -197,23 +197,29 @@ export function estimateAiWorkoutCalories(exercises = [], intensity = 'medium', 
     ? durationFromExercises.reduce((sum, val) => sum + val, 0) / durationFromExercises.length
     : null;
 
-  const exerciseFactor = clamp((exercises.length || 5) / 6, 0.7, 1.35);
+  const hiitHits = (exercises || []).filter(item => /hiit|sprint|jump|burpee|salto/i.test(
+    `${item?.nombre || ''} ${item?.descripcion || ''} ${item?.detalle || ''}`
+  )).length;
+  const strengthHits = (exercises || []).filter(item => /fuerza|strength|push|sentadilla|peso/i.test(
+    `${item?.nombre || ''} ${item?.descripcion || ''} ${item?.detalle || ''}`
+  )).length;
+  const mobilityHits = (exercises || []).filter(item => /movilidad|stretch|mobil|flex/i.test(
+    `${item?.nombre || ''} ${item?.descripcion || ''} ${item?.detalle || ''}`
+  )).length;
+
+  const exerciseFactor = clamp(0.85 + (exercises.length || 5) * 0.04 + hiitHits * 0.06 - mobilityHits * 0.05, 0.7, 1.35);
   const estimatedDuration = avgDuration
-    ? clamp(avgDuration * exercises.length * 0.35, 15, 75)
-    : baseDuration * exerciseFactor;
+    ? clamp(avgDuration * Math.max(exercises.length * 0.25, 1) + hiitHits * 3 - mobilityHits * 2, 16, 70)
+    : clamp(baseDuration * exerciseFactor, 18, 70);
 
-  const allText = (exercises || [])
-    .map(item => `${item?.nombre || ''} ${item?.descripcion || ''} ${item?.detalle || ''}`)
-    .join(' ')
-    .toLowerCase();
+  const baseMetMap = { soft: 4.2, medium: 5.9, hard: 7.4 };
+  const keywordMetAdjust = hiitHits ? 0.6 : 0;
+  const strengthAdjust = strengthHits ? Math.min(strengthHits * 0.12, 0.6) : 0;
+  const mobilityPenalty = mobilityHits ? Math.min(mobilityHits * 0.2, 0.8) : 0;
+  const met = clamp((baseMetMap[intensity] || baseMetMap.medium) + keywordMetAdjust + strengthAdjust - mobilityPenalty, 3.4, 9.2);
 
-  const metAdjustment =
-    /(hiit|sprint|jump|burpee|salto)/.test(allText) ? 1.2 : /(movilidad|stretch|mobil)/.test(allText) ? 0.85 : 1;
-
-  const metMap = { soft: 4.8, medium: 6.7, hard: 8.6 };
-  const met = (metMap[intensity] || metMap.medium) * metAdjustment;
-
-  return computeCaloriesFromMet(met, estimatedDuration, weightKg);
+  const estimated = computeCaloriesFromMet(met, estimatedDuration, weightKg);
+  return clamp(estimated, 140, 780);
 }
 
 export function calculateEstimatedWorkoutKcal({

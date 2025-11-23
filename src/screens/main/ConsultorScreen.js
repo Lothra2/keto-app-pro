@@ -171,6 +171,9 @@ const ConsultorScreen = () => {
     };
   }, [theme]);
 
+  const inputPaddingBottom = Math.max(insets.bottom, 6);
+  const listBottomSpacing = 44 + keyboardOffset + inputPaddingBottom;
+
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -233,7 +236,7 @@ const ConsultorScreen = () => {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
       <View style={styles.bannerWrapper}>
@@ -371,7 +374,7 @@ const ConsultorScreen = () => {
         renderItem={renderItem}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: 96 + insets.bottom + keyboardOffset },
+          { paddingBottom: listBottomSpacing },
         ]}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
@@ -393,7 +396,7 @@ const ConsultorScreen = () => {
             shadowRadius: 18,
             shadowOffset: { width: 0, height: -6 },
             elevation: 10,
-            paddingBottom: 8 + insets.bottom,
+            paddingBottom: inputPaddingBottom,
             bottom: keyboardOffset,
           },
         ]}
@@ -580,7 +583,7 @@ const styles = StyleSheet.create({
   image: { width: 240, height: 240, borderRadius: 14, marginBottom: 4 },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 96,
+    paddingBottom: 48,
     paddingTop: 8,
   },
   inputBar: {
@@ -592,7 +595,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     gap: 8,
   },
   input: {
