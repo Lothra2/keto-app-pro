@@ -290,7 +290,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, language === 'es' && styles.optionActive]}
             onPress={() => handleChangeLanguage('es')}
           >
-            <Text style={[styles.optionText, language === 'es' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, language === 'es' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Español
             </Text>
           </TouchableOpacity>
@@ -298,7 +302,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, language === 'en' && styles.optionActive]}
             onPress={() => handleChangeLanguage('en')}
           >
-            <Text style={[styles.optionText, language === 'en' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, language === 'en' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               English
             </Text>
           </TouchableOpacity>
@@ -320,7 +328,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, gender === 'male' && styles.optionActive]}
             onPress={() => handleChangeGender('male')}
           >
-            <Text style={[styles.optionText, gender === 'male' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, gender === 'male' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {language === 'en' ? 'Male' : 'Hombre'}
             </Text>
           </TouchableOpacity>
@@ -328,7 +340,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, gender === 'female' && styles.optionActive]}
             onPress={() => handleChangeGender('female')}
           >
-            <Text style={[styles.optionText, gender === 'female' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, gender === 'female' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {language === 'en' ? 'Female' : 'Mujer'}
             </Text>
           </TouchableOpacity>
@@ -350,7 +366,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, planWeeks === 2 && styles.optionActive]}
             onPress={() => handleChangePlanWeeks(2)}
           >
-            <Text style={[styles.optionText, planWeeks === 2 && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, planWeeks === 2 && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               2 {language === 'en' ? 'weeks' : 'semanas'}
             </Text>
           </TouchableOpacity>
@@ -358,7 +378,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, planWeeks === 3 && styles.optionActive]}
             onPress={() => handleChangePlanWeeks(3)}
           >
-            <Text style={[styles.optionText, planWeeks === 3 && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, planWeeks === 3 && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               3 {language === 'en' ? 'weeks' : 'semanas'}
             </Text>
           </TouchableOpacity>
@@ -366,7 +390,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, planWeeks === 4 && styles.optionActive]}
             onPress={() => handleChangePlanWeeks(4)}
           >
-            <Text style={[styles.optionText, planWeeks === 4 && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, planWeeks === 4 && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               4 {language === 'en' ? 'weeks' : 'semanas'}
             </Text>
           </TouchableOpacity>
@@ -721,7 +749,8 @@ const getStyles = (theme) => StyleSheet.create({
   optionsRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    alignItems: 'stretch'
   },
   option: {
     flex: 1,
@@ -730,10 +759,10 @@ const getStyles = (theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.md,
     alignItems: 'center',
-    minHeight: 60,
+    height: 56,
     justifyContent: 'center'
   },
   optionActive: {
