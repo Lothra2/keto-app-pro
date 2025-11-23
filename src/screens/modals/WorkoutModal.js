@@ -53,6 +53,8 @@ const WorkoutModal = ({ route, navigation }) => {
     const stored = await getWorkoutData(day);
     if (stored && Array.isArray(stored)) {
       setGenerated(stored);
+    } else if (stored?.exercises && Array.isArray(stored.exercises)) {
+      setGenerated(stored.exercises);
     }
   };
 
@@ -82,7 +84,7 @@ const WorkoutModal = ({ route, navigation }) => {
         userStats: { height, weight, age }
       });
       setGenerated(workout);
-      await saveWorkoutData(day, workout);
+      await saveWorkoutData(day, { exercises: workout, estimatedKcal: null, intensity });
     } catch (error) {
       console.error(error);
       Alert.alert(

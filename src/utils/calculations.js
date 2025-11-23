@@ -1,10 +1,26 @@
 import { basePlan } from '../data/basePlan';
 import { basePlanEn } from '../data/basePlanEn';
 
+const defaultMealDistribution = {
+  desayuno: 0.25,
+  snackAM: 0.10,
+  almuerzo: 0.35,
+  snackPM: 0.10,
+  cena: 0.20
+};
+
+const femaleMealDistribution = {
+  desayuno: 0.30,
+  snackAM: 0.10,
+  almuerzo: 0.30,
+  snackPM: 0.10,
+  cena: 0.20
+};
+
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
  */
-export function buildPlan(weeks = 2, gender = 'male', language = 'es') {
+export function buildPlan(weeks = 2, gender = 'male', language = 'en') {
   const totalDays = weeks * 7;
   const plan = [];
 
@@ -18,16 +34,18 @@ export function buildPlan(weeks = 2, gender = 'male', language = 'es') {
     dayCopy.dia = language === 'en' ? `Day ${i + 1}` : `Día ${i + 1}`;
 
     // Ajuste de calorías por género
-    if (gender === 'female') {
-      dayCopy.kcal = Math.round((dayCopy.kcal || 1600) * 0.9);
-    } else {
-      dayCopy.kcal = dayCopy.kcal || 1600;
-    }
+    const kcalBase = dayCopy.kcal || 1600;
+    const genderMultiplier = gender === 'female' ? 0.9 : 1.05;
+    dayCopy.kcal = Math.round(kcalBase * genderMultiplier);
     
     plan.push(dayCopy);
   }
 
   return plan;
+}
+
+export function getMealDistribution(gender = 'male') {
+  return gender === 'female' ? femaleMealDistribution : defaultMealDistribution;
 }
 
 /**
@@ -87,17 +105,23 @@ export function calculateTDEE(bmr, activityLevel = 'sedentary') {
   return Math.round(bmr * multiplier);
 }
 
+export function estimateWorkoutCalories(intensity = 'medium', weightKg = 75) {
+  const metMap = { soft: 4.5, medium: 6.5, hard: 8.5 };
+  const durationMap = { soft: 25, medium: 35, hard: 50 };
+
+  const met = metMap[intensity] || metMap.medium;
+  const duration = durationMap[intensity] || durationMap.medium;
+  const safeWeight = Number.isFinite(Number(weightKg)) ? Number(weightKg) : 75;
+
+  const kcal = (met * 3.5 * safeWeight * duration) / 200;
+  return Math.max(80, Math.round(kcal));
+}
+
 /**
  * Calcular calorías consumidas según comidas marcadas
  */
-export function calculateConsumedCalories(mealStates, goalKcal = 1600) {
-  const mealPercents = {
-    desayuno: 0.25,
-    snackAM: 0.10,
-    almuerzo: 0.35,
-    snackPM: 0.10,
-    cena: 0.20
-  };
+export function calculateConsumedCalories(mealStates, goalKcal = 1600, gender = 'male') {
+  const mealPercents = getMealDistribution(gender);
 
   let consumed = 0;
 
