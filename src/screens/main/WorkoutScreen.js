@@ -173,6 +173,10 @@ const WorkoutScreen = ({ route, navigation }) => {
         }
       })
 
+      if (!Array.isArray(exercises) || exercises.length === 0) {
+        throw new Error('Empty workout from AI')
+      }
+
       const reference = getWorkoutForDay(language, Math.floor(safeActiveDay / 7) + 1, safeActiveDay % 7)
       const { baseEstimatedKcal: baseForDay, aiEstimatedKcal: computedAiKcal } = calculateEstimatedWorkoutKcal({
         exercises,
@@ -195,7 +199,11 @@ const WorkoutScreen = ({ route, navigation }) => {
       })
     } catch (error) {
       console.error('Error generating workout:', error)
-      alert(language === 'en' ? 'Error generating workout' : 'Error generando entreno')
+      alert(
+        language === 'en'
+          ? 'We could not build the workout. Try again or adjust intensity.'
+          : 'No pudimos generar el entreno. Intenta de nuevo o ajusta la intensidad.'
+      )
     } finally {
       setLoading(false)
       setLoadingType(null)
@@ -237,6 +245,10 @@ const WorkoutScreen = ({ route, navigation }) => {
             age: metrics.age || 30
           }
         })
+
+        if (!Array.isArray(exercises) || exercises.length === 0) {
+          throw new Error('Empty workout from AI')
+        }
         const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
         const { baseEstimatedKcal: baseForDay, aiEstimatedKcal: computedAiKcal } = calculateEstimatedWorkoutKcal({
           exercises,
@@ -491,6 +503,31 @@ const WorkoutScreen = ({ route, navigation }) => {
       sections.push({
         label: language === 'en' ? 'Coach notes' : 'Notas del coach',
         value: detailExercise.notas
+      })
+    }
+
+    if (detailExercise.respiracion) {
+      sections.push({
+        label: language === 'en' ? 'Breathing' : 'Respiración',
+        value: detailExercise.respiracion
+      })
+    }
+
+    if (detailExercise.errores) {
+      sections.push({
+        label: language === 'en' ? 'Avoid' : 'Evita',
+        value: detailExercise.errores
+      })
+    }
+
+    if (detailExercise.regresion || detailExercise.progresion) {
+      const easier = detailExercise.regresion
+      const harder = detailExercise.progresion
+      sections.push({
+        label: language === 'en' ? 'Progression / regression' : 'Progresión / regresión',
+        value: [easier && `${language === 'en' ? 'Easier: ' : 'Fácil: '}${easier}`, harder && `${language === 'en' ? 'Harder: ' : 'Difícil: '}${harder}`]
+          .filter(Boolean)
+          .join('\n')
       })
     }
 

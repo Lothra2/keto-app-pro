@@ -1,7 +1,8 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { getDayData } from '../storage/storage';
+import { getDayData, getCheatMeal } from '../storage/storage';
 import { getDayDisplayName } from './labels';
+import { calculateDynamicDailyKcal } from './calculations';
 
 const MEAL_CONFIG = [
   { key: 'desayuno', labelEn: 'Breakfast', labelEs: 'Desayuno' },
@@ -46,13 +47,29 @@ export const exportWeekPlanPdf = async ({
   derivedPlan = [],
   language = 'es',
   waterGoal = 2400,
-  startDate
+  startDate,
+  metrics = {},
+  gender = 'male'
 }) => {
   const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0;
   const safeWeek = Number.isFinite(Number(weekNumber)) ? Number(weekNumber) : 1;
   const startIndex = Math.max(0, (safeWeek - 1) * 7);
   const endIndex = totalDays > 0 ? Math.min(safeWeek * 7, totalDays) : 0;
   const normalizedWaterGoal = Number(waterGoal) || 2400;
+  const cheatSummary = [];
+
+  const avgBaseKcal = derivedPlan
+    .slice(startIndex, endIndex)
+    .map((d) => Number(d?.kcal) || 0)
+    .filter(Boolean)
+    .reduce((sum, val, _, arr) => sum + val / arr.length, 0);
+
+  const recommendedKcal = calculateDynamicDailyKcal({
+    baseKcal: Math.round(avgBaseKcal || 0) || 1600,
+    gender,
+    metrics,
+    cheatKcal: 0
+  });
 
   const dayBlocks = [];
 
@@ -67,6 +84,7 @@ export const exportWeekPlanPdf = async ({
     for (let index = startIndex; index < endIndex; index += 1) {
       const base = derivedPlan[index] || {};
       const override = await getDayData(index);
+      const cheat = await getCheatMeal(index);
       const merged = { ...base, ...override };
 
       const dayTitle = getDayDisplayName({
@@ -92,11 +110,16 @@ export const exportWeekPlanPdf = async ({
         };
       });
 
+      if (cheat?.mealKey) {
+        cheatSummary.push({ dayTitle, mealKey: cheat.mealKey, description: cheat.description });
+      }
+
       dayBlocks.push({
         title: dayTitle,
         kcal: merged.kcal || base.kcal || 0,
         macros: macroLine,
-        meals
+        meals,
+        cheat
       });
     }
   }
@@ -136,6 +159,7 @@ export const exportWeekPlanPdf = async ({
           <div class="day-meta">
             <span>${escapeHtml(String(day.kcal))} kcal</span>
             <span>${escapeHtml(day.macros)}</span>
+            ${day.cheat?.mealKey ? `<span class="pill pill-warning">Cheat · ${escapeHtml(day.cheat.mealKey)}</span>` : ''}
           </div>
           ${mealHtml}
         </section>
@@ -146,6 +170,14 @@ export const exportWeekPlanPdf = async ({
   const subtitle = language === 'en'
     ? 'Weekly keto meals, macros and notes'
     : 'Comidas keto semanales, macros y notas';
+
+  const cheatLine = cheatSummary.length
+    ? cheatSummary
+        .map((item) => `${item.dayTitle} · ${item.mealKey}${item.description ? `: ${item.description}` : ''}`)
+        .join(' | ')
+    : language === 'en'
+    ? 'No cheat meal scheduled this week.'
+    : 'Sin cheat meal programado esta semana.';
 
   const html = `
     <!DOCTYPE html>
@@ -175,6 +207,30 @@ export const exportWeekPlanPdf = async ({
             color: #475569;
             font-size: 14px;
           }
+          .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+          }
+          .meta-card {
+            background: #0ea5e9;
+            color: #ecfeff;
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: 0 10px 24px rgba(14, 165, 233, 0.2);
+          }
+          .meta-card h3 {
+            margin: 0 0 4px;
+            font-size: 14px;
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
+          }
+          .meta-card p {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+          }
           .day-card {
             background: #ffffff;
             border-radius: 18px;
@@ -196,6 +252,16 @@ export const exportWeekPlanPdf = async ({
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 1px;
+          }
+          .pill {
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 11px;
+          }
+          .pill-warning {
+            background: rgba(249, 115, 22, 0.15);
+            color: #c2410c;
           }
           .meal {
             margin-bottom: 16px;
@@ -243,6 +309,16 @@ export const exportWeekPlanPdf = async ({
               ? `Hydration goal: ${normalizedWaterGoal} ml`
               : `Meta de hidratación: ${normalizedWaterGoal} ml`}
           </p>
+          <div class="meta-grid">
+            <div class="meta-card">
+              <h3>${language === 'en' ? 'Recommended kcal' : 'Kcal sugeridas'}</h3>
+              <p>${recommendedKcal} kcal</p>
+            </div>
+            <div class="meta-card" style="background:#22c55e;box-shadow:0 10px 24px rgba(34,197,94,0.18);">
+              <h3>${language === 'en' ? 'Cheat status' : 'Estado cheat'}</h3>
+              <p>${escapeHtml(cheatLine)}</p>
+            </div>
+          </div>
         </div>
         ${daysHtml}
       </body>
