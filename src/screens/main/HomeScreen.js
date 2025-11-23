@@ -34,13 +34,15 @@ import {
   getDayReview,
   saveDayReview,
   isDayCompleted,
-  setDayCompleted
+  setDayCompleted,
+  getCheatMeal
 } from '../../storage/storage';
 import { getDailyTip, getMotivationalMessage } from '../../data/tips';
 import aiService from '../../api/aiService';
 import {
   calculateConsumedCalories,
   calculateDynamicMacros,
+  calculateDynamicDailyKcal,
   getMealDistribution
 } from '../../utils/calculations';
 import { mergePlanDay, MEAL_KEYS, buildWeekAiPayload } from '../../utils/plan';
@@ -256,10 +258,18 @@ const HomeScreen = ({ navigation }) => {
         startDate: user?.startDate
       });
 
-      // calorías guardadas
+      const cheat = await getCheatMeal(currentDay);
+      const planKcal = merged.kcal || baseDay.kcal || 1600;
+      const dynamicGoal = calculateDynamicDailyKcal({
+        baseKcal: planKcal,
+        gender,
+        metrics,
+        cheatKcal: cheat?.kcalEstimate || 0
+      });
+
       const calState = await getCalorieState(
         currentDay,
-        merged.kcal || baseDay.kcal || 1600
+        dynamicGoal
       );
 
       const mealsState = {
@@ -268,10 +278,16 @@ const HomeScreen = ({ navigation }) => {
       };
       setMealStates(mealsState);
 
-      const goal = calState.goal || merged.kcal || baseDay.kcal || 1600;
-      setCalorieGoal(goal);
+      const goal = calState.goal || dynamicGoal;
+      const normalizedGoal = goal !== dynamicGoal ? dynamicGoal : goal;
 
-      const consumed = computeConsumedFromDay(merged, mealsState, goal);
+      if (normalizedGoal !== calState.goal) {
+        await saveCalorieState(currentDay, { ...calState, goal: normalizedGoal });
+      }
+
+      setCalorieGoal(normalizedGoal);
+
+      const consumed = computeConsumedFromDay(merged, mealsState, normalizedGoal);
       setCaloriesConsumed(consumed);
 
       // agua
@@ -298,11 +314,11 @@ const HomeScreen = ({ navigation }) => {
       setExtrasExpanded(false);
 
       // set final day
-      setDayData(merged);
+      setDayData({ ...merged, planKcal, dynamicKcal: dynamicGoal });
     } catch (error) {
       console.error('Error loading day data:', error);
     }
-  }, [currentDay, derivedPlan, language, weeklyWaterGoal, user?.startDate]);
+  }, [currentDay, derivedPlan, language, weeklyWaterGoal, user?.startDate, gender, metrics]);
 
   useEffect(() => {
     loadDayData();
@@ -386,7 +402,14 @@ const HomeScreen = ({ navigation }) => {
     setAiDayLoading(true);
 
     try {
-      const dayKcal = baseDay.kcal || 1600;
+      const cheat = await getCheatMeal(currentDay);
+      const planKcal = baseDay.kcal || 1600;
+      const dayKcal = calculateDynamicDailyKcal({
+        baseKcal: planKcal,
+        gender,
+        metrics,
+        cheatKcal: cheat?.kcalEstimate || 0
+      });
 
       const dist = getMealDistribution(gender);
 
@@ -423,7 +446,8 @@ const HomeScreen = ({ navigation }) => {
       const finalDay = {
         ...baseDay,
         ...generatedMeals,
-        kcal: dayKcal,
+        kcal: planKcal,
+        dynamicKcal: dayKcal,
         isAI: true
       };
 
@@ -788,7 +812,7 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.bannerStatLabel}>
               {language === 'en' ? 'Daily calories' : 'Calorías diarias'}
             </Text>
-            <Text style={styles.bannerStatValue}>{(dayData.kcal || calorieGoal)} kcal</Text>
+            <Text style={styles.bannerStatValue}>{(dayData.dynamicKcal || calorieGoal || dayData.kcal)} kcal</Text>
           </View>
           <View style={styles.bannerMacros}>
             <View style={styles.bannerMacroChip}>

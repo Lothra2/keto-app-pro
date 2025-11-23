@@ -10,9 +10,9 @@ const defaultMealDistribution = {
 };
 
 const femaleMealDistribution = {
-  desayuno: 0.30,
+  desayuno: 0.25,
   snackAM: 0.10,
-  almuerzo: 0.30,
+  almuerzo: 0.35,
   snackPM: 0.10,
   cena: 0.20
 };

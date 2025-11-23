@@ -186,6 +186,11 @@ class AIService {
     const snackHintEn =
       'If meal is a snack, return max 2 clear items, e.g. "120 g Greek yogurt, 20 g nuts" or "1 boiled egg, 30 g cheese". Do not return only grams.'
 
+    const lightMealsHintEs =
+      'Desayuno y cena deben ser ligeros, fáciles de digerir, máximo 20-25 min de preparación. Evita guisos pesados o porciones muy grandes.'
+    const lightMealsHintEn =
+      'Breakfast and dinner must stay light and easy to digest, max 20-25 min prep. Avoid heavy stews or oversized portions.'
+
     const isSnack = mealType === 'snackAM' || mealType === 'snackPM'
 
     const prompt =
@@ -196,7 +201,7 @@ Meals already used today (do NOT repeat or make something very similar): ${usedL
 Absolutely avoid repeating these very common keto meals TODAY: ${hardBannedEn.join(', ')}.
 Rotate the base: eggs, dairy, meat, canned protein, cold cuts, vegetables. Do NOT always choose dairy or yogurt.
 Prefer: ${like || 'none'}. Avoid: ${dislike || 'none'}.
-${isSnack ? snackHintEn : ''}
+${isSnack ? snackHintEn : lightMealsHintEn}
 Randomness seed: ${variationTag}. Make it a bit different from typical outputs.
 Respond ONLY as JSON:
 {
@@ -212,7 +217,7 @@ Comidas ya usadas hoy (NO las repitas ni hagas algo muy parecido): ${usedList}.
 Evita repetir HOY estas comidas keto típicas: ${hardBannedEs.join(', ')}.
 Rota la base: huevos, lácteos, carne, proteína en lata, fiambres, verduras. No elijas siempre lácteos o yogur.
 Prefiere: ${like || 'ninguna'}. Evita: ${dislike || 'ninguna'}.
-${isSnack ? snackHintEs : ''}
+${isSnack ? snackHintEs : lightMealsHintEs}
 Semilla aleatoria: ${variationTag}. Hazlo distinto a ejemplos típicos.
 Responde SOLO en JSON:
 {
@@ -306,9 +311,9 @@ Responde SOLO en JSON:
       language === 'en'
         ? `You are a keto nutrition planner.
 Create a full keto day with ${kcal} kcal total, distributed like this:
-- desayuno 30%
+- desayuno 25% (light, quick to digest)
 - snackAM 10%
-- almuerzo 30%
+- almuerzo 35% (heavier, most complex meal)
 - snackPM 10%
 - cena 20%
 
@@ -317,8 +322,8 @@ Also avoid these overused keto meals for this user today: ${hardBannedEn.join(',
 User likes: ${like || 'none'}.
 User dislikes: ${dislike || 'none'}.
 Today theme, follow it: ${dayTheme}.
-Snacks must have real foods, not only grams.
-Calculate kcal for each meal from the total. Keep each meal close to its share.
+Breakfast and dinner must be light and simple, no heavy sauces or big stews. Snacks must have real foods, not only grams and stay under 2 items.
+Calculate kcal for each meal from the total. Keep each meal close to its share and keep breakfast/dinner portions easy to digest.
 Respond ONLY in JSON:
 {
   "desayuno": { "nombre": "short breakfast name", "qty": "ingredients with quantities", "kcal": number, "isAI": true },
@@ -330,9 +335,9 @@ Respond ONLY in JSON:
 }`
         : `Eres un nutricionista keto.
 Genera un día completo keto con ${kcal} kcal totales distribuidas así:
-- desayuno 30 %
+- desayuno 25 % (ligero, fácil de digerir)
 - snackAM 10 %
-- almuerzo 30 %
+- almuerzo 35 % (más completo del día)
 - snackPM 10 %
 - cena 20 %
 
@@ -341,8 +346,8 @@ Evita también estas comidas muy usadas para este usuario hoy: ${hardBannedEs.jo
 Preferencias del usuario, incluye en lo posible: ${like || 'ninguna'}.
 Cosas que el usuario no quiere, no las pongas: ${dislike || 'ninguna'}.
 Tema del día, síguelo: ${dayTheme}.
-Los snacks deben tener alimentos reales, no solo gramos.
-Calcula las kcal desde el total y mantén cada comida cerca de su porcentaje.
+Desayuno y cena deben ser livianos y simples, sin salsas pesadas ni guisos grandes. Los snacks deben tener alimentos reales, no solo gramos y máximo 2 ítems.
+Calcula las kcal desde el total y mantén cada comida cerca de su porcentaje, dejando desayuno y cena fáciles de digerir.
 Responde SOLO en JSON:
 {
   "desayuno": { "nombre": "Desayuno keto", "qty": "ingredientes con cantidades", "kcal": número, "isAI": true },

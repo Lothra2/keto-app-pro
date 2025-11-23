@@ -306,6 +306,8 @@ const DayScreen = ({ navigation }) => {
     }
   ];
 
+  const displayGoalKcal = calorieInfo.goal || dayData?.dynamicKcal || dayData?.kcal;
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -348,7 +350,7 @@ const DayScreen = ({ navigation }) => {
         {/* Day Header */}
         <View style={styles.header}>
           <Text style={styles.dayTitle}>{dayData.dia}</Text>
-          <Text style={styles.calories}>{dayData.kcal} kcal</Text>
+          <Text style={styles.calories}>{displayGoalKcal} kcal</Text>
           <View style={styles.macros}>
             <Text style={styles.macroText}>C {dayData.macros?.carbs}</Text>
             <Text style={styles.macroText}>P {dayData.macros?.prot}</Text>
