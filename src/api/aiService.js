@@ -6,7 +6,7 @@ class AIService {
    * Chat general del Consultor
    * Mantiene credenciales actuales y prueba varios "mode" si el backend no reconoce consultor-chat
    */
-  async chat({ prompt, mode = 'auto', language = 'es', credentials, context = {} }) {
+  async chat({ prompt, mode = 'auto', language = 'es', credentials, context = {}, history = [] }) {
     const { user, pass } = credentials || {}
 
     const systemEs =
@@ -19,8 +19,14 @@ class AIService {
         ? `User mode: ${mode}. Focus your answer on this area.`
         : `Modo del usuario: ${mode}. Enfoca tu respuesta en esa área.`
 
+    const serializedHistory = (history || [])
+      .slice(-6)
+      .map((msg) => `${msg.role || 'user'}: ${msg.text || ''}`)
+      .join('\n')
+
     const finalPrompt =
       `${language === 'en' ? systemEn : systemEs}\n${routedHint}\n\n` +
+      (serializedHistory ? `Recent chat:\n${serializedHistory}\n\n` : '') +
       `User: ${prompt}\n` +
       `Context: ${JSON.stringify(context || {})}`
 
