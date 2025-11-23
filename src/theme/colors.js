@@ -10,17 +10,17 @@ const emerald = {
   dark: {
     bg: '#0b1120',
     bgSoft: '#111b2b',
-    card: '#16213b',
-    cardSoft: 'rgba(30,41,59,0.4)',
+    card: '#101a2e',
+    cardSoft: 'rgba(31,41,69,0.5)',
     text: '#f8fafc',
     textMuted: 'rgba(226,232,240,0.72)',
-    border: 'rgba(148,163,184,0.28)'
+    border: 'rgba(125,145,175,0.28)'
   },
   light: {
     bg: '#f5f6fb',
     bgSoft: '#e7ecf5',
     card: '#ffffff',
-    cardSoft: 'rgba(15,23,42,0.06)',
+    cardSoft: 'rgba(11,59,106,0.05)',
     text: '#0f172a',
     textMuted: 'rgba(15,23,42,0.58)',
     border: 'rgba(15,23,42,0.12)'
