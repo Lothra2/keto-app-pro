@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 
 const Card = ({ children, style, outlined = false, tone = 'default' }) => {
   const { theme: themeMode } = useApp();
@@ -10,10 +11,16 @@ const Card = ({ children, style, outlined = false, tone = 'default' }) => {
   const styles = getStyles(theme);
 
   const palette = {
-    default: ['rgba(255,255,255,0.06)', 'rgba(15,23,42,0.08)'],
-    info: ['rgba(14,165,233,0.18)', 'rgba(14,165,233,0.06)'],
-    success: ['rgba(34,197,94,0.18)', 'rgba(34,197,94,0.06)'],
-    warning: ['rgba(249,115,22,0.18)', 'rgba(249,115,22,0.06)'],
+    default: [
+      theme.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)',
+      theme.colors.cardSoft || 'rgba(15,23,42,0.06)',
+    ],
+    info: [
+      `${theme.colors.info}29`,
+      `${theme.colors.info}14`,
+    ],
+    success: [withAlpha(theme.colors.success, 0.2), withAlpha(theme.colors.success, 0.08)],
+    warning: [withAlpha(theme.colors.warning, 0.18), withAlpha(theme.colors.warning, 0.08)],
   };
 
   const gradient = palette[tone] || palette.default;
@@ -26,7 +33,7 @@ const Card = ({ children, style, outlined = false, tone = 'default' }) => {
         end={{ x: 1, y: 1 }}
         style={[styles.base, outlined ? styles.outlined : styles.filled]}
       >
-        <View style={styles.inner}>{children}</View>
+        <View style={[styles.inner, outlined && styles.innerOutlined]}>{children}</View>
       </LinearGradient>
     </View>
   );
@@ -37,22 +44,27 @@ const getStyles = (theme) =>
     shadowWrap: {
       borderRadius: theme.radius.lg,
       overflow: 'hidden',
-      shadowColor: '#0ea5e9',
+      shadowColor: theme.colors.accent || theme.colors.primary,
       shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: theme.mode === 'dark' ? 0.16 : 0.08,
-      shadowRadius: 18,
+      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.12,
+      shadowRadius: 14,
       elevation: 4,
+      backgroundColor: 'transparent',
     },
     base: {
       borderRadius: theme.radius.lg,
       padding: 1,
       borderWidth: 1,
-      borderColor: theme.colors.border
+      borderColor: theme.colors.border,
     },
     inner: {
       borderRadius: theme.radius.lg,
       padding: theme.spacing.md,
-      backgroundColor: theme.mode === 'dark' ? 'rgba(10,16,30,0.75)' : 'rgba(255,255,255,0.82)',
+      backgroundColor: theme.colors.surface,
+    },
+    innerOutlined: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     filled: {},
     outlined: {

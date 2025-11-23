@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { withAlpha } from '../../theme/utils';
 
 const ScreenBanner = ({
   theme,
@@ -21,24 +22,24 @@ const ScreenBanner = ({
   const computedGradient =
     gradientColors ||
     (theme.mode === 'dark'
-      ? ['#0ea5e9', theme.colors.primary, '#0f172a']
-      : ['#34d399', theme.colors.primary, '#0ea5e9']);
+      ? ['#5ad4ff', theme.colors.primary, '#0b1224']
+      : ['#5ad4ff', theme.colors.primary, '#b7dcff']);
 
   const toneMap = {
     success: {
-      backgroundColor: 'rgba(34,197,94,0.22)',
+      backgroundColor: withAlpha(theme.colors.success, 0.2),
       color: 'rgba(240,253,244,0.95)',
-      borderColor: 'rgba(34,197,94,0.5)'
+      borderColor: withAlpha(theme.colors.success, 0.45)
     },
     warning: {
-      backgroundColor: 'rgba(249,115,22,0.25)',
+      backgroundColor: withAlpha(theme.colors.warning, 0.25),
       color: 'rgba(255,247,237,0.92)',
-      borderColor: 'rgba(249,115,22,0.55)'
+      borderColor: withAlpha(theme.colors.warning, 0.5)
     },
     info: {
-      backgroundColor: 'rgba(14,165,233,0.28)',
+      backgroundColor: withAlpha(theme.colors.info, 0.28),
       color: 'rgba(236,254,255,0.95)',
-      borderColor: 'rgba(14,165,233,0.5)'
+      borderColor: withAlpha(theme.colors.info, 0.5)
     },
     light: {
       backgroundColor: 'rgba(255,255,255,0.15)',

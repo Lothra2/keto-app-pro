@@ -1,21 +1,25 @@
-import colors from './colors';
+import palettes, { colors as defaultColors } from './colors';
 import spacing from './spacing';
 import typography from './typography';
 import radius from './radius';
 
 export const getTheme = (mode = 'dark') => {
-  const colorScheme = mode === 'dark' ? colors.dark : colors.light;
+  const paletteKey = mode === 'navy' ? 'navy' : 'emerald';
+  const palette = palettes[paletteKey] || palettes.emerald;
+  const isLight = mode === 'light';
+  const colorScheme = isLight ? palette.light : palette.dark;
 
   return {
     colors: {
-      ...colors,
+      ...palette,
       ...colorScheme,
-      primary: colors.primary,
-      primarySoft: colors.primarySoft,
-      danger: colors.danger,
-      success: colors.success,
-      warning: colors.warning,
-      info: colors.info,
+      primary: palette.primary,
+      primarySoft: palette.primarySoft,
+      accent: palette.accent || palette.primary,
+      danger: palette.danger,
+      success: palette.success,
+      warning: palette.warning,
+      info: palette.info,
       background: colorScheme.bg,
       surface: colorScheme.card,
       onPrimary: '#ffffff',
@@ -24,14 +28,15 @@ export const getTheme = (mode = 'dark') => {
     spacing,
     typography,
     radius,
-    mode
+    mode: isLight ? 'light' : 'dark',
+    name: paletteKey
   };
 };
 
-export { colors, spacing, typography, radius };
+export { defaultColors as colors, spacing, typography, radius, palettes };
 
 export default {
-  colors,
+  colors: defaultColors,
   spacing,
   typography,
   radius,
