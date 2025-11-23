@@ -12,7 +12,7 @@ import Card from '../../components/shared/Card'
 import ScreenBanner from '../../components/shared/ScreenBanner'
 import { exportWorkoutPlanPdf } from '../../utils/pdf'
 import { getDayDisplayName } from '../../utils/labels'
-import { estimateWorkoutCalories } from '../../utils/calculations'
+import { estimateAiWorkoutCalories, estimateBaseWorkoutCalories } from '../../utils/calculations'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}
@@ -37,9 +37,11 @@ const WorkoutScreen = ({ route, navigation }) => {
   const [loadingMessage, setLoadingMessage] = useState('')
   const [detailExercise, setDetailExercise] = useState(null)
   const [exportingPdf, setExportingPdf] = useState(false)
-  const [estimatedKcal, setEstimatedKcal] = useState(0)
+  const [aiEstimatedKcal, setAiEstimatedKcal] = useState(null)
+  const [baseEstimatedKcal, setBaseEstimatedKcal] = useState(0)
   const [workoutDone, setWorkoutDone] = useState(false)
   const [loggedKcal, setLoggedKcal] = useState(null)
+  const [workoutSource, setWorkoutSource] = useState('base')
 
   const intensities = ['soft', 'medium', 'hard']
   const intensityLabels = {
@@ -96,7 +98,7 @@ const WorkoutScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     loadWorkout(safeActiveDay)
-  }, [safeActiveDay])
+  }, [safeActiveDay, selectedIntensity, language, metrics.startWeight])
 
   const calculateEstimated = useCallback(
     (intensityLevel) =>
@@ -105,13 +107,25 @@ const WorkoutScreen = ({ route, navigation }) => {
   )
 
   const loadWorkout = async day => {
+    const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
+    const baseKcal = estimateBaseWorkoutCalories({
+      dayText: reference?.today,
+      dayIndex: day,
+      weightKg: metrics.startWeight || 75,
+      intensity: selectedIntensity
+    })
+    setBaseEstimatedKcal(baseKcal)
+
     const saved = await getWorkoutData(day)
     const exercises = Array.isArray(saved) ? saved : saved?.exercises || []
-    setWorkout(Array.isArray(exercises) ? exercises : [])
+    const normalizedExercises = Array.isArray(exercises) ? exercises : []
+    setWorkout(normalizedExercises)
 
-    const estimatedFromStorage = (!Array.isArray(saved) && saved?.estimatedKcal) || 0
-    const estimated = estimatedFromStorage || calculateEstimated(saved?.intensity)
-    setEstimatedKcal(estimated)
+    const storedAiKcal = (!Array.isArray(saved) && (saved?.aiEstimatedKcal ?? saved?.estimatedKcal)) || null
+    const aiKcal = normalizedExercises.length
+      ? storedAiKcal || estimateAiWorkoutCalories(normalizedExercises, saved?.intensity || selectedIntensity, metrics.startWeight || 75)
+      : null
+    setAiEstimatedKcal(aiKcal)
 
     const progress = await getProgressData(day)
     const storedKcal = progress.exkcal !== undefined && progress.exkcal !== null
@@ -119,6 +133,13 @@ const WorkoutScreen = ({ route, navigation }) => {
       : null
     setLoggedKcal(Number.isFinite(storedKcal) ? storedKcal : null)
     setWorkoutDone(Boolean(progress.workoutDone))
+
+    const hasAi = normalizedExercises.length > 0
+    if (progress.workoutType) {
+      setWorkoutSource(progress.workoutType === 'ai' && hasAi ? 'ai' : 'base')
+    } else {
+      setWorkoutSource(hasAi ? 'ai' : 'base')
+    }
   }
 
   const handleGenerateWorkout = async () => {
@@ -148,12 +169,14 @@ const WorkoutScreen = ({ route, navigation }) => {
         }
       })
 
-      const estimated = calculateEstimated(selectedIntensity)
+      const estimated = estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
       setWorkout(exercises)
-      setEstimatedKcal(estimated)
+      setAiEstimatedKcal(estimated)
+      setWorkoutSource('ai')
       await saveWorkoutData(safeActiveDay, {
         exercises,
         estimatedKcal: estimated,
+        aiEstimatedKcal: estimated,
         intensity: selectedIntensity,
       })
     } catch (error) {
@@ -200,15 +223,17 @@ const WorkoutScreen = ({ route, navigation }) => {
             age: metrics.age || 30
           }
         })
-        const estimated = calculateEstimated(selectedIntensity)
+        const estimated = estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
         await saveWorkoutData(day, {
           exercises,
           estimatedKcal: estimated,
+          aiEstimatedKcal: estimated,
           intensity: selectedIntensity,
         })
         if (day === safeActiveDay) {
           setWorkout(exercises)
-          setEstimatedKcal(estimated)
+          setAiEstimatedKcal(estimated)
+          setWorkoutSource('ai')
         }
       }
     } catch (error) {
@@ -296,14 +321,19 @@ const WorkoutScreen = ({ route, navigation }) => {
     localPlan
   ])
 
+  const selectedKcal = useMemo(
+    () => (workoutSource === 'ai' && aiEstimatedKcal ? aiEstimatedKcal : baseEstimatedKcal),
+    [aiEstimatedKcal, baseEstimatedKcal, workoutSource]
+  )
+
   const persistWorkoutCompletion = useCallback(
-    async (dayIndex, completed, kcalToLog) => {
+    async (dayIndex, completed, kcalToLog, typeToLog) => {
       const existing = await getProgressData(dayIndex)
-      const normalized = { ...existing, workoutDone: completed }
+      const normalized = { ...existing, workoutDone: completed, workoutType: typeToLog }
 
       if (completed) {
         const numericKcal = Number(kcalToLog)
-        const safeKcal = Number.isFinite(numericKcal) ? numericKcal : estimatedKcal
+        const safeKcal = Number.isFinite(numericKcal) ? numericKcal : selectedKcal
         normalized.exkcal = safeKcal
         setLoggedKcal(safeKcal)
       } else {
@@ -313,14 +343,31 @@ const WorkoutScreen = ({ route, navigation }) => {
 
       await saveProgressData(dayIndex, normalized)
     },
-    [estimatedKcal]
+    [selectedKcal]
+  )
+
+  const handleSelectWorkoutSource = useCallback(
+    async (nextSource) => {
+      const resolved = nextSource === 'ai' && workout.length ? 'ai' : 'base'
+      setWorkoutSource(resolved)
+
+      if (workoutDone) {
+        const kcalValue = resolved === 'ai' && aiEstimatedKcal ? aiEstimatedKcal : baseEstimatedKcal
+        setLoggedKcal(kcalValue)
+        await persistWorkoutCompletion(safeActiveDay, true, kcalValue, resolved)
+      } else {
+        const existing = await getProgressData(safeActiveDay)
+        await saveProgressData(safeActiveDay, { ...existing, workoutType: resolved })
+      }
+    },
+    [aiEstimatedKcal, baseEstimatedKcal, persistWorkoutCompletion, safeActiveDay, workout.length, workoutDone]
   )
 
   const handleToggleWorkoutDone = async () => {
     const nextState = !workoutDone
     setWorkoutDone(nextState)
-    const kcalValue = nextState ? loggedKcal || estimatedKcal : null
-    await persistWorkoutCompletion(safeActiveDay, nextState, kcalValue)
+    const kcalValue = nextState ? loggedKcal || selectedKcal : null
+    await persistWorkoutCompletion(safeActiveDay, nextState, kcalValue, workoutSource)
   }
 
   const handleExercisePress = exercise => {
@@ -595,19 +642,56 @@ const WorkoutScreen = ({ route, navigation }) => {
           </View>
           <Text style={styles.statusText}>
             {language === 'en'
-              ? 'Swipe to mark as completed. We will log calories burned in progress.'
-              : 'Desliza para marcar completado. Guardaremos las calorías quemadas en progreso.'}
+              ? 'Swipe to mark as completed. Choose base or AI so calories match what you did.'
+              : 'Desliza para marcar completado. Elige base o IA para que las calorías coincidan.'}
           </Text>
+          <View style={styles.sourceRow}>
+            <Text style={styles.statusLabel}>
+              {language === 'en' ? 'I followed' : 'Seguí'}
+            </Text>
+            <View style={styles.sourceChips}>
+              <TouchableOpacity
+                onPress={() => handleSelectWorkoutSource('base')}
+                style={[
+                  styles.sourceChip,
+                  workoutSource === 'base' && styles.sourceChipActive
+                ]}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.sourceChipLabel}>
+                  {language === 'en' ? 'Base plan' : 'Plan base'}
+                </Text>
+                <Text style={styles.sourceChipValue}>{baseEstimatedKcal} kcal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleSelectWorkoutSource('ai')}
+                style={[
+                  styles.sourceChip,
+                  !workout.length && styles.sourceChipDisabled,
+                  workoutSource === 'ai' && styles.sourceChipActive
+                ]}
+                disabled={!workout.length}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.sourceChipLabel}>
+                  {language === 'en' ? 'AI workout' : 'Entreno IA'}
+                </Text>
+                <Text style={styles.sourceChipValue}>
+                  {aiEstimatedKcal ? `${aiEstimatedKcal} kcal` : language === 'en' ? 'Pending' : 'Pendiente'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>
               {language === 'en' ? 'Estimated burn' : 'Calorías estimadas'}
             </Text>
-            <Text style={styles.statusValue}>{estimatedKcal} kcal</Text>
+            <Text style={styles.statusValue}>{selectedKcal} kcal</Text>
           </View>
           {loggedKcal !== null && (
             <View style={styles.statusRow}>
               <Text style={styles.statusLabel}>
-                {language === 'en' ? 'Logged' : 'Registrado'}
+                {language === 'en' ? 'Completed burn' : 'Calorías completadas'}
               </Text>
               <Text style={styles.statusValue}>{loggedKcal} kcal</Text>
             </View>
@@ -843,6 +927,44 @@ const getStyles = theme => StyleSheet.create({
   },
   statusText: {
     ...theme.typography.bodySmall,
+    color: theme.colors.textMuted
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm
+  },
+  sourceChips: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    flex: 1,
+    justifyContent: 'flex-end'
+  },
+  sourceChip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    minWidth: 120,
+    backgroundColor: theme.colors.card,
+    gap: 2
+  },
+  sourceChipActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft
+  },
+  sourceChipDisabled: {
+    opacity: 0.5
+  },
+  sourceChipLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+    fontWeight: '600'
+  },
+  sourceChipValue: {
+    ...theme.typography.caption,
     color: theme.colors.textMuted
   },
   statusRow: {
