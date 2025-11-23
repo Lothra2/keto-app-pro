@@ -170,7 +170,9 @@ const ConsultorScreen = () => {
   }, [theme]);
 
   const inputPaddingBottom = 12;
-  const listBottomSpacing = 44 + keyboardOffset + inputPaddingBottom;
+  const navSpacer = 86;
+  const bottomOffset = keyboardOffset > 0 ? keyboardOffset : navSpacer;
+  const listBottomSpacing = 44 + bottomOffset + inputPaddingBottom;
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -406,7 +408,7 @@ const ConsultorScreen = () => {
             shadowOffset: { width: 0, height: -6 },
             elevation: 10,
             paddingBottom: inputPaddingBottom,
-            bottom: keyboardOffset,
+            bottom: bottomOffset,
           },
         ]}
       >

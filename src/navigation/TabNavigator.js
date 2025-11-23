@@ -28,8 +28,8 @@ const TabIcon = ({ emoji, focused, label }) => {
         {
           backgroundColor: focused
             ? theme.mode === 'dark'
-              ? 'rgba(90,212,255,0.14)'
-              : 'rgba(11,59,106,0.1)'
+              ? `${theme.colors.accent}24`
+              : `${theme.colors.primary}14`
             : 'transparent',
           borderColor: focused ? theme.colors.accent || theme.colors.primary : 'transparent',
         },
@@ -39,7 +39,7 @@ const TabIcon = ({ emoji, focused, label }) => {
         colors={
           focused
             ? [
-                theme.mode === 'dark' ? 'rgba(90,212,255,0.85)' : 'rgba(90,212,255,0.65)',
+                `${theme.colors.accent}d9`,
                 theme.colors.primary,
               ]
             : ['transparent', 'transparent']
@@ -54,6 +54,9 @@ const TabIcon = ({ emoji, focused, label }) => {
           styles.label,
           { color: focused ? theme.colors.accent || theme.colors.primary : theme.colors.textMuted },
         ]}
+        numberOfLines={1}
+        ellipsizeMode="clip"
+        allowFontScaling={false}
       >
         {label}
       </Text>
@@ -89,8 +92,8 @@ const TabNavigator = () => {
           borderTopWidth: 0,
           borderRadius: 22,
           overflow: 'hidden',
-          backgroundColor: theme.mode === 'dark' ? 'rgba(10,18,32,0.8)' : 'rgba(255,255,255,0.86)',
-          shadowColor: theme.colors.primary,
+          backgroundColor: theme.mode === 'dark' ? 'rgba(10,16,30,0.82)' : 'rgba(255,255,255,0.9)',
+          shadowColor: theme.colors.accent || theme.colors.primary,
           shadowOpacity: 0.22,
           shadowRadius: 24,
           shadowOffset: { width: 0, height: 10 },
@@ -108,8 +111,8 @@ const TabNavigator = () => {
             <LinearGradient
               colors={
                 theme.mode === 'dark'
-                  ? ['rgba(90,212,255,0.08)', 'rgba(11,17,32,0.6)']
-                  : ['rgba(11,59,106,0.08)', 'rgba(255,255,255,0.4)']
+                  ? [`${theme.colors.accent}0f`, 'rgba(11,17,32,0.6)']
+                  : [`${theme.colors.primary}14`, 'rgba(255,255,255,0.5)']
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -195,6 +198,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
+    minWidth: 64,
   },
   iconGlow: {
     ...StyleSheet.absoluteFillObject,
@@ -207,6 +211,8 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 12,
   },
 });
 

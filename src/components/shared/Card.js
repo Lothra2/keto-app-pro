@@ -10,8 +10,14 @@ const Card = ({ children, style, outlined = false, tone = 'default' }) => {
   const styles = getStyles(theme);
 
   const palette = {
-    default: ['rgba(11,59,106,0.14)', 'rgba(10,18,32,0.18)'],
-    info: ['rgba(90,212,255,0.18)', 'rgba(90,212,255,0.06)'],
+    default: [
+      theme.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)',
+      theme.colors.cardSoft || 'rgba(15,23,42,0.06)',
+    ],
+    info: [
+      `${theme.colors.info}29`,
+      `${theme.colors.info}14`,
+    ],
     success: ['rgba(34,197,94,0.18)', 'rgba(34,197,94,0.06)'],
     warning: ['rgba(249,115,22,0.18)', 'rgba(249,115,22,0.06)'],
   };
@@ -37,23 +43,23 @@ const getStyles = (theme) =>
     shadowWrap: {
       borderRadius: theme.radius.lg,
       overflow: 'hidden',
-      shadowColor: theme.colors.primary,
+      shadowColor: theme.colors.accent || theme.colors.primary,
       shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: theme.mode === 'dark' ? 0.26 : 0.12,
-      shadowRadius: 18,
-      elevation: 6,
+      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.12,
+      shadowRadius: 14,
+      elevation: 4,
       backgroundColor: 'transparent',
     },
     base: {
       borderRadius: theme.radius.lg,
       padding: 1,
       borderWidth: 1,
-      borderColor: theme.mode === 'dark' ? 'rgba(90,212,255,0.16)' : 'rgba(11,59,106,0.16)',
+      borderColor: theme.colors.border,
     },
     inner: {
       borderRadius: theme.radius.lg,
       padding: theme.spacing.md,
-      backgroundColor: theme.mode === 'dark' ? 'rgba(12,20,36,0.78)' : 'rgba(255,255,255,0.9)',
+      backgroundColor: theme.colors.surface,
     },
     innerOutlined: {
       borderWidth: 1,
