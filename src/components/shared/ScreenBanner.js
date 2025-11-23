@@ -21,8 +21,8 @@ const ScreenBanner = ({
   const computedGradient =
     gradientColors ||
     (theme.mode === 'dark'
-      ? ['#0ea5e9', theme.colors.primary, '#0f172a']
-      : ['#34d399', theme.colors.primary, '#0ea5e9']);
+      ? ['#5ad4ff', theme.colors.primary, '#0b1224']
+      : ['#5ad4ff', theme.colors.primary, '#b7dcff']);
 
   const toneMap = {
     success: {
