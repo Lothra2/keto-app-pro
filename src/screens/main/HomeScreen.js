@@ -183,8 +183,12 @@ const HomeScreen = ({ navigation }) => {
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
   const [waterInfo, setWaterInfo] = useState({ goal: weeklyWaterGoal, ml: 0 });
   const [cheatMeal, setCheatMeal] = useState(null);
-  const [cheatForm, setCheatForm] = useState({ mealKey: 'cena', description: '', kcal: '' });
+  const [cheatForm, setCheatForm] = useState({ mealKey: 'cena', description: '', portion: '', kcal: '' });
   const [cheatConflict, setCheatConflict] = useState(null);
+  const [cheatExpanded, setCheatExpanded] = useState(false);
+  const [cheatEstimating, setCheatEstimating] = useState(false);
+  const [cheatAiNote, setCheatAiNote] = useState('');
+  const [cheatEstimatedByAI, setCheatEstimatedByAI] = useState(false);
   const [extras, setExtras] = useState([]);
   const [extrasExpanded, setExtrasExpanded] = useState(false);
   const [dayReview, setDayReview] = useState(null);
@@ -267,13 +271,30 @@ const HomeScreen = ({ navigation }) => {
 
       const cheat = await getCheatMeal(currentDay);
       setCheatMeal(cheat);
+      setCheatAiNote(cheat?.note || '');
+      setCheatEstimatedByAI(Boolean(cheat?.estimatedByAI));
       setCheatForm((prev) => ({
         ...prev,
         mealKey: cheat?.mealKey || prev.mealKey,
         description: cheat?.description || '',
+        portion: cheat?.portion || '',
         kcal: cheat?.kcalEstimate ? String(cheat.kcalEstimate) : '',
       }));
       setCheatConflict(await findCheatInWeek(currentDay));
+      setCheatExpanded(false);
+
+      if (cheat?.mealKey) {
+        const cheatEntry = {
+          ...(merged?.[cheat.mealKey] || {}),
+          nombre: language === 'en' ? 'Cheat meal' : 'Cheat meal',
+          descripcion: cheat.description || merged?.[cheat.mealKey]?.descripcion || '',
+          qty: cheat.portion || merged?.[cheat.mealKey]?.qty || '',
+          kcal: cheat.kcalEstimate ? Number(cheat.kcalEstimate) : merged?.[cheat.mealKey]?.kcal,
+          isCheat: true,
+          estimatedByAI: Boolean(cheat?.estimatedByAI),
+        };
+        merged[cheat.mealKey] = cheatEntry;
+      }
 
       const planKcal = merged.kcal || baseDay.kcal || 1600;
       const dynamicGoal = calculateDynamicDailyKcal({
@@ -649,8 +670,80 @@ const HomeScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  const runCheatAiEstimation = useCallback(
+    async (silent = false) => {
+      if (!hasAiCheat) return null;
+
+      if (!cheatForm.description.trim()) {
+        if (!silent) {
+          Alert.alert(
+            language === 'en' ? 'Add a description' : 'Agrega una descripción',
+            language === 'en'
+              ? 'Tell us what you will eat so we can rebalance the day.'
+              : 'Cuéntanos qué vas a comer para reequilibrar el día.'
+          );
+        }
+        return null;
+      }
+
+      setCheatEstimating(true);
+      try {
+        const estimate = await aiService.estimateCheatCalories({
+          mealKey: cheatForm.mealKey,
+          description: cheatForm.description.trim(),
+          portion: cheatForm.portion.trim(),
+          language,
+          credentials: apiCredentials,
+          dayKcal: calorieGoal,
+          consumedKcal: caloriesConsumed,
+        });
+
+        if (estimate?.kcalEstimate) {
+          setCheatForm((prev) => ({ ...prev, kcal: String(estimate.kcalEstimate) }));
+          setCheatAiNote(estimate.note || '');
+          setCheatEstimatedByAI(true);
+          if (!silent) {
+            Alert.alert(
+              language === 'en' ? 'Calories estimated' : 'Calorías estimadas',
+              language === 'en'
+                ? `We estimated ~${estimate.kcalEstimate} kcal for this cheat.`
+                : `Estimamos ~${estimate.kcalEstimate} kcal para este cheat.`
+            );
+          }
+        }
+
+        return estimate;
+      } catch (error) {
+        console.error('Error estimating cheat kcal:', error);
+        if (!silent) {
+          Alert.alert(
+            language === 'en' ? 'Could not estimate' : 'No se pudo estimar',
+            language === 'en'
+              ? 'Try again or enter the calories manually.'
+              : 'Intenta otra vez o ingresa las calorías manualmente.'
+          );
+        }
+        return null;
+      } finally {
+        setCheatEstimating(false);
+      }
+    },
+    [
+      apiCredentials,
+      caloriesConsumed,
+      calorieGoal,
+      cheatForm.description,
+      cheatForm.mealKey,
+      cheatForm.portion,
+      hasAiCheat,
+      language,
+    ]
+  );
+
   const handleSaveCheat = useCallback(async () => {
-    const kcalNumber = Number(cheatForm.kcal);
+    let kcalNumber = Number(cheatForm.kcal);
+    let note = cheatAiNote;
+    const estimatedByAI = cheatEstimatedByAI || (hasAiCheat && Boolean(note));
 
     if (!cheatForm.description.trim()) {
       Alert.alert(
@@ -660,6 +753,14 @@ const HomeScreen = ({ navigation }) => {
           : 'Cuéntanos qué vas a comer para reequilibrar el día.'
       );
       return;
+    }
+
+    if (hasAiCheat && (!Number.isFinite(kcalNumber) || kcalNumber <= 0)) {
+      const estimate = await runCheatAiEstimation(true);
+      if (estimate?.kcalEstimate) {
+        kcalNumber = estimate.kcalEstimate;
+        note = estimate.note || note;
+      }
     }
 
     if (!Number.isFinite(kcalNumber) || kcalNumber <= 0) {
@@ -676,10 +777,14 @@ const HomeScreen = ({ navigation }) => {
       ...cheatForm,
       kcalEstimate: Math.round(kcalNumber),
       description: cheatForm.description.trim(),
+      portion: cheatForm.portion.trim(),
+      estimatedByAI,
+      note,
     };
 
     await saveCheatMeal(currentDay, payload);
     await loadDayData();
+    setCheatExpanded(false);
 
     Alert.alert(
       language === 'en' ? 'Cheat saved' : 'Cheat guardado',
@@ -687,11 +792,23 @@ const HomeScreen = ({ navigation }) => {
         ? 'We rebalanced your day with the new cheat.'
         : 'Reequilibramos tu día con el nuevo cheat.'
     );
-  }, [cheatForm, currentDay, language, loadDayData]);
+  }, [
+    cheatAiNote,
+    cheatEstimatedByAI,
+    cheatForm,
+    currentDay,
+    hasAiCheat,
+    language,
+    loadDayData,
+    runCheatAiEstimation,
+  ]);
 
   const handleClearCheat = useCallback(async () => {
     await clearCheatMeal(currentDay);
-    setCheatForm((prev) => ({ ...prev, description: '', kcal: '' }));
+    setCheatForm((prev) => ({ ...prev, description: '', portion: '', kcal: '' }));
+    setCheatAiNote('');
+    setCheatEstimatedByAI(false);
+    setCheatExpanded(false);
     await loadDayData();
   }, [currentDay, loadDayData]);
 
@@ -722,6 +839,9 @@ const HomeScreen = ({ navigation }) => {
         title: language === 'en' ? 'Breakfast' : 'Desayuno',
         icon: '🍳',
         data: dayData.desayuno,
+        isCheat: cheatMeal?.mealKey === 'desayuno',
+        cheatSummary: cheatMeal?.mealKey === 'desayuno' ? cheatMeal?.description : '',
+        cheatPortion: cheatMeal?.mealKey === 'desayuno' ? cheatMeal?.portion : '',
         isCompleted: mealStates.desayuno,
         onToggle: () => handleToggleMeal('desayuno'),
         onGenerateAI: () => handleGenerateAI('desayuno'),
@@ -734,6 +854,9 @@ const HomeScreen = ({ navigation }) => {
         title: language === 'en' ? 'Snack AM' : 'Snack AM',
         icon: '⏰',
         data: dayData.snackAM,
+        isCheat: cheatMeal?.mealKey === 'snackAM',
+        cheatSummary: cheatMeal?.mealKey === 'snackAM' ? cheatMeal?.description : '',
+        cheatPortion: cheatMeal?.mealKey === 'snackAM' ? cheatMeal?.portion : '',
         isCompleted: mealStates.snackAM,
         onToggle: () => handleToggleMeal('snackAM'),
         showAIButton: false,
@@ -745,6 +868,9 @@ const HomeScreen = ({ navigation }) => {
         title: language === 'en' ? 'Lunch' : 'Almuerzo',
         icon: '🥗',
         data: dayData.almuerzo,
+        isCheat: cheatMeal?.mealKey === 'almuerzo',
+        cheatSummary: cheatMeal?.mealKey === 'almuerzo' ? cheatMeal?.description : '',
+        cheatPortion: cheatMeal?.mealKey === 'almuerzo' ? cheatMeal?.portion : '',
         isCompleted: mealStates.almuerzo,
         onToggle: () => handleToggleMeal('almuerzo'),
         onGenerateAI: () => handleGenerateAI('almuerzo'),
@@ -757,6 +883,9 @@ const HomeScreen = ({ navigation }) => {
         title: language === 'en' ? 'Snack PM' : 'Snack PM',
         icon: '🥜',
         data: dayData.snackPM,
+        isCheat: cheatMeal?.mealKey === 'snackPM',
+        cheatSummary: cheatMeal?.mealKey === 'snackPM' ? cheatMeal?.description : '',
+        cheatPortion: cheatMeal?.mealKey === 'snackPM' ? cheatMeal?.portion : '',
         isCompleted: mealStates.snackPM,
         onToggle: () => handleToggleMeal('snackPM'),
         showAIButton: false,
@@ -768,6 +897,9 @@ const HomeScreen = ({ navigation }) => {
         title: language === 'en' ? 'Dinner' : 'Cena',
         icon: '🍖',
         data: dayData.cena,
+        isCheat: cheatMeal?.mealKey === 'cena',
+        cheatSummary: cheatMeal?.mealKey === 'cena' ? cheatMeal?.description : '',
+        cheatPortion: cheatMeal?.mealKey === 'cena' ? cheatMeal?.portion : '',
         isCompleted: mealStates.cena,
         onToggle: () => handleToggleMeal('cena'),
         onGenerateAI: () => handleGenerateAI('cena'),
@@ -776,7 +908,7 @@ const HomeScreen = ({ navigation }) => {
         kcal: getKcal(dayData.cena, 'cena')
       }
     ];
-  }, [dayData, mealStates, language, calorieGoal]);
+  }, [calorieGoal, cheatMeal, dayData, gender, mealStates, language]);
 
   if (!dayData) {
     return (
@@ -801,6 +933,7 @@ const HomeScreen = ({ navigation }) => {
     prot: dynamicMacros?.prot || dayData.macros?.prot || '--',
     fat: dynamicMacros?.fat || dayData.macros?.fat || '--'
   };
+  const hasAiCheat = Boolean(apiCredentials.user && apiCredentials.pass);
   const mealToggleTrack = {
     false: theme.mode === 'dark' ? 'rgba(148,163,184,0.35)' : 'rgba(148,163,184,0.3)',
     true: theme.colors.primary
@@ -811,10 +944,20 @@ const HomeScreen = ({ navigation }) => {
   const cheatLabel = cheatMeal
     ? `${meals.find((m) => m.key === cheatMeal.mealKey)?.title || cheatMeal.mealKey} · ${
         cheatMeal.kcalEstimate || '--'
-      } kcal`
+      } kcal${cheatMeal?.portion ? ` · ${cheatMeal.portion}` : ''}`
     : language === 'en'
     ? 'Plan your weekly cheat and we balance the day.'
     : 'Agenda tu cheat semanal y balanceamos el día.';
+  const cheatDescription = cheatMeal?.description || '';
+  const cheatOrigin = cheatMeal
+    ? cheatMeal.estimatedByAI
+      ? language === 'en'
+        ? 'AI kcal'
+        : 'Kcal IA'
+      : language === 'en'
+      ? 'Manual kcal'
+      : 'Calorías manuales'
+    : null;
 
   return (
     <ScrollView
@@ -935,94 +1078,6 @@ const HomeScreen = ({ navigation }) => {
           </Text>
         </View>
       </View>
-
-      <Card style={styles.cheatCard}>
-        <View style={styles.cheatHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>🍕 {language === 'en' ? 'Cheat meal' : 'Cheat meal'}</Text>
-            <Text style={styles.cheatLabel}>{cheatLabel}</Text>
-          </View>
-          {cheatMeal ? (
-            <Text style={[styles.cheatBadge, { color: theme.colors.primary, borderColor: theme.colors.primary }]}>
-              {language === 'en' ? 'Balanced' : 'Balanceado'}
-            </Text>
-          ) : null}
-        </View>
-
-        <Text style={styles.cheatHint}>
-          {language === 'en'
-            ? 'Choose the meal, describe it and estimate kcal. We only allow 1 cheat per week.'
-            : 'Elige la comida, descríbela y estima kcal. Solo 1 cheat por semana.'}
-        </Text>
-
-        <View style={styles.cheatChips}>
-          {meals.map((m) => (
-            <TouchableOpacity
-              key={m.key}
-              style={[styles.cheatChip, cheatForm.mealKey === m.key && styles.cheatChipActive]}
-              onPress={() => setCheatForm((prev) => ({ ...prev, mealKey: m.key }))}
-            >
-              <Text
-                style={[styles.cheatChipText, cheatForm.mealKey === m.key && styles.cheatChipTextActive]}
-              >
-                {m.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <TextInput
-          style={[styles.cheatInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
-          placeholder={language === 'en' ? 'What will you eat?' : '¿Qué vas a comer?'}
-          placeholderTextColor={theme.colors.textMuted}
-          value={cheatForm.description}
-          onChangeText={(text) => setCheatForm((prev) => ({ ...prev, description: text }))}
-          multiline
-        />
-
-        <View style={styles.cheatKcalRow}>
-          <Text style={styles.cheatKcalLabel}>
-            {language === 'en' ? 'Estimated kcal' : 'Kcal estimadas'}
-          </Text>
-          <TextInput
-            style={[styles.cheatKcalInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
-            keyboardType="numeric"
-            value={cheatForm.kcal}
-            onChangeText={(text) => setCheatForm((prev) => ({ ...prev, kcal: text }))}
-            placeholder="450"
-            placeholderTextColor={theme.colors.textMuted}
-          />
-        </View>
-
-        {cheatConflict && cheatConflict.dayIndex !== currentDay ? (
-          <Text style={styles.cheatWarning}>
-            {language === 'en'
-              ? `Already scheduled on day ${cheatConflict.dayIndex + 1}.`
-              : `Ya programado en el día ${cheatConflict.dayIndex + 1}.`}
-          </Text>
-        ) : null}
-
-        <View style={styles.cheatActions}>
-          <TouchableOpacity style={styles.cheatButton} onPress={handleSaveCheat}>
-            <Text style={styles.cheatButtonText}>
-              {cheatMeal ? (language === 'en' ? 'Update cheat' : 'Actualizar cheat') : language === 'en' ? 'Save cheat' : 'Guardar cheat'}
-            </Text>
-          </TouchableOpacity>
-          {cheatMeal ? (
-            <TouchableOpacity style={[styles.cheatButton, styles.cheatGhost]} onPress={handleClearCheat}>
-              <Text style={[styles.cheatButtonText, styles.cheatGhostText]}>
-                {language === 'en' ? 'Remove' : 'Quitar'}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <Text style={styles.cheatFootnote}>
-          {language === 'en'
-            ? 'We add ~60% of the cheat kcal to your goal and keep protein on track.'
-            : 'Sumamos ~60% de las kcal del cheat a tu meta y mantenemos la proteína.'}
-        </Text>
-      </Card>
 
     <Card style={styles.tipCard}>
       <LinearGradient
@@ -1145,6 +1200,9 @@ const HomeScreen = ({ navigation }) => {
                   <View style={{ flex: 1 }}>
                     <View style={styles.mealTitleRow}>
                       <Text style={styles.mealTitle}>{meal.title}</Text>
+                      {meal.isCheat ? (
+                        <Text style={styles.mealCheatPill}>Cheat</Text>
+                      ) : null}
                       {meal.isAI ? (
                         <Text style={styles.mealAiPill}>
                           IA
@@ -1173,6 +1231,18 @@ const HomeScreen = ({ navigation }) => {
                   <Text style={styles.mealDesc} numberOfLines={2}>
                     {meal.data.qty}
                   </Text>
+                ) : null}
+                {meal.isCheat && (meal.cheatSummary || meal.cheatPortion) ? (
+                  <View style={styles.mealCheatNoteRow}>
+                    {meal.cheatPortion ? (
+                      <Text style={styles.mealCheatPortion}>{meal.cheatPortion}</Text>
+                    ) : null}
+                    {meal.cheatSummary ? (
+                      <Text style={styles.mealCheatText} numberOfLines={2}>
+                        {meal.cheatSummary}
+                      </Text>
+                    ) : null}
+                  </View>
                 ) : null}
                 <View style={styles.mealActions}>
                   {meal.showAIButton ? (
@@ -1246,6 +1316,172 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
       </View>
+
+      <Card style={styles.cheatCard} outlined>
+        <View style={styles.cheatHeaderRow}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.sectionTitle}>🍕 {language === 'en' ? 'Cheat meal' : 'Cheat meal'}</Text>
+            <Text style={styles.cheatLabel}>{cheatLabel}</Text>
+            <Text style={styles.cheatHint} numberOfLines={2}>
+              {cheatDescription
+                ? cheatDescription
+                : language === 'en'
+                ? 'Reserve 1 cheat this week. We rebalance kcal for that meal.'
+                : 'Reserva 1 cheat esta semana. Rebalanceamos las kcal de esa comida.'}
+            </Text>
+            {cheatConflict && cheatConflict.dayIndex !== currentDay ? (
+              <Text style={styles.cheatWarning}>
+                {language === 'en'
+                  ? `Already planned on day ${cheatConflict.dayIndex + 1}.`
+                  : `Ya programado en el día ${cheatConflict.dayIndex + 1}.`}
+              </Text>
+            ) : null}
+          </View>
+          <TouchableOpacity
+            onPress={() => setCheatExpanded((prev) => !prev)}
+            style={[styles.cheatBadgeButton, cheatExpanded && styles.cheatBadgeButtonActive]}
+          >
+            <Text style={styles.cheatBadgeButtonText}>
+              {cheatExpanded
+                ? language === 'en'
+                  ? 'Close'
+                  : 'Cerrar'
+                : cheatMeal
+                ? language === 'en'
+                  ? 'Edit'
+                  : 'Editar'
+                : language === 'en'
+                ? 'Add'
+                : 'Agregar'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {cheatMeal ? (
+          <View style={styles.cheatStatusRow}>
+            <Text style={styles.cheatPill}>{language === 'en' ? 'Active cheat' : 'Cheat activo'}</Text>
+            {cheatOrigin ? <Text style={styles.cheatMeta}>{cheatOrigin}</Text> : null}
+          </View>
+        ) : null}
+
+        {cheatExpanded ? (
+          <View style={styles.cheatFormArea}>
+            <Text style={styles.cheatSubLabel}>
+              {language === 'en'
+                ? 'Which meal do you want to replace?'
+                : '¿Qué comida quieres reemplazar?'}
+            </Text>
+            <View style={styles.cheatChips}>
+              {meals.map((m) => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[styles.cheatChip, cheatForm.mealKey === m.key && styles.cheatChipActive]}
+                  onPress={() => setCheatForm((prev) => ({ ...prev, mealKey: m.key }))}
+                >
+                  <Text style={[styles.cheatChipText, cheatForm.mealKey === m.key && styles.cheatChipTextActive]}>
+                    {m.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={[styles.cheatInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
+              placeholder={language === 'en' ? 'What will you eat?' : '¿Qué vas a comer?'}
+              placeholderTextColor={theme.colors.textMuted}
+              value={cheatForm.description}
+              onChangeText={(text) => setCheatForm((prev) => ({ ...prev, description: text }))}
+              multiline
+            />
+
+            <TextInput
+              style={[styles.cheatInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
+              placeholder={language === 'en' ? 'Portion or quantity' : 'Porción o cantidad'}
+              placeholderTextColor={theme.colors.textMuted}
+              value={cheatForm.portion}
+              onChangeText={(text) => setCheatForm((prev) => ({ ...prev, portion: text }))}
+            />
+
+            <View style={styles.cheatKcalRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cheatKcalLabel}>
+                  {language === 'en' ? 'Estimated kcal' : 'Kcal estimadas'}
+                </Text>
+                <TextInput
+                  style={[styles.cheatKcalInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
+                  keyboardType="numeric"
+                  value={cheatForm.kcal}
+                  onChangeText={(text) => setCheatForm((prev) => ({ ...prev, kcal: text }))}
+                  placeholder="450"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+              </View>
+              {hasAiCheat ? (
+                <TouchableOpacity
+                  style={[styles.cheatSmallButton, cheatEstimating && styles.cheatSmallButtonDisabled]}
+                  onPress={() => runCheatAiEstimation(false)}
+                  disabled={cheatEstimating}
+                >
+                  <Text style={styles.cheatSmallButtonText}>
+                    {cheatEstimating
+                      ? language === 'en'
+                        ? 'Estimating…'
+                        : 'Estimando…'
+                      : language === 'en'
+                      ? 'AI estimate'
+                      : 'Estimación IA'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.cheatManualBox}>
+                  <Text style={styles.cheatManualText}>
+                    {language === 'en'
+                      ? 'Enter the calories manually'
+                      : 'Ingresa las calorías manualmente'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {cheatAiNote ? <Text style={styles.cheatNote}>{cheatAiNote}</Text> : null}
+
+            {cheatConflict && cheatConflict.dayIndex !== currentDay ? (
+              <Text style={styles.cheatWarning}>
+                {language === 'en'
+                  ? `Already planned on day ${cheatConflict.dayIndex + 1}.`
+                  : `Ya programado en el día ${cheatConflict.dayIndex + 1}.`}
+              </Text>
+            ) : null}
+
+            <View style={styles.cheatActions}>
+              <TouchableOpacity style={styles.cheatButton} onPress={handleSaveCheat}>
+                <Text style={styles.cheatButtonText}>
+                  {cheatMeal
+                    ? language === 'en'
+                      ? 'Update cheat'
+                      : 'Actualizar cheat'
+                    : language === 'en'
+                    ? 'Save cheat'
+                    : 'Guardar cheat'}
+                </Text>
+              </TouchableOpacity>
+              {cheatMeal ? (
+                <TouchableOpacity style={[styles.cheatButton, styles.cheatGhost]} onPress={handleClearCheat}>
+                  <Text style={[styles.cheatButtonText, styles.cheatGhostText]}>
+                    {language === 'en' ? 'Remove' : 'Quitar'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <Text style={styles.cheatFootnote}>
+              {language === 'en'
+                ? 'We replace that meal and add ~60% of the cheat kcal into your goal.'
+                : 'Reemplazamos esa comida y sumamos ~60% de las kcal del cheat a tu meta.'}
+            </Text>
+          </View>
+        ) : null}
+      </Card>
 
       <Card style={styles.reviewCard}>
         <View style={styles.reviewHeader}>
@@ -1510,36 +1746,63 @@ const createStyles = (theme) =>
       borderWidth: 1,
       borderColor: theme.colors.border,
       padding: theme.spacing.md,
-      gap: theme.spacing.sm,
+      gap: theme.spacing.sm
     },
-    cheatHeader: {
+    cheatHeaderRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      gap: theme.spacing.sm,
+      alignItems: 'flex-start',
+      gap: theme.spacing.sm
     },
     cheatLabel: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
-      marginTop: 2,
-    },
-    cheatBadge: {
-      ...theme.typography.caption,
-      borderWidth: 1,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      fontWeight: '700',
+      marginTop: 2
     },
     cheatHint: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
-      lineHeight: 18,
+      lineHeight: 18
+    },
+    cheatBadgeButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.cardSoft
+    },
+    cheatBadgeButtonActive: {
+      backgroundColor: theme.colors.primarySoft,
+      borderColor: theme.colors.primary
+    },
+    cheatBadgeButtonText: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+      fontWeight: '700'
+    },
+    cheatStatusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.xs
+    },
+    cheatPill: {
+      ...theme.typography.caption,
+      backgroundColor: theme.colors.primarySoft,
+      color: theme.colors.primary,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      fontWeight: '700'
+    },
+    cheatMeta: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
     },
     cheatChips: {
       flexDirection: 'row',
       gap: theme.spacing.xs,
-      flexWrap: 'wrap',
+      flexWrap: 'wrap'
     },
     cheatChip: {
       paddingHorizontal: 12,
@@ -1547,36 +1810,45 @@ const createStyles = (theme) =>
       borderRadius: 14,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      backgroundColor: theme.colors.cardSoft,
+      backgroundColor: theme.colors.cardSoft
     },
     cheatChipActive: {
       backgroundColor: theme.colors.primarySoft,
-      borderColor: theme.colors.primary,
+      borderColor: theme.colors.primary
     },
     cheatChipText: {
       ...theme.typography.caption,
-      color: theme.colors.text,
+      color: theme.colors.text
     },
     cheatChipTextActive: {
       color: theme.colors.primary,
-      fontWeight: '700',
+      fontWeight: '700'
     },
     cheatInput: {
       borderWidth: 1,
       borderRadius: theme.radius.md,
       padding: theme.spacing.sm,
       minHeight: 52,
-      backgroundColor: theme.colors.cardSoft,
+      backgroundColor: theme.colors.cardSoft
+    },
+    cheatFormArea: {
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.sm
+    },
+    cheatSubLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+      fontWeight: '700'
     },
     cheatKcalRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: theme.spacing.sm,
+      gap: theme.spacing.sm
     },
     cheatKcalLabel: {
       ...theme.typography.caption,
-      color: theme.colors.text,
+      color: theme.colors.text
     },
     cheatKcalInput: {
       minWidth: 96,
@@ -1584,41 +1856,78 @@ const createStyles = (theme) =>
       borderRadius: theme.radius.md,
       padding: theme.spacing.sm,
       backgroundColor: theme.colors.cardSoft,
-      textAlign: 'center',
+      textAlign: 'center'
+    },
+    cheatSmallButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.primary,
+      minWidth: 120,
+      alignItems: 'center'
+    },
+    cheatSmallButtonDisabled: {
+      opacity: 0.7
+    },
+    cheatSmallButtonText: {
+      ...theme.typography.caption,
+      color: theme.colors.onPrimary,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.3
+    },
+    cheatManualBox: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.cardSoft,
+      flex: 1,
+      marginLeft: theme.spacing.sm
+    },
+    cheatManualText: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
     },
     cheatWarning: {
       ...theme.typography.caption,
-      color: theme.colors.warning,
+      color: theme.colors.warning
     },
     cheatActions: {
       flexDirection: 'row',
       gap: theme.spacing.sm,
-      flexWrap: 'wrap',
+      flexWrap: 'wrap'
     },
     cheatButton: {
       flex: 1,
       backgroundColor: theme.colors.primary,
       paddingVertical: 12,
       borderRadius: theme.radius.md,
-      alignItems: 'center',
+      alignItems: 'center'
     },
     cheatButtonText: {
       ...theme.typography.button,
       color: theme.colors.onPrimary,
-      fontWeight: '700',
+      fontWeight: '700'
     },
     cheatGhost: {
       backgroundColor: theme.colors.cardSoft,
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: theme.colors.border
     },
     cheatGhostText: {
+      color: theme.colors.text
+    },
+    cheatNote: {
+      ...theme.typography.caption,
       color: theme.colors.text,
+      fontStyle: 'italic'
     },
     cheatFootnote: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
-      lineHeight: 18,
+      lineHeight: 18
     },
     pdfCard: {
       gap: theme.spacing.sm,
@@ -1898,6 +2207,15 @@ const createStyles = (theme) =>
       paddingVertical: 2,
       borderRadius: 999
     },
+    mealCheatPill: {
+      ...theme.typography.caption,
+      backgroundColor: 'rgba(248,113,113,0.12)',
+      color: theme.colors.warning,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+      fontWeight: '700'
+    },
     mealKcal: {
       ...theme.typography.caption,
       color: theme.colors.textMuted
@@ -1911,6 +2229,28 @@ const createStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.text,
       lineHeight: 18
+    },
+    mealCheatNoteRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 4,
+    },
+    mealCheatPortion: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+      backgroundColor: theme.colors.cardSoft,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    mealCheatText: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      flex: 1,
+      lineHeight: 16,
     },
     mealActions: {
       flexDirection: 'row',

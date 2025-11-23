@@ -171,8 +171,8 @@ const ConsultorScreen = () => {
     };
   }, [theme]);
 
-  const inputPaddingBottom = 10 + Math.max(insets.bottom, 0);
-  const listBottomSpacing = 72 + insets.bottom + keyboardOffset;
+  const inputPaddingBottom = Math.max(insets.bottom, 6);
+  const listBottomSpacing = 44 + keyboardOffset + inputPaddingBottom;
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     gap: 8,
   },
   input: {
