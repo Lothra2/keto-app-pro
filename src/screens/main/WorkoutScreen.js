@@ -12,7 +12,7 @@ import Card from '../../components/shared/Card'
 import ScreenBanner from '../../components/shared/ScreenBanner'
 import { exportWorkoutPlanPdf } from '../../utils/pdf'
 import { getDayDisplayName } from '../../utils/labels'
-import { estimateAiWorkoutCalories, estimateBaseWorkoutCalories } from '../../utils/calculations'
+import { calculateEstimatedWorkoutKcal, estimateAiWorkoutCalories, estimateBaseWorkoutCalories } from '../../utils/calculations'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}
@@ -108,25 +108,26 @@ const WorkoutScreen = ({ route, navigation }) => {
     setAiEstimatedKcal(null)
     setWorkoutSource('base')
 
+    const saved = await getWorkoutData(day)
+    const exercises = Array.isArray(saved) ? saved : saved?.exercises || []
+    const normalizedExercises = Array.isArray(exercises) ? exercises : []
+    setWorkout(normalizedExercises)
+
     const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
-    const computedBaseKcal = estimateBaseWorkoutCalories({
+    const { baseEstimatedKcal: computedBaseKcal, aiEstimatedKcal: computedAiKcal } = calculateEstimatedWorkoutKcal({
+      exercises: normalizedExercises,
       dayText: reference?.today,
       dayIndex: day,
       weightKg: metrics.startWeight || 75,
       intensity: selectedIntensity
     })
 
-    const saved = await getWorkoutData(day)
-    const exercises = Array.isArray(saved) ? saved : saved?.exercises || []
-    const normalizedExercises = Array.isArray(exercises) ? exercises : []
-    setWorkout(normalizedExercises)
-
     const baseKcal = (!Array.isArray(saved) && saved?.baseEstimatedKcal) || computedBaseKcal
     setBaseEstimatedKcal(baseKcal)
 
     const storedAiKcal = (!Array.isArray(saved) && (saved?.aiEstimatedKcal ?? saved?.estimatedKcal)) || null
     const aiKcal = normalizedExercises.length
-      ? storedAiKcal || estimateAiWorkoutCalories(normalizedExercises, saved?.intensity || selectedIntensity, metrics.startWeight || 75)
+      ? storedAiKcal || computedAiKcal || estimateAiWorkoutCalories(normalizedExercises, saved?.intensity || selectedIntensity, metrics.startWeight || 75)
       : null
     setAiEstimatedKcal(aiKcal)
 
@@ -172,13 +173,15 @@ const WorkoutScreen = ({ route, navigation }) => {
         }
       })
 
-      const estimated = estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
-      const baseForDay = estimateBaseWorkoutCalories({
-        dayText: localPlan?.today,
+      const reference = getWorkoutForDay(language, Math.floor(safeActiveDay / 7) + 1, safeActiveDay % 7)
+      const { baseEstimatedKcal: baseForDay, aiEstimatedKcal: computedAiKcal } = calculateEstimatedWorkoutKcal({
+        exercises,
+        dayText: reference?.today || localPlan?.today,
         dayIndex: safeActiveDay,
         weightKg: metrics.startWeight || 75,
         intensity: selectedIntensity
       })
+      const estimated = computedAiKcal || estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
       setBaseEstimatedKcal(baseForDay)
       setWorkout(exercises)
       setAiEstimatedKcal(estimated)
@@ -234,13 +237,15 @@ const WorkoutScreen = ({ route, navigation }) => {
             age: metrics.age || 30
           }
         })
-        const baseForDay = estimateBaseWorkoutCalories({
-          dayText: getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)?.today,
+        const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
+        const { baseEstimatedKcal: baseForDay, aiEstimatedKcal: computedAiKcal } = calculateEstimatedWorkoutKcal({
+          exercises,
+          dayText: reference?.today,
           dayIndex: day,
           weightKg: metrics.startWeight || 75,
           intensity: selectedIntensity
         })
-        const estimated = estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
+        const estimated = computedAiKcal || estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
         await saveWorkoutData(day, {
           exercises,
           estimatedKcal: estimated,

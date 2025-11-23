@@ -198,6 +198,21 @@ export function estimateAiWorkoutCalories(exercises = [], intensity = 'medium', 
   return computeCaloriesFromMet(met, estimatedDuration, weightKg);
 }
 
+export function calculateEstimatedWorkoutKcal({
+  exercises = [],
+  dayText,
+  dayIndex = 0,
+  weightKg = 75,
+  intensity = 'medium'
+} = {}) {
+  const baseEstimatedKcal = estimateBaseWorkoutCalories({ dayText, dayIndex, weightKg, intensity });
+  const aiEstimatedKcal = exercises.length
+    ? estimateAiWorkoutCalories(exercises, intensity, weightKg)
+    : null;
+
+  return { baseEstimatedKcal, aiEstimatedKcal };
+}
+
 /**
  * Calcular calorías consumidas según comidas marcadas
  */
@@ -402,6 +417,7 @@ export default {
   estimateBodyFat,
   calculateBMR,
   calculateTDEE,
+  calculateEstimatedWorkoutKcal,
   calculateConsumedCalories,
   calculateDynamicMacros,
   calculateIdealWeight,
@@ -412,3 +428,6 @@ export default {
   calculateWaterGoal,
   calculateWeightProgress
 };
+
+// Alias for legacy callers
+export const calculateEstimated = calculateEstimatedWorkoutKcal;
