@@ -418,6 +418,8 @@ export default {
   calculateBMR,
   calculateTDEE,
   calculateEstimatedWorkoutKcal,
+  // Legacy alias included for default consumers
+  calculateEstimated: calculateEstimatedWorkoutKcal,
   calculateConsumedCalories,
   calculateDynamicMacros,
   calculateIdealWeight,
