@@ -447,16 +447,16 @@ const ConsultorScreen = () => {
         <TouchableOpacity
           onPress={onSend}
           disabled={loading || input.trim().length === 0}
-          style={[
-            styles.sendBtn,
-            {
-              backgroundColor: loading ? theme.colors.textMuted : theme.colors.primary,
-              shadowColor: '#0f766e',
-              shadowOpacity: loading ? 0 : 0.35,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: loading ? 0 : 8,
-            },
+            style={[
+              styles.sendBtn,
+              {
+                backgroundColor: loading ? theme.colors.textMuted : theme.colors.primary,
+                shadowColor: theme.colors.primary,
+                shadowOpacity: loading ? 0 : 0.35,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: loading ? 0 : 8,
+              },
           ]}
         >
           {loading ? (

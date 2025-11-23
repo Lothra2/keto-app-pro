@@ -33,9 +33,9 @@ const navy = {
   accent: '#5ad4ff',
   primarySoft: 'rgba(11,59,106,0.16)',
   danger: '#ef4444',
-  success: '#22c55e',
-  warning: '#f97316',
-  info: '#0ea5e9',
+  success: '#2fb3ff',
+  warning: '#f59e0b',
+  info: '#38bdf8',
   dark: {
     bg: '#0b1120',
     bgSoft: '#111b2b',

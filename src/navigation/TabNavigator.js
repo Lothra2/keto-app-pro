@@ -17,7 +17,7 @@ import ConsultorScreen from '../screens/main/ConsultorScreen'; // 👈 nuevo
 const Tab = createBottomTabNavigator();
 
 // Iconos simples con emojis
-const TabIcon = ({ emoji, focused, label }) => {
+const TabIcon = ({ emoji, focused }) => {
   const { theme: themeMode } = useApp();
   const theme = getTheme(themeMode);
 
@@ -49,17 +49,6 @@ const TabIcon = ({ emoji, focused, label }) => {
         style={styles.iconGlow}
       />
       <Text style={styles.emoji}>{emoji}</Text>
-      <Text
-        style={[
-          styles.label,
-          { color: focused ? theme.colors.accent || theme.colors.primary : theme.colors.textMuted },
-        ]}
-        numberOfLines={1}
-        ellipsizeMode="clip"
-        allowFontScaling={false}
-      >
-        {label}
-      </Text>
     </View>
   );
 };
@@ -86,9 +75,9 @@ const TabNavigator = () => {
           left: 12,
           right: 12,
           bottom: 10,
-          height: 76,
-          paddingBottom: 12,
-          paddingTop: 8,
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 10,
           borderTopWidth: 0,
           borderRadius: 22,
           overflow: 'hidden',
@@ -128,9 +117,8 @@ const TabNavigator = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🍽" focused={focused} label={labels.menu} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🍽" focused={focused} />,
+          tabBarAccessibilityLabel: labels.menu,
         }}
       />
 
@@ -138,9 +126,8 @@ const TabNavigator = () => {
         name="Shopping"
         component={ShoppingScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🛒" focused={focused} label={labels.shopping} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🛒" focused={focused} />,
+          tabBarAccessibilityLabel: labels.shopping,
         }}
       />
 
@@ -148,9 +135,8 @@ const TabNavigator = () => {
         name="Workouts"
         component={WorkoutScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🏋️" focused={focused} label={labels.workout} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🏋️" focused={focused} />,
+          tabBarAccessibilityLabel: labels.workout,
         }}
       />
 
@@ -158,9 +144,8 @@ const TabNavigator = () => {
         name="Progress"
         component={ProgressScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📈" focused={focused} label={labels.progress} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📈" focused={focused} />,
+          tabBarAccessibilityLabel: labels.progress,
         }}
       />
 
@@ -169,9 +154,8 @@ const TabNavigator = () => {
         name="Consultor"
         component={ConsultorScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🤖" focused={focused} label={labels.consultor} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" focused={focused} />,
+          tabBarAccessibilityLabel: labels.consultor,
         }}
       />
 
@@ -179,9 +163,8 @@ const TabNavigator = () => {
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="⚙️" focused={focused} label={labels.settings} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
+          tabBarAccessibilityLabel: labels.settings,
         }}
       />
     </Tab.Navigator>
@@ -192,13 +175,12 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    minWidth: 64,
+    minWidth: 52,
   },
   iconGlow: {
     ...StyleSheet.absoluteFillObject,
@@ -206,13 +188,6 @@ const styles = StyleSheet.create({
   },
   emoji: {
     fontSize: 22,
-    marginBottom: 2,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 12,
   },
 });
 

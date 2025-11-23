@@ -448,15 +448,23 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, themeMode === 'dark' && styles.optionActive]}
             onPress={() => handleChangeTheme('dark')}
           >
-            <Text style={[styles.optionText, themeMode === 'dark' && styles.optionTextActive]}>
-              🌙 {language === 'en' ? 'Dark (Green)' : 'Oscuro (Verde)'}
+            <Text
+              style={[styles.optionText, themeMode === 'dark' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              🌙 {language === 'en' ? 'Dark' : 'Oscuro'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.option, themeMode === 'light' && styles.optionActive]}
             onPress={() => handleChangeTheme('light')}
           >
-            <Text style={[styles.optionText, themeMode === 'light' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, themeMode === 'light' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               ☀️ {language === 'en' ? 'Light' : 'Claro'}
             </Text>
           </TouchableOpacity>
@@ -464,8 +472,12 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, themeMode === 'navy' && styles.optionActive]}
             onPress={() => handleChangeTheme('navy')}
           >
-            <Text style={[styles.optionText, themeMode === 'navy' && styles.optionTextActive]}>
-              💎 {language === 'en' ? 'Navy glass' : 'Azul marino'}
+            <Text
+              style={[styles.optionText, themeMode === 'navy' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              💎 {language === 'en' ? 'Navy' : 'Azul marino'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -718,17 +730,20 @@ const getStyles = (theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    alignItems: 'center'
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    alignItems: 'center',
+    minHeight: 60,
+    justifyContent: 'center'
   },
   optionActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary
   },
   optionText: {
-    ...theme.typography.body,
+    ...theme.typography.bodySmall,
     color: theme.colors.text,
-    fontWeight: '500'
+    fontWeight: '600'
   },
   optionTextActive: {
     color: '#fff',

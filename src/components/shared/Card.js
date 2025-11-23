@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 
 const Card = ({ children, style, outlined = false, tone = 'default' }) => {
   const { theme: themeMode } = useApp();
@@ -18,8 +19,8 @@ const Card = ({ children, style, outlined = false, tone = 'default' }) => {
       `${theme.colors.info}29`,
       `${theme.colors.info}14`,
     ],
-    success: ['rgba(34,197,94,0.18)', 'rgba(34,197,94,0.06)'],
-    warning: ['rgba(249,115,22,0.18)', 'rgba(249,115,22,0.06)'],
+    success: [withAlpha(theme.colors.success, 0.2), withAlpha(theme.colors.success, 0.08)],
+    warning: [withAlpha(theme.colors.warning, 0.18), withAlpha(theme.colors.warning, 0.08)],
   };
 
   const gradient = palette[tone] || palette.default;
