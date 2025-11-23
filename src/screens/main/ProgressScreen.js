@@ -180,7 +180,8 @@ const ProgressScreen = () => {
         const mealsState = calorieState.meals || {}
         const consumedCalories = calculateConsumedCalories(
           mealsState,
-          calorieState.goal || plan[i]?.kcal || 1600
+          calorieState.goal || plan[i]?.kcal || 1600,
+          gender
         )
         const hasCalories = consumedCalories > 0
 

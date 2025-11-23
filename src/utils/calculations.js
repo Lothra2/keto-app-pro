@@ -1,10 +1,26 @@
 import { basePlan } from '../data/basePlan';
 import { basePlanEn } from '../data/basePlanEn';
 
+const defaultMealDistribution = {
+  desayuno: 0.25,
+  snackAM: 0.10,
+  almuerzo: 0.35,
+  snackPM: 0.10,
+  cena: 0.20
+};
+
+const femaleMealDistribution = {
+  desayuno: 0.30,
+  snackAM: 0.10,
+  almuerzo: 0.30,
+  snackPM: 0.10,
+  cena: 0.20
+};
+
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
  */
-export function buildPlan(weeks = 2, gender = 'male', language = 'es') {
+export function buildPlan(weeks = 2, gender = 'male', language = 'en') {
   const totalDays = weeks * 7;
   const plan = [];
 
@@ -18,16 +34,18 @@ export function buildPlan(weeks = 2, gender = 'male', language = 'es') {
     dayCopy.dia = language === 'en' ? `Day ${i + 1}` : `Día ${i + 1}`;
 
     // Ajuste de calorías por género
-    if (gender === 'female') {
-      dayCopy.kcal = Math.round((dayCopy.kcal || 1600) * 0.9);
-    } else {
-      dayCopy.kcal = dayCopy.kcal || 1600;
-    }
+    const kcalBase = dayCopy.kcal || 1600;
+    const genderMultiplier = gender === 'female' ? 0.9 : 1.05;
+    dayCopy.kcal = Math.round(kcalBase * genderMultiplier);
     
     plan.push(dayCopy);
   }
 
   return plan;
+}
+
+export function getMealDistribution(gender = 'male') {
+  return gender === 'female' ? femaleMealDistribution : defaultMealDistribution;
 }
 
 /**
@@ -87,17 +105,104 @@ export function calculateTDEE(bmr, activityLevel = 'sedentary') {
   return Math.round(bmr * multiplier);
 }
 
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const computeCaloriesFromMet = (met, durationMinutes, weightKg = 75) => {
+  const safeMet = clamp(toNumber(met, 5), 1.8, 12);
+  const safeDuration = clamp(toNumber(durationMinutes, 30), 10, 120);
+  const safeWeight = clamp(toNumber(weightKg, 75), 40, 200);
+  return Math.max(60, Math.round((safeMet * 3.5 * safeWeight * safeDuration) / 200));
+};
+
+export function estimateWorkoutCalories(intensity = 'medium', weightKg = 75) {
+  const metMap = { soft: 4.5, medium: 6.5, hard: 8.5 };
+  const durationMap = { soft: 25, medium: 35, hard: 50 };
+
+  return computeCaloriesFromMet(metMap[intensity] || metMap.medium, durationMap[intensity] || durationMap.medium, weightKg);
+}
+
+const parseMinutesFromText = text => {
+  if (!text || typeof text !== 'string') return null;
+  const match = text.match(/(\d{1,3})\s*(min|minutes|mins)?/i);
+  if (match && match[1]) {
+    return toNumber(match[1]);
+  }
+  return null;
+};
+
+const inferMetFromText = text => {
+  if (!text || typeof text !== 'string') return null;
+  const normalized = text.toLowerCase();
+
+  if (/(descanso|rest)/.test(normalized)) return 2.4;
+  if (/(movilidad|stretch|mobil|respir)/.test(normalized)) return 3.1;
+  if (/(caminar|walk|andar)/.test(normalized)) return 4.3;
+  if (/(core|plank|plancha|abs)/.test(normalized)) return 5.2;
+  if (/(fuerza|strength|torso|pierna)/.test(normalized)) return 6.8;
+  if (/(hiit|sprint|jump|burpee)/.test(normalized)) return 7.6;
+
+  return null;
+};
+
+export function estimateBaseWorkoutCalories({
+  dayText,
+  dayIndex = 0,
+  weightKg = 75,
+  intensity = 'medium'
+} = {}) {
+  const fallbackDurations = [28, 32, 24, 36, 30, 26, 18];
+  const parsedMinutes = parseMinutesFromText(dayText);
+  const fallbackMinutes = fallbackDurations[dayIndex % fallbackDurations.length] || 28;
+
+  const metFromText = inferMetFromText(dayText);
+  const baseMetMap = { soft: 4.6, medium: 6.2, hard: 7.6 };
+  const met = metFromText || baseMetMap[intensity] || baseMetMap.medium;
+
+  const duration = parsedMinutes || fallbackMinutes;
+  return computeCaloriesFromMet(met, duration, weightKg);
+}
+
+export function estimateAiWorkoutCalories(exercises = [], intensity = 'medium', weightKg = 75) {
+  const baseDurationMap = { soft: 26, medium: 36, hard: 50 };
+  const baseDuration = baseDurationMap[intensity] || baseDurationMap.medium;
+
+  const durationFromExercises = exercises
+    .map(item => parseMinutesFromText(item?.duracion || item?.descripcion || item?.detalle))
+    .filter(Boolean);
+
+  const avgDuration = durationFromExercises.length
+    ? durationFromExercises.reduce((sum, val) => sum + val, 0) / durationFromExercises.length
+    : null;
+
+  const exerciseFactor = clamp((exercises.length || 5) / 6, 0.7, 1.35);
+  const estimatedDuration = avgDuration
+    ? clamp(avgDuration * exercises.length * 0.35, 15, 75)
+    : baseDuration * exerciseFactor;
+
+  const allText = (exercises || [])
+    .map(item => `${item?.nombre || ''} ${item?.descripcion || ''} ${item?.detalle || ''}`)
+    .join(' ')
+    .toLowerCase();
+
+  const metAdjustment =
+    /(hiit|sprint|jump|burpee|salto)/.test(allText) ? 1.2 : /(movilidad|stretch|mobil)/.test(allText) ? 0.85 : 1;
+
+  const metMap = { soft: 4.8, medium: 6.7, hard: 8.6 };
+  const met = (metMap[intensity] || metMap.medium) * metAdjustment;
+
+  return computeCaloriesFromMet(met, estimatedDuration, weightKg);
+}
+
 /**
  * Calcular calorías consumidas según comidas marcadas
  */
-export function calculateConsumedCalories(mealStates, goalKcal = 1600) {
-  const mealPercents = {
-    desayuno: 0.25,
-    snackAM: 0.10,
-    almuerzo: 0.35,
-    snackPM: 0.10,
-    cena: 0.20
-  };
+export function calculateConsumedCalories(mealStates, goalKcal = 1600, gender = 'male') {
+  const mealPercents = getMealDistribution(gender);
 
   let consumed = 0;
 
