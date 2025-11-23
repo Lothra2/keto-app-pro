@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, Switch } from 'react-native'
 import { useApp } from '../../context/AppContext'
 import { getTheme } from '../../theme'
-import { getWorkoutData, saveWorkoutData } from '../../storage/storage'
+import { getWorkoutData, saveWorkoutData, getProgressData, saveProgressData } from '../../storage/storage'
 import aiService from '../../api/aiService'
 import WorkoutCard from '../../components/workout/WorkoutCard'
 import Button from '../../components/shared/Button'
@@ -12,6 +12,7 @@ import Card from '../../components/shared/Card'
 import ScreenBanner from '../../components/shared/ScreenBanner'
 import { exportWorkoutPlanPdf } from '../../utils/pdf'
 import { getDayDisplayName } from '../../utils/labels'
+import { estimateWorkoutCalories } from '../../utils/calculations'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}
@@ -36,6 +37,9 @@ const WorkoutScreen = ({ route, navigation }) => {
   const [loadingMessage, setLoadingMessage] = useState('')
   const [detailExercise, setDetailExercise] = useState(null)
   const [exportingPdf, setExportingPdf] = useState(false)
+  const [estimatedKcal, setEstimatedKcal] = useState(0)
+  const [workoutDone, setWorkoutDone] = useState(false)
+  const [loggedKcal, setLoggedKcal] = useState(null)
 
   const intensities = ['soft', 'medium', 'hard']
   const intensityLabels = {
@@ -94,9 +98,27 @@ const WorkoutScreen = ({ route, navigation }) => {
     loadWorkout(safeActiveDay)
   }, [safeActiveDay])
 
+  const calculateEstimated = useCallback(
+    (intensityLevel) =>
+      estimateWorkoutCalories(intensityLevel || selectedIntensity, metrics.startWeight || 75),
+    [metrics.startWeight, selectedIntensity]
+  )
+
   const loadWorkout = async day => {
     const saved = await getWorkoutData(day)
-    setWorkout(Array.isArray(saved) ? saved : [])
+    const exercises = Array.isArray(saved) ? saved : saved?.exercises || []
+    setWorkout(Array.isArray(exercises) ? exercises : [])
+
+    const estimatedFromStorage = (!Array.isArray(saved) && saved?.estimatedKcal) || 0
+    const estimated = estimatedFromStorage || calculateEstimated(saved?.intensity)
+    setEstimatedKcal(estimated)
+
+    const progress = await getProgressData(day)
+    const storedKcal = progress.exkcal !== undefined && progress.exkcal !== null
+      ? Number(progress.exkcal)
+      : null
+    setLoggedKcal(Number.isFinite(storedKcal) ? storedKcal : null)
+    setWorkoutDone(Boolean(progress.workoutDone))
   }
 
   const handleGenerateWorkout = async () => {
@@ -126,8 +148,14 @@ const WorkoutScreen = ({ route, navigation }) => {
         }
       })
 
+      const estimated = calculateEstimated(selectedIntensity)
       setWorkout(exercises)
-      await saveWorkoutData(safeActiveDay, exercises)
+      setEstimatedKcal(estimated)
+      await saveWorkoutData(safeActiveDay, {
+        exercises,
+        estimatedKcal: estimated,
+        intensity: selectedIntensity,
+      })
     } catch (error) {
       console.error('Error generating workout:', error)
       alert(language === 'en' ? 'Error generating workout' : 'Error generando entreno')
@@ -172,9 +200,15 @@ const WorkoutScreen = ({ route, navigation }) => {
             age: metrics.age || 30
           }
         })
-        await saveWorkoutData(day, exercises)
+        const estimated = calculateEstimated(selectedIntensity)
+        await saveWorkoutData(day, {
+          exercises,
+          estimatedKcal: estimated,
+          intensity: selectedIntensity,
+        })
         if (day === safeActiveDay) {
           setWorkout(exercises)
+          setEstimatedKcal(estimated)
         }
       }
     } catch (error) {
@@ -211,7 +245,7 @@ const WorkoutScreen = ({ route, navigation }) => {
           }) ||
           (language === 'en' ? `Day ${day + 1}` : `Día ${day + 1}`)
         const saved = await getWorkoutData(day)
-        const exercises = Array.isArray(saved) ? saved : []
+        const exercises = Array.isArray(saved) ? saved : saved?.exercises || []
         const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
 
         if (!weeklyFocus && reference?.focus) {
@@ -261,6 +295,33 @@ const WorkoutScreen = ({ route, navigation }) => {
     intensityLabel,
     localPlan
   ])
+
+  const persistWorkoutCompletion = useCallback(
+    async (dayIndex, completed, kcalToLog) => {
+      const existing = await getProgressData(dayIndex)
+      const normalized = { ...existing, workoutDone: completed }
+
+      if (completed) {
+        const numericKcal = Number(kcalToLog)
+        const safeKcal = Number.isFinite(numericKcal) ? numericKcal : estimatedKcal
+        normalized.exkcal = safeKcal
+        setLoggedKcal(safeKcal)
+      } else {
+        delete normalized.exkcal
+        setLoggedKcal(null)
+      }
+
+      await saveProgressData(dayIndex, normalized)
+    },
+    [estimatedKcal]
+  )
+
+  const handleToggleWorkoutDone = async () => {
+    const nextState = !workoutDone
+    setWorkoutDone(nextState)
+    const kcalValue = nextState ? loggedKcal || estimatedKcal : null
+    await persistWorkoutCompletion(safeActiveDay, nextState, kcalValue)
+  }
 
   const handleExercisePress = exercise => {
     if (!exercise) return
@@ -313,6 +374,10 @@ const WorkoutScreen = ({ route, navigation }) => {
     }) || (language === 'en' ? `Day ${safeActiveDay + 1}` : `Día ${safeActiveDay + 1}`)
   const weekLabel = language === 'en' ? `Week ${week}` : `Semana ${week}`
   const intensityLabel = intensityLabels[selectedIntensity] || intensityLabels.medium
+
+  useEffect(() => {
+    setEstimatedKcal((prev) => prev || calculateEstimated(selectedIntensity))
+  }, [calculateEstimated, selectedIntensity])
 
   const handleChangeDay = direction => {
     const next = clampDay(safeActiveDay + direction)
@@ -496,6 +561,39 @@ const WorkoutScreen = ({ route, navigation }) => {
               : <Text style={styles.loadingHint}>{loadingMessage}</Text>
             : null}
         </View>
+
+        <Card style={styles.statusCard}>
+          <View style={styles.statusHeader}>
+            <Text style={styles.sectionSubtitle}>
+              {language === 'en' ? 'Workout status' : 'Estado del entreno'}
+            </Text>
+            <Switch
+              value={workoutDone}
+              onValueChange={handleToggleWorkoutDone}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primarySoft }}
+              thumbColor={workoutDone ? theme.colors.primary : theme.colors.card}
+            />
+          </View>
+          <Text style={styles.statusText}>
+            {language === 'en'
+              ? 'Swipe to mark as completed. We will log calories burned in progress.'
+              : 'Desliza para marcar completado. Guardaremos las calorías quemadas en progreso.'}
+          </Text>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>
+              {language === 'en' ? 'Estimated burn' : 'Calorías estimadas'}
+            </Text>
+            <Text style={styles.statusValue}>{estimatedKcal} kcal</Text>
+          </View>
+          {loggedKcal !== null && (
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>
+                {language === 'en' ? 'Logged' : 'Registrado'}
+              </Text>
+              <Text style={styles.statusValue}>{loggedKcal} kcal</Text>
+            </View>
+          )}
+        </Card>
 
         <Card style={styles.pdfCard}>
           <View style={styles.pdfHeader}>
@@ -729,6 +827,32 @@ const getStyles = theme => StyleSheet.create({
   },
   generateButton: {
     width: '100%'
+  },
+  statusCard: {
+    gap: theme.spacing.sm
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  statusText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textMuted
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  statusLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted
+  },
+  statusValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '600'
   },
   pdfCard: {
     gap: theme.spacing.md

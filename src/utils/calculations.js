@@ -4,7 +4,7 @@ import { basePlanEn } from '../data/basePlanEn';
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
  */
-export function buildPlan(weeks = 2, gender = 'male', language = 'es') {
+export function buildPlan(weeks = 2, gender = 'male', language = 'en') {
   const totalDays = weeks * 7;
   const plan = [];
 
@@ -18,11 +18,9 @@ export function buildPlan(weeks = 2, gender = 'male', language = 'es') {
     dayCopy.dia = language === 'en' ? `Day ${i + 1}` : `Día ${i + 1}`;
 
     // Ajuste de calorías por género
-    if (gender === 'female') {
-      dayCopy.kcal = Math.round((dayCopy.kcal || 1600) * 0.9);
-    } else {
-      dayCopy.kcal = dayCopy.kcal || 1600;
-    }
+    const kcalBase = dayCopy.kcal || 1600;
+    const genderMultiplier = gender === 'female' ? 0.9 : 1.05;
+    dayCopy.kcal = Math.round(kcalBase * genderMultiplier);
     
     plan.push(dayCopy);
   }
@@ -85,6 +83,18 @@ export function calculateTDEE(bmr, activityLevel = 'sedentary') {
 
   const multiplier = multipliers[activityLevel] || 1.2;
   return Math.round(bmr * multiplier);
+}
+
+export function estimateWorkoutCalories(intensity = 'medium', weightKg = 75) {
+  const metMap = { soft: 4.5, medium: 6.5, hard: 8.5 };
+  const durationMap = { soft: 25, medium: 35, hard: 50 };
+
+  const met = metMap[intensity] || metMap.medium;
+  const duration = durationMap[intensity] || durationMap.medium;
+  const safeWeight = Number.isFinite(Number(weightKg)) ? Number(weightKg) : 75;
+
+  const kcal = (met * 3.5 * safeWeight * duration) / 200;
+  return Math.max(80, Math.round(kcal));
 }
 
 /**

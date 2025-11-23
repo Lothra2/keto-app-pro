@@ -128,12 +128,18 @@ const ConsultorScreen = () => {
           });
         }
       } else {
+        const historyForAi = [...messages, userMsg].map((msg) => ({
+          role: msg.role,
+          text: msg.text,
+        }));
+
         const res = await aiService.chat({
           prompt: trimmed,
           mode,
           language,
           credentials: creds,
           context: { domain: 'keto-calisthenics', experienceYears: 20 },
+          history: historyForAi,
         });
 
         const text =
@@ -151,7 +157,7 @@ const ConsultorScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, mode, language, creds, push]);
+  }, [input, loading, mode, language, creds, push, messages]);
 
   const bubblePalette = useMemo(() => {
     const isDark = theme.mode === 'dark';
