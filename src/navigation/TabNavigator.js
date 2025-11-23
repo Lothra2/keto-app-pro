@@ -71,16 +71,18 @@ const TabNavigator = () => {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          left: 12,
-          right: 12,
-          bottom: 12,
-          height: 78,
-          paddingBottom: 12,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 82,
+          paddingBottom: 14,
           paddingTop: 12,
           borderTopWidth: 0,
-          borderRadius: 22,
-          overflow: 'visible',
-          backgroundColor: theme.mode === 'dark' ? 'rgba(10,16,30,0.82)' : 'rgba(255,255,255,0.9)',
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
+          backgroundColor:
+            theme.mode === 'dark' ? 'rgba(10,16,30,0.72)' : 'rgba(255,255,255,0.82)',
           shadowColor: theme.colors.accent || theme.colors.primary,
           shadowOpacity: 0.22,
           shadowRadius: 24,
@@ -99,8 +101,8 @@ const TabNavigator = () => {
             <LinearGradient
               colors={
                 theme.mode === 'dark'
-                  ? [`${theme.colors.accent}0f`, 'rgba(11,17,32,0.6)']
-                  : [`${theme.colors.primary}14`, 'rgba(255,255,255,0.5)']
+                  ? [`${theme.colors.accent}0f`, 'rgba(11,17,32,0.5)']
+                  : [`${theme.colors.accent}18`, 'rgba(255,255,255,0.4)']
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}

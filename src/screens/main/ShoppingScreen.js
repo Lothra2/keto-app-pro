@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { useApp } from '../../context/AppContext'
 import { getTheme } from '../../theme'
+import { withAlpha } from '../../theme/utils'
 import { getDayData, getShoppingList, saveShoppingList } from '../../storage/storage'
 import aiService from '../../api/aiService'
 import { mergePlanDay, buildWeekAiPayload } from '../../utils/plan'
@@ -504,30 +505,32 @@ const getStyles = (theme) =>
       color: theme.colors.textMuted,
       marginTop: 2
     },
-    aiChip: {
-      backgroundColor: 'rgba(34,197,94,0.15)',
-      color: theme.colors.primary,
-      fontSize: 11,
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      borderRadius: 999,
-      overflow: 'hidden'
-    },
-    aiChipEmpty: {
-      backgroundColor: 'rgba(226,232,240,0.05)',
+  aiChip: {
+    backgroundColor: `${theme.colors.accent}18`,
+    color: theme.colors.accent,
+    fontSize: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}55`
+  },
+  aiChipEmpty: {
+    backgroundColor: 'rgba(226,232,240,0.05)',
       color: theme.colors.textMuted
     },
     aiListSections: {
       gap: theme.spacing.md
     },
-    aiListSection: {
-      gap: theme.spacing.xs,
-      backgroundColor: theme.colors.cardSoft,
-      padding: theme.spacing.sm,
-      borderRadius: theme.radius.md,
-      borderWidth: 1,
-      borderColor: theme.colors.border
-    },
+  aiListSection: {
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.cardSoft,
+    padding: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accent, 0.4)
+  },
     aiListSectionTitle: {
       ...theme.typography.body,
       color: theme.colors.text,
@@ -538,25 +541,25 @@ const getStyles = (theme) =>
       gap: 6,
       alignItems: 'flex-start'
     },
-    aiListBullet: {
-      color: theme.colors.primary,
-      fontSize: 14,
-      lineHeight: 18
-    },
+  aiListBullet: {
+    color: theme.colors.accent,
+    fontSize: 14,
+    lineHeight: 18
+  },
     aiListItemText: {
       ...theme.typography.bodySmall,
       color: theme.colors.text,
       flex: 1,
       lineHeight: 18
     },
-    aiNoteBox: {
-      marginTop: theme.spacing.xs,
-      padding: theme.spacing.sm,
-      backgroundColor: 'rgba(56,189,248,0.08)',
-      borderRadius: theme.radius.md,
-      borderWidth: 1,
-      borderColor: 'rgba(56,189,248,0.24)'
-    },
+  aiNoteBox: {
+    marginTop: theme.spacing.xs,
+    padding: theme.spacing.sm,
+    backgroundColor: `${theme.colors.accent}16`,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}55`
+  },
     aiNoteLabel: {
       ...theme.typography.caption,
       color: theme.colors.text,
@@ -598,19 +601,21 @@ const getStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted
     },
-    sectionToggle: {
-      width: 32,
-      height: 32,
-      borderRadius: theme.radius.full,
-      backgroundColor: theme.colors.primarySoft,
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    sectionToggleText: {
-      ...theme.typography.body,
-      color: theme.colors.primary,
-      fontWeight: '700'
-    },
+  sectionToggle: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.radius.full,
+    backgroundColor: `${theme.colors.accent}18`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}55`
+  },
+  sectionToggleText: {
+    ...theme.typography.body,
+    color: theme.colors.accent,
+    fontWeight: '700'
+  },
     categoryCard: {
       backgroundColor: theme.colors.card,
       borderWidth: 1,

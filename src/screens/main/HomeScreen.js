@@ -1552,9 +1552,9 @@ const HomeScreen = ({ navigation }) => {
           showWeekReview ? (
             <View style={styles.weekList}>
               {weekReview.map((item, index) => (
-                <Text key={`${item}-${index}`} style={styles.weekItem}>
-                  {item}
-                </Text>
+                <View key={`${item}-${index}`} style={styles.weekItemBox}>
+                  <Text style={styles.weekItem}>{item}</Text>
+                </View>
               ))}
             </View>
           ) : (
@@ -2116,14 +2116,16 @@ const createStyles = (theme) =>
       minWidth: 40,
       height: 28,
       borderRadius: 999,
-      backgroundColor: 'rgba(15,118,110,.2)',
+      backgroundColor: `${theme.colors.accent}20`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}60`,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 8
     },
     extrasCountText: {
       ...theme.typography.bodySmall,
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       fontWeight: '700'
     },
     extrasList: {
@@ -2332,6 +2334,13 @@ const createStyles = (theme) =>
     weekList: {
       marginTop: theme.spacing.sm,
       gap: theme.spacing.xs
+    },
+    weekItemBox: {
+      backgroundColor: `${theme.colors.accent}12`,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}40`
     },
     weekItem: {
       ...theme.typography.bodySmall,

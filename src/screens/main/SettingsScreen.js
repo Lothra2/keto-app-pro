@@ -761,10 +761,10 @@ const getStyles = (theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: theme.spacing.md,
     alignItems: 'center',
-    height: 56,
+    height: 46,
     justifyContent: 'center'
   },
   optionActive: {
