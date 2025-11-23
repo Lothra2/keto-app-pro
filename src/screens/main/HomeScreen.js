@@ -1842,7 +1842,7 @@ const createStyles = (theme) =>
     },
     cheatKcalRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: theme.spacing.sm
     },
@@ -1864,7 +1864,10 @@ const createStyles = (theme) =>
       borderRadius: theme.radius.md,
       backgroundColor: theme.colors.primary,
       minWidth: 120,
-      alignItems: 'center'
+      minHeight: 52,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'stretch'
     },
     cheatSmallButtonDisabled: {
       opacity: 0.7

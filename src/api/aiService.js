@@ -256,6 +256,22 @@ Responde SOLO en JSON:
     consumedKcal,
   }) {
     const { user, pass } = credentials || {}
+    const normalizeNote = (rawNote) => {
+      if (!rawNote) return ''
+
+      const raw = String(rawNote).trim()
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+      const inner = fenced ? fenced[1].trim() : raw
+
+      try {
+        const parsed = JSON.parse(inner)
+        if (parsed?.note) return String(parsed.note).trim()
+      } catch (_) {
+        // ignore JSON parsing errors for free-form notes
+      }
+
+      return inner.replace(/^json\s*/i, '').trim()
+    }
     const mealNames = {
       desayuno: language === 'en' ? 'breakfast' : 'desayuno',
       snackAM: language === 'en' ? 'morning snack' : 'snack de la mañana',
@@ -288,13 +304,13 @@ Responde SOLO en JSON:
           const parsed = JSON.parse(raw)
           const kcal = Number(parsed?.kcal)
           if (Number.isFinite(kcal) && kcal > 0) {
-            return { kcalEstimate: Math.round(kcal), note: parsed?.note || '' }
+            return { kcalEstimate: Math.round(kcal), note: normalizeNote(parsed?.note || '') }
           }
         } catch (jsonErr) {
           const match = raw.match(/(\d{2,4})/) || []
           const kcal = Number(match[1])
           if (Number.isFinite(kcal) && kcal > 0) {
-            return { kcalEstimate: Math.round(kcal), note: raw }
+            return { kcalEstimate: Math.round(kcal), note: normalizeNote(raw) }
           }
           lastErr = jsonErr
           continue
