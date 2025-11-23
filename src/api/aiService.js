@@ -246,6 +246,90 @@ Responde SOLO en JSON:
     }
   }
 
+  async estimateCheatCalories({
+    mealKey = 'cena',
+    description = '',
+    portion = '',
+    language = 'es',
+    credentials,
+    dayKcal,
+    consumedKcal,
+  }) {
+    const { user, pass } = credentials || {}
+    const normalizeNote = (rawNote) => {
+      if (!rawNote) return ''
+
+      const raw = String(rawNote).trim()
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+      const inner = fenced ? fenced[1].trim() : raw
+
+      try {
+        const parsed = JSON.parse(inner)
+        if (parsed?.note) return String(parsed.note).trim()
+      } catch (_) {
+        // ignore JSON parsing errors for free-form notes
+      }
+
+      return inner.replace(/^json\s*/i, '').trim()
+    }
+    const mealNames = {
+      desayuno: language === 'en' ? 'breakfast' : 'desayuno',
+      snackAM: language === 'en' ? 'morning snack' : 'snack de la mañana',
+      almuerzo: language === 'en' ? 'lunch' : 'almuerzo',
+      snackPM: language === 'en' ? 'afternoon snack' : 'snack de la tarde',
+      cena: language === 'en' ? 'dinner' : 'cena',
+    }
+
+    const safety =
+      language === 'en'
+        ? 'Estimate realistic kcal for the described cheat meal and portion. Use typical keto macros, avoid overestimating. Respond ONLY as JSON with fields {"kcal": number, "note": "short reason"}. If data is unclear, give your best realistic guess between 120 and 950 kcal.'
+        : 'Estima kcal realistas para el cheat descrito y la porción. Usa macros keto típicos y evita sobreestimar. Responde SOLO en JSON con campos {"kcal": número, "note": "razón breve"}. Si falta info, devuelve tu mejor estimación entre 120 y 950 kcal.'
+
+    const prompt = `${safety}\n\nMeal: ${mealNames[mealKey] || mealKey}.\nDescription: ${description}\nPortion: ${portion || 'sin porción declarada'}.\nPlanned day kcal: ${dayKcal || 'n/d'}.\nMeals already consumed: ${consumedKcal || 0} kcal.`
+
+    const candidates = ['cheat-kcal', 'nutrition-kcal', 'meal-kcal', 'chat']
+    let lastErr = null
+    for (const mode of candidates) {
+      try {
+        const data = await callNetlifyAI({
+          mode,
+          user,
+          pass,
+          lang: language,
+          prompt,
+        })
+
+        const raw = data?.text || ''
+        try {
+          const parsed = JSON.parse(raw)
+          const kcal = Number(parsed?.kcal)
+          if (Number.isFinite(kcal) && kcal > 0) {
+            return { kcalEstimate: Math.round(kcal), note: normalizeNote(parsed?.note || '') }
+          }
+        } catch (jsonErr) {
+          const match = raw.match(/(\d{2,4})/) || []
+          const kcal = Number(match[1])
+          if (Number.isFinite(kcal) && kcal > 0) {
+            return { kcalEstimate: Math.round(kcal), note: normalizeNote(raw) }
+          }
+          lastErr = jsonErr
+          continue
+        }
+      } catch (error) {
+        const status = error?.response?.status
+        if (status === 401 || status === 400 || status === 404) {
+          lastErr = error
+          continue
+        }
+        lastErr = error
+        break
+      }
+    }
+
+    console.error('Error estimating cheat kcal:', lastErr)
+    throw lastErr || new Error('Cheat kcal estimation failed')
+  }
+
   /**
    * Genera un día completo con IA
    */
