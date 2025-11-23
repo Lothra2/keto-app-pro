@@ -578,6 +578,8 @@ const HomeScreen = ({ navigation }) => {
         weekNumber: safeWeek,
         derivedPlan,
         language,
+        gender,
+        metrics,
         waterGoal: weeklyWaterGoal,
         startDate: user?.startDate
       });

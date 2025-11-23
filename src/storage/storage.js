@@ -163,6 +163,34 @@ export async function saveCalorieState(dayIndex, state) {
   return await storage.setJSON(DYNAMIC_KEYS.CAL + dayIndex, state);
 }
 
+export async function getCheatMeal(dayIndex) {
+  const storage = new Storage();
+  return await storage.getJSON(DYNAMIC_KEYS.CHEAT + dayIndex, null);
+}
+
+export async function saveCheatMeal(dayIndex, cheatData) {
+  const storage = new Storage();
+  return await storage.setJSON(DYNAMIC_KEYS.CHEAT + dayIndex, cheatData);
+}
+
+export async function clearCheatMeal(dayIndex) {
+  const storage = new Storage();
+  return await storage.remove(DYNAMIC_KEYS.CHEAT + dayIndex);
+}
+
+export async function findCheatInWeek(dayIndex, weekLength = 7) {
+  const start = Math.floor(dayIndex / weekLength) * weekLength;
+  const end = start + weekLength;
+  for (let i = start; i < end; i += 1) {
+    if (i === dayIndex) continue;
+    const stored = await getCheatMeal(i);
+    if (stored && stored.mealKey) {
+      return { dayIndex: i, data: stored };
+    }
+  }
+  return null;
+}
+
 // Marcar comida como completada
 export async function saveMealCompletion(dayIndex, mealKey, completed) {
   const state = await getCalorieState(dayIndex);
