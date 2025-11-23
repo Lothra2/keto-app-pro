@@ -607,7 +607,10 @@ const SettingsScreen = ({ navigation }) => {
   );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme) => {
+  const tileHeight = 46;
+
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.bg
@@ -650,9 +653,10 @@ const getStyles = (theme) => StyleSheet.create({
   button: {
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     alignItems: 'center',
-    minHeight: 56,
+    minHeight: tileHeight,
     justifyContent: 'center'
   },
   buttonDanger: {
@@ -703,12 +707,14 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '700'
   },
   inlineAction: {
-    paddingVertical: 10,
+    paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.primarySoft,
     borderWidth: 1,
     borderColor: theme.colors.primary,
+    minHeight: tileHeight,
+    justifyContent: 'center'
   },
   inlineActionText: {
     ...theme.typography.caption,
@@ -738,6 +744,8 @@ const getStyles = (theme) => StyleSheet.create({
   dateButton: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
+    minHeight: tileHeight,
+    justifyContent: 'center',
     backgroundColor: theme.colors.primarySoft,
     borderRadius: theme.radius.md,
     borderWidth: 1,
@@ -764,7 +772,7 @@ const getStyles = (theme) => StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: theme.spacing.md,
     alignItems: 'center',
-    height: 46,
+    height: tileHeight,
     justifyContent: 'center'
   },
   optionActive: {
@@ -786,6 +794,7 @@ const getStyles = (theme) => StyleSheet.create({
     textAlign: 'center',
     marginTop: theme.spacing.xl
   }
-});
+  });
+};
 
 export default SettingsScreen;
