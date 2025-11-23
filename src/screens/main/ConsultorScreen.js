@@ -13,7 +13,6 @@ import {
   Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import aiService from '../../api/aiService';
@@ -41,7 +40,6 @@ const getWelcomeMessage = (language) => ({
 const ConsultorScreen = () => {
   const { theme: themeMode, language, apiCredentials } = useApp();
   const theme = getTheme(themeMode);
-  const insets = useSafeAreaInsets();
 
   const [messages, setMessages] = useState([getWelcomeMessage(language)]);
   const [input, setInput] = useState('');
@@ -163,15 +161,15 @@ const ConsultorScreen = () => {
     const isDark = theme.mode === 'dark';
 
     return {
-      userBg: isDark ? 'rgba(14,165,233,0.2)' : 'rgba(14,165,233,0.12)',
-      userBorder: isDark ? 'rgba(125,211,252,0.45)' : 'rgba(14,165,233,0.35)',
-      assistantBg: isDark ? 'rgba(15,23,42,0.72)' : theme.colors.surface,
+      userBg: isDark ? 'rgba(90,212,255,0.16)' : 'rgba(11,59,106,0.12)',
+      userBorder: isDark ? 'rgba(90,212,255,0.4)' : 'rgba(11,59,106,0.28)',
+      assistantBg: isDark ? 'rgba(11,18,32,0.75)' : theme.colors.surface,
       assistantBorder: isDark ? 'rgba(148,163,184,0.35)' : theme.colors.border,
       meta: isDark ? 'rgba(226,232,240,0.65)' : 'rgba(15,23,42,0.55)'
     };
   }, [theme]);
 
-  const inputPaddingBottom = Math.max(insets.bottom, 6);
+  const inputPaddingBottom = 12;
   const listBottomSpacing = 44 + keyboardOffset + inputPaddingBottom;
 
   useEffect(() => {
@@ -180,7 +178,7 @@ const ConsultorScreen = () => {
 
     const onShow = (event) => {
       const height = event?.endCoordinates?.height || 0;
-      setKeyboardOffset(Math.max(height - insets.bottom, 0));
+      setKeyboardOffset(Math.max(height, 0));
     };
 
     const onHide = () => {
@@ -194,7 +192,7 @@ const ConsultorScreen = () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [insets.bottom]);
+  }, []);
 
   const renderItem = ({ item }) => {
     const isUser = item.role === 'user';
@@ -237,7 +235,7 @@ const ConsultorScreen = () => {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      keyboardVerticalOffset={0}
     >
       <View style={styles.bannerWrapper}>
         <ScreenBanner
@@ -285,26 +283,37 @@ const ConsultorScreen = () => {
         </ScreenBanner>
       </View>
 
-      <View style={[styles.coachCard, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.coachCardTitle, { color: theme.colors.text }]}>
-          {language === 'en' ? 'Coach tips' : 'Tips del coach'}
-        </Text>
-        <Text style={[styles.coachCardSubtitle, { color: theme.colors.textMuted }]}>
-          {language === 'en'
-            ? 'Ask for form cues, lighter meals or quick swaps. The coach will adapt to your gear and schedule.'
-            : 'Pídele cues de técnica, comidas más ligeras o swaps rápidos. El coach se adapta a tu equipo y tiempo.'}
-        </Text>
-        <View style={styles.coachCardRow}>
-          <View style={[styles.coachBadge, { backgroundColor: theme.colors.primarySoft }]}> 
-            <Text style={[styles.coachBadgeText, { color: theme.colors.primary }]}>{language === 'en' ? 'New' : 'Nuevo'}</Text>
-          </View>
-          <Text style={[styles.coachCardHint, { color: theme.colors.text }]}>
-            {language === 'en'
-              ? 'Tap a quick prompt below or request more detail on an exercise.'
-              : 'Toca un prompt rápido abajo o pide más detalle de un ejercicio.'}
+      <LinearGradient
+        colors={
+          theme.mode === 'dark'
+            ? ['rgba(11,59,106,0.4)', 'rgba(10,18,32,0.75)']
+            : ['rgba(11,59,106,0.12)', 'rgba(255,255,255,0.92)']
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.coachCard, { borderColor: theme.colors.border, shadowColor: theme.colors.primary }]}
+      >
+        <View style={styles.coachCardContent}>
+          <Text style={[styles.coachCardTitle, { color: theme.colors.text }]}>
+            {language === 'en' ? 'Coach tips' : 'Tips del coach'}
           </Text>
+          <Text style={[styles.coachCardSubtitle, { color: theme.colors.textMuted }]}>
+            {language === 'en'
+              ? 'Ask for form cues, lighter meals or quick swaps. The coach will adapt to your gear and schedule.'
+              : 'Pídele cues de técnica, comidas más ligeras o swaps rápidos. El coach se adapta a tu equipo y tiempo.'}
+          </Text>
+          <View style={styles.coachCardRow}>
+            <View style={[styles.coachBadge, { backgroundColor: theme.colors.primarySoft }]}>
+              <Text style={[styles.coachBadgeText, { color: theme.colors.primary }]}>{language === 'en' ? 'New' : 'Nuevo'}</Text>
+            </View>
+            <Text style={[styles.coachCardHint, { color: theme.colors.text }]}>
+              {language === 'en'
+                ? 'Tap a quick prompt below or request more detail on an exercise.'
+                : 'Toca un prompt rápido abajo o pide más detalle de un ejercicio.'}
+            </Text>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* chips rápidos */}
       <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
@@ -384,8 +393,8 @@ const ConsultorScreen = () => {
       <LinearGradient
         colors={
           theme.mode === 'dark'
-            ? ['rgba(15,23,42,0.92)', 'rgba(15,23,42,0.86)']
-            : ['rgba(255,255,255,0.97)', 'rgba(248,250,252,0.92)']
+            ? ['rgba(11,18,32,0.95)', 'rgba(11,59,106,0.6)']
+            : ['rgba(255,255,255,0.97)', 'rgba(90,212,255,0.16)']
         }
         style={[
           styles.inputBar,
@@ -492,15 +501,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 6,
     marginBottom: 10,
-    padding: 14,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.24)',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    elevation: 6,
+  },
+  coachCardContent: {
+    padding: 16,
     gap: 6,
   },
   coachCardTitle: {
@@ -536,8 +545,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   quickRow: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 12,
+    borderRadius: 16,
   },
   quickContent: {
     paddingHorizontal: 16,
