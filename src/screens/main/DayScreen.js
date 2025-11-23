@@ -307,6 +307,13 @@ const DayScreen = ({ navigation }) => {
   ];
 
   const displayGoalKcal = calorieInfo.goal || dayData?.dynamicKcal || dayData?.kcal;
+  const cheatLabel = cheatMeal
+    ? `${language === 'en' ? 'Cheat' : 'Cheat'} · ${
+        meals.find((m) => m.key === cheatMeal.mealKey)?.title || cheatMeal.mealKey
+      }${cheatMeal.kcalEstimate ? ` · ${cheatMeal.kcalEstimate} kcal` : ''}`
+    : language === 'en'
+    ? 'Plan your 1x/week cheat and we rebalance the day.'
+    : 'Agenda tu cheat 1x/semana y reequilibramos el día.';
 
   return (
     <View style={styles.container}>
@@ -355,6 +362,9 @@ const DayScreen = ({ navigation }) => {
             <Text style={styles.macroText}>C {dayData.macros?.carbs}</Text>
             <Text style={styles.macroText}>P {dayData.macros?.prot}</Text>
             <Text style={styles.macroText}>G {dayData.macros?.fat}</Text>
+          </View>
+          <View style={[styles.inlineCheat, cheatMeal && styles.inlineCheatActive]}>
+            <Text style={[styles.inlineCheatText, cheatMeal && styles.inlineCheatTextActive]}>{cheatLabel}</Text>
           </View>
         </View>
 
@@ -508,6 +518,27 @@ const getStyles = (theme) => StyleSheet.create({
   },
   header: {
     marginBottom: theme.spacing.lg
+  },
+  inlineCheat: {
+    marginTop: theme.spacing.xs,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: theme.radius.full,
+    backgroundColor: theme.colors.cardSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.border
+  },
+  inlineCheatActive: {
+    backgroundColor: theme.colors.primarySoft,
+    borderColor: theme.colors.primary
+  },
+  inlineCheatText: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    fontWeight: '600'
+  },
+  inlineCheatTextActive: {
+    color: theme.colors.primary
   },
   toolsRow: {
     marginBottom: theme.spacing.lg,

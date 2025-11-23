@@ -173,6 +173,10 @@ const WorkoutScreen = ({ route, navigation }) => {
         }
       })
 
+      if (!Array.isArray(exercises) || exercises.length === 0) {
+        throw new Error('Empty workout from AI')
+      }
+
       const reference = getWorkoutForDay(language, Math.floor(safeActiveDay / 7) + 1, safeActiveDay % 7)
       const { baseEstimatedKcal: baseForDay, aiEstimatedKcal: computedAiKcal } = calculateEstimatedWorkoutKcal({
         exercises,
@@ -195,7 +199,11 @@ const WorkoutScreen = ({ route, navigation }) => {
       })
     } catch (error) {
       console.error('Error generating workout:', error)
-      alert(language === 'en' ? 'Error generating workout' : 'Error generando entreno')
+      alert(
+        language === 'en'
+          ? 'We could not build the workout. Try again or adjust intensity.'
+          : 'No pudimos generar el entreno. Intenta de nuevo o ajusta la intensidad.'
+      )
     } finally {
       setLoading(false)
       setLoadingType(null)
@@ -237,6 +245,10 @@ const WorkoutScreen = ({ route, navigation }) => {
             age: metrics.age || 30
           }
         })
+
+        if (!Array.isArray(exercises) || exercises.length === 0) {
+          throw new Error('Empty workout from AI')
+        }
         const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
         const { baseEstimatedKcal: baseForDay, aiEstimatedKcal: computedAiKcal } = calculateEstimatedWorkoutKcal({
           exercises,

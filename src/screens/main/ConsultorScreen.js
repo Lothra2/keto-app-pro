@@ -371,7 +371,7 @@ const ConsultorScreen = () => {
         renderItem={renderItem}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: 120 + insets.bottom + keyboardOffset },
+          { paddingBottom: 96 + insets.bottom + keyboardOffset },
         ]}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         keyboardShouldPersistTaps="handled"
@@ -393,7 +393,7 @@ const ConsultorScreen = () => {
             shadowRadius: 18,
             shadowOffset: { width: 0, height: -6 },
             elevation: 10,
-            paddingBottom: 12 + insets.bottom,
+            paddingBottom: 8 + insets.bottom,
             bottom: keyboardOffset,
           },
         ]}
@@ -580,8 +580,8 @@ const styles = StyleSheet.create({
   image: { width: 240, height: 240, borderRadius: 14, marginBottom: 4 },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 120,
-    paddingTop: 12,
+    paddingBottom: 96,
+    paddingTop: 8,
   },
   inputBar: {
     position: 'absolute',
@@ -591,7 +591,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 8,
   },
   input: {

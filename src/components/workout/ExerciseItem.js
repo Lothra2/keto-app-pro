@@ -10,18 +10,17 @@ const ExerciseItem = ({ exercise, onPress }) => {
 
   if (!exercise) return null;
 
-  const infoLines = [
-    exercise.descripcion && { icon: '📋', text: exercise.descripcion },
-    exercise.detalle && { icon: '🧠', text: exercise.detalle },
-    exercise.duracion && {
-      icon: '⏱️',
-      text: `${language === 'en' ? 'Duration' : 'Duración'}: ${exercise.duracion}`
-    },
-    exercise.descanso && {
-      icon: '🧘',
-      text: `${language === 'en' ? 'Rest' : 'Descanso'}: ${exercise.descanso}`
-    },
-    exercise.notas && { icon: '✨', text: exercise.notas }
+  const shortText = (value = '') => {
+    if (value.length <= 110) return value;
+    return `${value.slice(0, 107)}…`;
+  };
+
+  const previewText =
+    exercise.descripcion || exercise.detalle || exercise.notas || '';
+
+  const badges = [
+    exercise.duracion && `${language === 'en' ? 'Duration' : 'Duración'} · ${exercise.duracion}`,
+    exercise.descanso && `${language === 'en' ? 'Rest' : 'Descanso'} · ${exercise.descanso}`
   ].filter(Boolean);
 
   return (
@@ -37,12 +36,16 @@ const ExerciseItem = ({ exercise, onPress }) => {
           <Text style={styles.series}>{exercise.series}</Text>
         ) : null}
       </View>
-      {infoLines.length ? (
-        <View style={styles.infoList}>
-          {infoLines.map((line, index) => (
-            <View key={`${line.icon}-${index}`} style={styles.infoRow}>
-              <Text style={styles.infoIcon}>{line.icon}</Text>
-              <Text style={styles.infoText}>{line.text}</Text>
+      {previewText ? (
+        <View style={styles.previewBox}>
+          <Text style={styles.previewText}>{shortText(previewText)}</Text>
+        </View>
+      ) : null}
+      {badges.length ? (
+        <View style={styles.badgeRow}>
+          {badges.map((badge, index) => (
+            <View key={`${badge}-${index}`} style={styles.badge}>
+              <Text style={styles.badgeText}>{badge}</Text>
             </View>
           ))}
         </View>
@@ -81,23 +84,36 @@ const getStyles = (theme) =>
       ...theme.typography.caption,
       color: theme.colors.textMuted
     },
-    infoList: {
-      gap: 4
+    previewBox: {
+      backgroundColor: theme.colors.card,
+      borderRadius: theme.radius.sm,
+      padding: theme.spacing.xs,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginTop: theme.spacing.xs
     },
-    infoRow: {
+    previewText: {
+      ...theme.typography.caption,
+      color: theme.colors.text
+    },
+    badgeRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 6
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: theme.spacing.xs
     },
-    infoIcon: {
-      fontSize: 12,
-      lineHeight: 18
+    badge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: theme.radius.full,
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border
     },
-    infoText: {
+    badgeText: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
-      flex: 1,
-      lineHeight: 18
+      fontWeight: '600'
     },
     detailHint: {
       ...theme.typography.caption,

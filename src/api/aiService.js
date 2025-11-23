@@ -410,23 +410,40 @@ Responde SOLO en JSON:
 
     const prompt =
       language === 'en'
-        ? `Return a JSON with field "ejercicios" for day ${dayIndex + 1} (week ${weekNumber}) of a ${intensityMap[intensity]}. This must be a bodyweight-only workout, no equipment. User data: height ${height} cm, weight ${weight} kg, age ${age}. Each item must include: {"nombre": short name, "series": "3 x 12" or time, "descripcion": concise how-to, "detalle": 2 technique cues and breathing, "errores": common mistakes, "regresion": easy regression, "progresion": harder option}. English.`
-        : `Devuelve un JSON con campo "ejercicios" para el día ${dayIndex + 1} (semana ${weekNumber}) de un entreno ${intensityMap[intensity]}. Debe ser SOLO con peso corporal, sin equipos. Datos usuario: estatura ${height} cm, peso ${weight} kg, edad ${age}. Cada ítem incluye: {"nombre": nombre corto, "series": "3 x 12" o tiempo, "descripcion": cómo hacerlo en breve, "detalle": 2 cues técnicos y respiración, "errores": errores comunes, "regresion": versión fácil, "progresion": versión difícil}. Español.`
+        ? `Return a JSON with field "ejercicios" for day ${dayIndex + 1} (week ${weekNumber}) of a ${intensityMap[intensity]}. This must be a bodyweight-only workout, no equipment. User data: height ${height} cm, weight ${weight} kg, age ${age}. Each item must include: {"nombre": short name, "series": "3 x 12" or time, "descripcion": concise how-to, "detalle": 2 technique cues and breathing, "errores": common mistakes, "regresion": easy regression, "progresion": harder option}. Keep descriptions short (max 25 words) and return 5-7 exercises. English. Respond ONLY in JSON.`
+        : `Devuelve un JSON con campo "ejercicios" para el día ${dayIndex + 1} (semana ${weekNumber}) de un entreno ${intensityMap[intensity]}. Debe ser SOLO con peso corporal, sin equipos. Datos usuario: estatura ${height} cm, peso ${weight} kg, edad ${age}. Cada ítem incluye: {"nombre": nombre corto, "series": "3 x 12" o tiempo, "descripcion": cómo hacerlo en breve, "detalle": 2 cues técnicos y respiración, "errores": errores comunes, "regresion": versión fácil, "progresion": versión difícil}. Sé breve (máx 25 palabras) y devuelve 5-7 ejercicios. Español. Responde SOLO en JSON.`
 
-    try {
-      const data = await callNetlifyAI({
-        mode: 'workout-day',
-        user,
-        pass,
-        lang: language,
-        prompt
-      })
+    const candidates = ['workout-day', 'workout', 'workout-plan', 'workouts', 'fitness']
+    let lastErr = null
 
-      return this.parseWorkoutResponse(data, language)
-    } catch (error) {
-      console.error('Error generating workout:', error)
-      throw error
+    for (const mode of candidates) {
+      try {
+        const data = await callNetlifyAI({
+          mode,
+          user,
+          pass,
+          lang: language,
+          prompt
+        })
+
+        const parsed = this.parseWorkoutResponse(data, language)
+        if (parsed.length) {
+          return parsed
+        }
+        lastErr = new Error('Empty workout list')
+      } catch (error) {
+        const status = error?.response?.status
+        if (status === 401 || status === 400 || status === 404) {
+          lastErr = error
+          continue
+        }
+        lastErr = error
+        break
+      }
     }
+
+    console.error('Error generating workout:', lastErr)
+    throw lastErr || new Error('Workout generation failed')
   }
 
   async generateWeekReview({ weekNumber, days, language, credentials }) {
