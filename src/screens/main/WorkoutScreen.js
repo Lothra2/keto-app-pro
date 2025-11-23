@@ -897,14 +897,16 @@ const getStyles = theme => StyleSheet.create({
     color: theme.colors.text
   },
   focusBadge: {
-    backgroundColor: theme.colors.primarySoft,
+    backgroundColor: `${theme.colors.accent}18`,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
-    borderRadius: theme.radius.full
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}55`
   },
   focusBadgeText: {
     ...theme.typography.caption,
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontWeight: '600'
   },
   focusDescription: {
@@ -937,11 +939,13 @@ const getStyles = theme => StyleSheet.create({
   },
   intensityBadge: {
     ...theme.typography.caption,
-    color: theme.colors.primary,
-    backgroundColor: theme.colors.primarySoft,
+    color: theme.colors.accent,
+    backgroundColor: `${theme.colors.accent}18`,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
-    borderRadius: theme.radius.full
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}55`
   },
   intensityRow: {
     flexDirection: 'row',
@@ -956,8 +960,8 @@ const getStyles = theme => StyleSheet.create({
     paddingHorizontal: theme.spacing.md
   },
   intensityChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent
   },
   intensityChipText: {
     ...theme.typography.bodySmall,

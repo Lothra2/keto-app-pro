@@ -77,7 +77,7 @@ const getStyles = (theme) =>
       backgroundColor: theme.colors.primary
     },
     overlayFill: {
-      backgroundColor: 'rgba(16,185,129,0.9)'
+      backgroundColor: theme.colors.accent
     },
     percent: {
       ...theme.typography.caption,

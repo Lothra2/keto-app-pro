@@ -20,6 +20,7 @@ const Tab = createBottomTabNavigator();
 const TabIcon = ({ emoji, focused }) => {
   const { theme: themeMode } = useApp();
   const theme = getTheme(themeMode);
+  const focusColor = theme.colors.accent || theme.colors.primary;
 
   return (
     <View
@@ -27,11 +28,9 @@ const TabIcon = ({ emoji, focused }) => {
         styles.iconContainer,
         {
           backgroundColor: focused
-            ? theme.mode === 'dark'
-              ? `${theme.colors.accent}24`
-              : `${theme.colors.primary}14`
-            : 'transparent',
-          borderColor: focused ? theme.colors.accent || theme.colors.primary : 'transparent',
+            ? `${focusColor}20`
+            : theme.colors.cardSoft,
+          borderColor: focused ? `${focusColor}80` : 'transparent',
         },
       ]}
     >
@@ -39,7 +38,7 @@ const TabIcon = ({ emoji, focused }) => {
         colors={
           focused
             ? [
-                `${theme.colors.accent}d9`,
+                `${focusColor}cc`,
                 theme.colors.primary,
               ]
             : ['transparent', 'transparent']
@@ -72,16 +71,18 @@ const TabNavigator = () => {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          left: 12,
-          right: 12,
-          bottom: 12,
-          height: 78,
-          paddingBottom: 12,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 82,
+          paddingBottom: 14,
           paddingTop: 12,
           borderTopWidth: 0,
-          borderRadius: 22,
-          overflow: 'visible',
-          backgroundColor: theme.mode === 'dark' ? 'rgba(10,16,30,0.82)' : 'rgba(255,255,255,0.9)',
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          overflow: 'hidden',
+          backgroundColor:
+            theme.mode === 'dark' ? 'rgba(10,16,30,0.72)' : 'rgba(255,255,255,0.82)',
           shadowColor: theme.colors.accent || theme.colors.primary,
           shadowOpacity: 0.22,
           shadowRadius: 24,
@@ -100,8 +101,8 @@ const TabNavigator = () => {
             <LinearGradient
               colors={
                 theme.mode === 'dark'
-                  ? [`${theme.colors.accent}0f`, 'rgba(11,17,32,0.6)']
-                  : [`${theme.colors.primary}14`, 'rgba(255,255,255,0.5)']
+                  ? [`${theme.colors.accent}0f`, 'rgba(11,17,32,0.5)']
+                  : [`${theme.colors.accent}18`, 'rgba(255,255,255,0.4)']
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -177,14 +178,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    borderRadius: 18,
+    borderRadius: 24,
     borderWidth: 1,
-    minWidth: 56,
-    minHeight: 56,
+    minWidth: 58,
+    minHeight: 58,
+    overflow: 'hidden',
   },
   iconGlow: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
+    opacity: 0.85,
+    borderRadius: 24,
   },
   emoji: {
     fontSize: 22,
