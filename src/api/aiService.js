@@ -405,8 +405,8 @@ Responde SOLO en JSON:
 
     const prompt =
       language === 'en'
-        ? `Return a JSON with field "ejercicios" for day ${dayIndex + 1} (week ${weekNumber}) of a ${intensityMap[intensity]}. This must be a bodyweight-only workout, no equipment. User data: height ${height} cm, weight ${weight} kg, age ${age}. Each item: {"nombre": short name, "series": "3 x 12" or time, "descripcion": very short tip}. English.`
-        : `Devuelve un JSON con campo "ejercicios" para el día ${dayIndex + 1} (semana ${weekNumber}) de un entreno ${intensityMap[intensity]}. Debe ser SOLO con peso corporal, sin equipos. Datos usuario: estatura ${height} cm, peso ${weight} kg, edad ${age}. Cada ítem: {"nombre": nombre corto, "series": "3 x 12" o tiempo, "descripcion": tip muy corto}. Español.`
+        ? `Return a JSON with field "ejercicios" for day ${dayIndex + 1} (week ${weekNumber}) of a ${intensityMap[intensity]}. This must be a bodyweight-only workout, no equipment. User data: height ${height} cm, weight ${weight} kg, age ${age}. Each item must include: {"nombre": short name, "series": "3 x 12" or time, "descripcion": concise how-to, "detalle": 2 technique cues and breathing, "errores": common mistakes, "regresion": easy regression, "progresion": harder option}. English.`
+        : `Devuelve un JSON con campo "ejercicios" para el día ${dayIndex + 1} (semana ${weekNumber}) de un entreno ${intensityMap[intensity]}. Debe ser SOLO con peso corporal, sin equipos. Datos usuario: estatura ${height} cm, peso ${weight} kg, edad ${age}. Cada ítem incluye: {"nombre": nombre corto, "series": "3 x 12" o tiempo, "descripcion": cómo hacerlo en breve, "detalle": 2 cues técnicos y respiración, "errores": errores comunes, "regresion": versión fácil, "progresion": versión difícil}. Español.`
 
     try {
       const data = await callNetlifyAI({
@@ -711,6 +711,10 @@ Responde SOLO en JSON:
       .map((w) => {
         const rest = w.descanso || w.rest || w.restTime || w.resting || ''
         const detail = w.detalle || w.detalles || w.detail || w.how || ''
+        const breathing = w.respiracion || w.breathing || ''
+        const mistakes = w.errores || w.mistakes || ''
+        const regression = w.regresion || w.regression || ''
+        const progression = w.progresion || w.progression || ''
         const duration = w.duracion || w.tiempo || w.duration || ''
         const notes = w.notas || w.notes || ''
 
@@ -719,6 +723,10 @@ Responde SOLO en JSON:
           series: w.series || w.reps || (language === 'en' ? '3 sets' : '3 series'),
           descripcion: w.descripcion || w.desc || '',
           detalle: detail,
+          respiracion: breathing,
+          errores: mistakes,
+          regresion: regression,
+          progresion: progression,
           descanso: rest,
           duracion: duration,
           notas: notes

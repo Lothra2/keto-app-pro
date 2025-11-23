@@ -17,6 +17,24 @@ const femaleMealDistribution = {
   cena: 0.20
 };
 
+export function calculateDynamicDailyKcal({ baseKcal = 1600, gender = 'male', metrics = {}, cheatKcal = 0 }) {
+  const bmr = calculateBMR(metrics.height, metrics.startWeight, metrics.age, gender === 'male');
+  const intensity = metrics.workoutIntensity || 'medium';
+  const activityMap = { soft: 'light', medium: 'moderate', hard: 'active' };
+  const tdee = bmr ? calculateTDEE(bmr, activityMap[intensity] || 'moderate') : null;
+
+  const target = tdee ? Math.round(tdee * 0.8) : baseKcal;
+  const blended = Math.round(baseKcal * 0.4 + target * 0.6);
+
+  const guardrails = gender === 'female' ? { min: 1200, max: 2800 } : { min: 1400, max: 3200 };
+  const safeBase = clamp(blended || baseKcal, guardrails.min, guardrails.max);
+
+  if (!cheatKcal || cheatKcal <= 0) return safeBase;
+
+  const compensated = safeBase + Math.round(cheatKcal * 0.6);
+  return clamp(compensated, guardrails.min, guardrails.max + 300);
+}
+
 /**
  * Construir plan extendido (2, 3 o 4 semanas)
  */

@@ -494,6 +494,31 @@ const WorkoutScreen = ({ route, navigation }) => {
       })
     }
 
+    if (detailExercise.respiracion) {
+      sections.push({
+        label: language === 'en' ? 'Breathing' : 'Respiración',
+        value: detailExercise.respiracion
+      })
+    }
+
+    if (detailExercise.errores) {
+      sections.push({
+        label: language === 'en' ? 'Avoid' : 'Evita',
+        value: detailExercise.errores
+      })
+    }
+
+    if (detailExercise.regresion || detailExercise.progresion) {
+      const easier = detailExercise.regresion
+      const harder = detailExercise.progresion
+      sections.push({
+        label: language === 'en' ? 'Progression / regression' : 'Progresión / regresión',
+        value: [easier && `${language === 'en' ? 'Easier: ' : 'Fácil: '}${easier}`, harder && `${language === 'en' ? 'Harder: ' : 'Difícil: '}${harder}`]
+          .filter(Boolean)
+          .join('\n')
+      })
+    }
+
     const intensityName = intensityLabels[selectedIntensity] || intensityLabels.medium
     const intensityTip =
       language === 'en'
