@@ -651,7 +651,9 @@ const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
-    alignItems: 'center'
+    alignItems: 'center',
+    minHeight: 56,
+    justifyContent: 'center'
   },
   buttonDanger: {
     backgroundColor: theme.colors.danger
