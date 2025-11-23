@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 import WeekSelector from '../../components/progress/WeekSelector';
 import DayPills from '../../components/progress/DayPills';
 import CalorieBar from '../../components/meals/CalorieBar';
@@ -1667,7 +1668,7 @@ const createStyles = (theme) =>
       backgroundColor: 'rgba(15,23,42,0.35)'
     },
     bannerToggleActive: {
-      backgroundColor: 'rgba(34,197,94,0.3)'
+      backgroundColor: withAlpha(theme.colors.success, 0.3)
     },
     bannerToggleText: {
       ...theme.typography.caption,
@@ -2029,11 +2030,11 @@ const createStyles = (theme) =>
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
-      backgroundColor: theme.mode === 'dark' ? 'rgba(45,212,191,0.25)' : 'rgba(45,212,191,0.18)'
+      backgroundColor: withAlpha(theme.colors.success, theme.mode === 'dark' ? 0.28 : 0.18)
     },
     tipBadgeText: {
       ...theme.typography.caption,
-      color: theme.mode === 'dark' ? '#5eead4' : '#0f766e',
+      color: theme.colors.success,
       fontWeight: '600'
     },
     waterCard: {
@@ -2170,11 +2171,11 @@ const createStyles = (theme) =>
       padding: theme.spacing.md,
       gap: theme.spacing.sm,
       borderWidth: 1,
-      borderColor: 'rgba(226,232,240,0.02)'
+      borderColor: withAlpha(theme.colors.border, 0.6)
     },
     mealCardDone: {
-      borderColor: 'rgba(34,197,94,0.5)',
-      backgroundColor: 'rgba(34,197,94,0.03)'
+      borderColor: withAlpha(theme.colors.success, 0.55),
+      backgroundColor: withAlpha(theme.colors.success, 0.08)
     },
     mealHeaderRow: {
       flexDirection: 'row',
@@ -2185,7 +2186,7 @@ const createStyles = (theme) =>
       width: 44,
       height: 44,
       borderRadius: 16,
-      backgroundColor: 'rgba(15,118,110,0.15)',
+      backgroundColor: withAlpha(theme.colors.primary, 0.16),
       alignItems: 'center',
       justifyContent: 'center'
     },
@@ -2333,7 +2334,7 @@ const createStyles = (theme) =>
       color: theme.colors.text
     },
     completeButton: {
-      backgroundColor: 'rgba(34,197,94,0.25)',
+      backgroundColor: withAlpha(theme.colors.success, 0.25),
       borderRadius: theme.radius.md,
       paddingVertical: theme.spacing.md,
       alignItems: 'center',
@@ -2341,7 +2342,7 @@ const createStyles = (theme) =>
       marginBottom: theme.spacing.lg
     },
     completeButtonDone: {
-      backgroundColor: 'rgba(34,197,94,0.45)'
+      backgroundColor: withAlpha(theme.colors.success, 0.45)
     },
     completeButtonText: {
       ...theme.typography.body,

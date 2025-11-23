@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 import MealList from '../../components/meals/MealList';
 import CalorieBar from '../../components/meals/CalorieBar';
 import WeekSelector from '../../components/progress/WeekSelector';
@@ -549,7 +550,7 @@ const getStyles = (theme) => StyleSheet.create({
     paddingVertical: 12,
     borderRadius: theme.radius.md,
     alignItems: 'center',
-    shadowColor: '#0f766e',
+    shadowColor: theme.colors.primary,
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
@@ -640,7 +641,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: theme.radius.sm,
     padding: theme.spacing.sm,
     alignItems: 'center',
-    shadowColor: '#0f766e',
+    shadowColor: theme.colors.primary,
     shadowOpacity: 0.18,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -772,7 +773,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: theme.radius.sm,
     paddingVertical: 10,
     alignItems: 'center',
-    shadowColor: '#0f766e',
+    shadowColor: theme.colors.primary,
     shadowOpacity: 0.14,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 4 },
@@ -801,13 +802,13 @@ const getStyles = (theme) => StyleSheet.create({
     marginBottom: theme.spacing.lg
   },
   completeButton: {
-    backgroundColor: 'rgba(34,197,94,0.3)',
+    backgroundColor: withAlpha(theme.colors.success, 0.32),
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
     alignItems: 'center'
   },
   completeButtonDone: {
-    backgroundColor: 'rgba(34,197,94,0.6)'
+    backgroundColor: withAlpha(theme.colors.success, 0.6)
   },
   completeButtonText: {
     ...theme.typography.body,

@@ -104,6 +104,16 @@ const SettingsScreen = ({ navigation }) => {
     await updateSettings('theme', newTheme);
   };
 
+  const themeLabel = useMemo(() => {
+    if (themeMode === 'light') {
+      return language === 'en' ? 'Light' : 'Claro';
+    }
+    if (themeMode === 'navy') {
+      return language === 'en' ? 'Navy' : 'Azul marino';
+    }
+    return language === 'en' ? 'Dark' : 'Oscuro';
+  }, [language, themeMode]);
+
   const handleSaveFoodPrefs = async () => {
     await updateFoodPrefs(likeFoods, dislikeFoods);
     Alert.alert(
@@ -211,12 +221,8 @@ const SettingsScreen = ({ navigation }) => {
         }
         description={
           language === 'en'
-            ? `Language: ${language === 'en' ? 'English' : 'Español'} · Theme: ${
-                themeMode === 'dark' ? 'Dark' : 'Light'
-              }`
-            : `Idioma: ${language === 'en' ? 'English' : 'Español'} · Tema: ${
-                themeMode === 'dark' ? 'Oscuro' : 'Claro'
-              }`
+            ? `Language: ${language === 'en' ? 'English' : 'Español'} · Theme: ${themeLabel}`
+            : `Idioma: ${language === 'en' ? 'English' : 'Español'} · Tema: ${themeLabel}`
         }
         badge={
           user?.name
@@ -284,7 +290,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, language === 'es' && styles.optionActive]}
             onPress={() => handleChangeLanguage('es')}
           >
-            <Text style={[styles.optionText, language === 'es' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, language === 'es' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Español
             </Text>
           </TouchableOpacity>
@@ -292,7 +302,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, language === 'en' && styles.optionActive]}
             onPress={() => handleChangeLanguage('en')}
           >
-            <Text style={[styles.optionText, language === 'en' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, language === 'en' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               English
             </Text>
           </TouchableOpacity>
@@ -314,7 +328,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, gender === 'male' && styles.optionActive]}
             onPress={() => handleChangeGender('male')}
           >
-            <Text style={[styles.optionText, gender === 'male' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, gender === 'male' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {language === 'en' ? 'Male' : 'Hombre'}
             </Text>
           </TouchableOpacity>
@@ -322,7 +340,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, gender === 'female' && styles.optionActive]}
             onPress={() => handleChangeGender('female')}
           >
-            <Text style={[styles.optionText, gender === 'female' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, gender === 'female' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {language === 'en' ? 'Female' : 'Mujer'}
             </Text>
           </TouchableOpacity>
@@ -344,7 +366,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, planWeeks === 2 && styles.optionActive]}
             onPress={() => handleChangePlanWeeks(2)}
           >
-            <Text style={[styles.optionText, planWeeks === 2 && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, planWeeks === 2 && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               2 {language === 'en' ? 'weeks' : 'semanas'}
             </Text>
           </TouchableOpacity>
@@ -352,7 +378,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, planWeeks === 3 && styles.optionActive]}
             onPress={() => handleChangePlanWeeks(3)}
           >
-            <Text style={[styles.optionText, planWeeks === 3 && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, planWeeks === 3 && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               3 {language === 'en' ? 'weeks' : 'semanas'}
             </Text>
           </TouchableOpacity>
@@ -360,7 +390,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, planWeeks === 4 && styles.optionActive]}
             onPress={() => handleChangePlanWeeks(4)}
           >
-            <Text style={[styles.optionText, planWeeks === 4 && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, planWeeks === 4 && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               4 {language === 'en' ? 'weeks' : 'semanas'}
             </Text>
           </TouchableOpacity>
@@ -442,7 +476,11 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, themeMode === 'dark' && styles.optionActive]}
             onPress={() => handleChangeTheme('dark')}
           >
-            <Text style={[styles.optionText, themeMode === 'dark' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, themeMode === 'dark' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               🌙 {language === 'en' ? 'Dark' : 'Oscuro'}
             </Text>
           </TouchableOpacity>
@@ -450,8 +488,24 @@ const SettingsScreen = ({ navigation }) => {
             style={[styles.option, themeMode === 'light' && styles.optionActive]}
             onPress={() => handleChangeTheme('light')}
           >
-            <Text style={[styles.optionText, themeMode === 'light' && styles.optionTextActive]}>
+            <Text
+              style={[styles.optionText, themeMode === 'light' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               ☀️ {language === 'en' ? 'Light' : 'Claro'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.option, themeMode === 'navy' && styles.optionActive]}
+            onPress={() => handleChangeTheme('navy')}
+          >
+            <Text
+              style={[styles.optionText, themeMode === 'navy' && styles.optionTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              💎 {language === 'en' ? 'Navy' : 'Azul marino'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -694,25 +748,31 @@ const getStyles = (theme) => StyleSheet.create({
   },
   optionsRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap',
+    alignItems: 'stretch'
   },
   option: {
     flex: 1,
+    minWidth: '30%',
     backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    alignItems: 'center'
+    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.md,
+    alignItems: 'center',
+    height: 56,
+    justifyContent: 'center'
   },
   optionActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary
   },
   optionText: {
-    ...theme.typography.body,
+    ...theme.typography.bodySmall,
     color: theme.colors.text,
-    fontWeight: '500'
+    fontWeight: '600'
   },
   optionTextActive: {
     color: '#fff',
