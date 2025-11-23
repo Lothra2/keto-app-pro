@@ -18,7 +18,7 @@ import {
   getLocalMealTip,
   getMotivationalMessage
 } from '../../data/tips'
-import { getMealDistribution } from '../../utils/calculations'
+import { calculateDynamicDailyKcal, getMealDistribution } from '../../utils/calculations'
 
 const mealLabels = {
   desayuno: { es: 'Desayuno', en: 'Breakfast' },
@@ -37,7 +37,8 @@ const MealGeneratorModal = ({ route, navigation }) => {
     gender,
     foodPrefs,
     apiCredentials,
-    user
+    user,
+    metrics
   } = useApp()
 
   const theme = getTheme(themeMode)
@@ -179,9 +180,15 @@ const MealGeneratorModal = ({ route, navigation }) => {
 
     if (isFullDay) {
       updated = { ...baseData, ...result, isAI: true }
+      const dynamicGoal = calculateDynamicDailyKcal({
+        baseKcal: result.kcal || baseDay.kcal || 1600,
+        gender,
+        metrics,
+        cheatKcal: 0
+      })
       await saveCalorieState(dayIndex, {
         ...(calorieState || {}),
-        goal: result.kcal || baseDay.kcal || 1600
+        goal: dynamicGoal
       })
     } else if (mealKey) {
       updated = {

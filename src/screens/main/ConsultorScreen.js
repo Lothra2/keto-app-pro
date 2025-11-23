@@ -282,6 +282,27 @@ const ConsultorScreen = () => {
         </ScreenBanner>
       </View>
 
+      <View style={[styles.coachCard, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.coachCardTitle, { color: theme.colors.text }]}>
+          {language === 'en' ? 'Coach tips' : 'Tips del coach'}
+        </Text>
+        <Text style={[styles.coachCardSubtitle, { color: theme.colors.textMuted }]}>
+          {language === 'en'
+            ? 'Ask for form cues, lighter meals or quick swaps. The coach will adapt to your gear and schedule.'
+            : 'Pídele cues de técnica, comidas más ligeras o swaps rápidos. El coach se adapta a tu equipo y tiempo.'}
+        </Text>
+        <View style={styles.coachCardRow}>
+          <View style={[styles.coachBadge, { backgroundColor: theme.colors.primarySoft }]}> 
+            <Text style={[styles.coachBadgeText, { color: theme.colors.primary }]}>{language === 'en' ? 'New' : 'Nuevo'}</Text>
+          </View>
+          <Text style={[styles.coachCardHint, { color: theme.colors.text }]}>
+            {language === 'en'
+              ? 'Tap a quick prompt below or request more detail on an exercise.'
+              : 'Toca un prompt rápido abajo o pide más detalle de un ejercicio.'}
+          </Text>
+        </View>
+      </View>
+
       {/* chips rápidos */}
       <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
         <FlatList
@@ -463,6 +484,53 @@ const styles = StyleSheet.create({
     color: 'rgba(248,250,252,0.95)',
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  coachCard: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.24)',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+    gap: 6,
+  },
+  coachCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: 0.2,
+  },
+  coachCardSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  coachCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  coachBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  coachBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  coachCardHint: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   quickRow: {
     paddingVertical: 10,
