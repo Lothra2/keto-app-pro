@@ -20,6 +20,7 @@ const Tab = createBottomTabNavigator();
 const TabIcon = ({ emoji, focused }) => {
   const { theme: themeMode } = useApp();
   const theme = getTheme(themeMode);
+  const focusColor = theme.colors.accent || theme.colors.primary;
 
   return (
     <View
@@ -27,11 +28,9 @@ const TabIcon = ({ emoji, focused }) => {
         styles.iconContainer,
         {
           backgroundColor: focused
-            ? theme.mode === 'dark'
-              ? `${theme.colors.accent}24`
-              : `${theme.colors.primary}14`
-            : 'transparent',
-          borderColor: focused ? theme.colors.accent || theme.colors.primary : 'transparent',
+            ? `${focusColor}20`
+            : theme.colors.cardSoft,
+          borderColor: focused ? `${focusColor}80` : 'transparent',
         },
       ]}
     >
@@ -39,7 +38,7 @@ const TabIcon = ({ emoji, focused }) => {
         colors={
           focused
             ? [
-                `${theme.colors.accent}d9`,
+                `${focusColor}cc`,
                 theme.colors.primary,
               ]
             : ['transparent', 'transparent']
@@ -177,14 +176,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    borderRadius: 18,
+    borderRadius: 24,
     borderWidth: 1,
-    minWidth: 56,
-    minHeight: 56,
+    minWidth: 58,
+    minHeight: 58,
+    overflow: 'hidden',
   },
   iconGlow: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
+    opacity: 0.85,
+    borderRadius: 24,
   },
   emoji: {
     fontSize: 22,

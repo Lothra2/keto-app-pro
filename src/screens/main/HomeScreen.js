@@ -2076,12 +2076,14 @@ const createStyles = (theme) =>
       flex: 1,
       borderRadius: theme.radius.sm,
       paddingVertical: theme.spacing.sm,
-      backgroundColor: 'rgba(56,189,248,0.12)',
+      backgroundColor: `${theme.colors.accent}1f`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}40`,
       alignItems: 'center'
     },
     waterButtonText: {
       ...theme.typography.bodySmall,
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       fontWeight: '600'
     },
     waterButtonGhost: {
@@ -2205,8 +2207,8 @@ const createStyles = (theme) =>
     },
     mealAiPill: {
       ...theme.typography.caption,
-      backgroundColor: 'rgba(14,165,233,0.1)',
-      color: theme.colors.primary,
+      backgroundColor: `${theme.colors.accent}26`,
+      color: theme.colors.accent,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 999
@@ -2263,14 +2265,16 @@ const createStyles = (theme) =>
       gap: theme.spacing.sm
     },
     mealAIButton: {
-      backgroundColor: 'rgba(14,165,233,.15)',
+      backgroundColor: `${theme.colors.accent}26`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}50`,
       paddingHorizontal: 12,
       paddingVertical: 5,
       borderRadius: 999
     },
     mealAIText: {
       ...theme.typography.caption,
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       fontWeight: '600'
     },
     mealStatusText: {
