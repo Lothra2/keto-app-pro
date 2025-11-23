@@ -100,26 +100,29 @@ const WorkoutScreen = ({ route, navigation }) => {
     loadWorkout(safeActiveDay)
   }, [safeActiveDay, selectedIntensity, language, metrics.startWeight])
 
-  const calculateEstimated = useCallback(
-    (intensityLevel) =>
-      estimateWorkoutCalories(intensityLevel || selectedIntensity, metrics.startWeight || 75),
-    [metrics.startWeight, selectedIntensity]
-  )
-
   const loadWorkout = async day => {
+    // reset local state before loading to avoid leaking values across days
+    setWorkout([])
+    setWorkoutDone(false)
+    setLoggedKcal(null)
+    setAiEstimatedKcal(null)
+    setWorkoutSource('base')
+
     const reference = getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)
-    const baseKcal = estimateBaseWorkoutCalories({
+    const computedBaseKcal = estimateBaseWorkoutCalories({
       dayText: reference?.today,
       dayIndex: day,
       weightKg: metrics.startWeight || 75,
       intensity: selectedIntensity
     })
-    setBaseEstimatedKcal(baseKcal)
 
     const saved = await getWorkoutData(day)
     const exercises = Array.isArray(saved) ? saved : saved?.exercises || []
     const normalizedExercises = Array.isArray(exercises) ? exercises : []
     setWorkout(normalizedExercises)
+
+    const baseKcal = (!Array.isArray(saved) && saved?.baseEstimatedKcal) || computedBaseKcal
+    setBaseEstimatedKcal(baseKcal)
 
     const storedAiKcal = (!Array.isArray(saved) && (saved?.aiEstimatedKcal ?? saved?.estimatedKcal)) || null
     const aiKcal = normalizedExercises.length
@@ -170,6 +173,13 @@ const WorkoutScreen = ({ route, navigation }) => {
       })
 
       const estimated = estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
+      const baseForDay = estimateBaseWorkoutCalories({
+        dayText: localPlan?.today,
+        dayIndex: safeActiveDay,
+        weightKg: metrics.startWeight || 75,
+        intensity: selectedIntensity
+      })
+      setBaseEstimatedKcal(baseForDay)
       setWorkout(exercises)
       setAiEstimatedKcal(estimated)
       setWorkoutSource('ai')
@@ -177,7 +187,8 @@ const WorkoutScreen = ({ route, navigation }) => {
         exercises,
         estimatedKcal: estimated,
         aiEstimatedKcal: estimated,
-        intensity: selectedIntensity,
+        baseEstimatedKcal: baseForDay,
+        intensity: selectedIntensity
       })
     } catch (error) {
       console.error('Error generating workout:', error)
@@ -223,17 +234,25 @@ const WorkoutScreen = ({ route, navigation }) => {
             age: metrics.age || 30
           }
         })
+        const baseForDay = estimateBaseWorkoutCalories({
+          dayText: getWorkoutForDay(language, Math.floor(day / 7) + 1, day % 7)?.today,
+          dayIndex: day,
+          weightKg: metrics.startWeight || 75,
+          intensity: selectedIntensity
+        })
         const estimated = estimateAiWorkoutCalories(exercises, selectedIntensity, metrics.startWeight || 75)
         await saveWorkoutData(day, {
           exercises,
           estimatedKcal: estimated,
           aiEstimatedKcal: estimated,
-          intensity: selectedIntensity,
+          baseEstimatedKcal: baseForDay,
+          intensity: selectedIntensity
         })
         if (day === safeActiveDay) {
           setWorkout(exercises)
           setAiEstimatedKcal(estimated)
           setWorkoutSource('ai')
+          setBaseEstimatedKcal(baseForDay)
         }
       }
     } catch (error) {
