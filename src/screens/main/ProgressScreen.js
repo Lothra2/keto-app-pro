@@ -13,6 +13,7 @@ import { differenceInCalendarDays, isValid, startOfDay } from 'date-fns'
 import { useFocusEffect } from '@react-navigation/native'
 import { useApp } from '../../context/AppContext'
 import { getTheme } from '../../theme'
+import { withAlpha } from '../../theme/utils'
 import {
   getProgressData,
   saveProgressData,
@@ -1444,43 +1445,53 @@ const getStyles = (theme) =>
       justifyContent: 'space-between',
       marginBottom: theme.spacing.sm
     },
-    statItem: {
-      flex: 1,
-      alignItems: 'center'
-    },
-    statLabel: {
-      ...theme.typography.caption,
-      color: theme.colors.textMuted,
-      marginBottom: 4
-    },
-    statValue: {
-      ...theme.typography.body,
-      color: theme.colors.text,
-      fontWeight: '600'
-    },
-    calculatedStats: {
-      backgroundColor: theme.colors.bgSoft,
-      borderRadius: theme.radius.sm,
-      padding: theme.spacing.sm,
-      marginTop: theme.spacing.sm,
-      gap: 4
-    },
-    calculatedStat: {
-      ...theme.typography.bodySmall,
-      color: theme.colors.text
-    },
-    editButton: {
-      backgroundColor: theme.colors.bgSoft,
-      borderRadius: theme.radius.sm,
-      padding: theme.spacing.sm,
-      alignItems: 'center',
-      marginTop: theme.spacing.sm
-    },
-    editButtonText: {
-      ...theme.typography.bodySmall,
-      color: theme.colors.text,
-      fontWeight: '600'
-    },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardSoft,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.accent, 0.45),
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    marginHorizontal: theme.spacing.xs
+  },
+  statLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+    marginBottom: 4,
+    fontWeight: '600'
+  },
+  statValue: {
+    ...theme.typography.body,
+    color: theme.colors.accent,
+    fontWeight: '700'
+  },
+  calculatedStats: {
+    backgroundColor: `${theme.colors.accent}10`,
+    borderRadius: theme.radius.sm,
+    padding: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}40`
+  },
+  calculatedStat: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text
+  },
+  editButton: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radius.sm,
+    padding: theme.spacing.sm,
+    alignItems: 'center',
+    marginTop: theme.spacing.sm
+  },
+  editButtonText: {
+    ...theme.typography.bodySmall,
+    color: '#fff',
+    fontWeight: '700'
+  },
     addBaseDataButton: {
       backgroundColor: theme.colors.card,
       borderWidth: 2,

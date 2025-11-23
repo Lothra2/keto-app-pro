@@ -101,20 +101,22 @@ const getStyles = (theme) =>
       ...theme.typography.bodySmall,
       color: theme.colors.textMuted
     },
-    countBadge: {
-      minWidth: 30,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: theme.radius.full,
-      backgroundColor: theme.colors.primarySoft,
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    countBadgeText: {
-      ...theme.typography.caption,
-      color: theme.colors.primary,
-      fontWeight: '600'
-    },
+  countBadge: {
+    minWidth: 30,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    backgroundColor: `${theme.colors.accent}18`,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}55`,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  countBadgeText: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
+    fontWeight: '600'
+  },
     list: {
       gap: theme.spacing.sm
     },
@@ -123,30 +125,30 @@ const getStyles = (theme) =>
       color: theme.colors.textMuted,
       fontStyle: 'italic'
     },
-    toggle: {
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: theme.radius.full,
-      backgroundColor: theme.colors.cardSoft,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      marginBottom: theme.spacing.sm,
-      marginTop: theme.spacing.xs
-    },
-    toggleText: {
-      ...theme.typography.caption,
-      color: theme.colors.primary,
-      fontWeight: '600'
-    },
-    toggleIcon: {
-      ...theme.typography.caption,
-      color: theme.colors.primary,
-      fontWeight: '600'
-    },
+  toggle: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.full,
+    backgroundColor: `${theme.colors.accent}12`,
+    borderWidth: 1,
+    borderColor: `${theme.colors.accent}55`,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.xs
+  },
+  toggleText: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
+    fontWeight: '600'
+  },
+  toggleIcon: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
+    fontWeight: '600'
+  },
     collapsedHint: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,

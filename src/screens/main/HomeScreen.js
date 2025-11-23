@@ -1552,9 +1552,9 @@ const HomeScreen = ({ navigation }) => {
           showWeekReview ? (
             <View style={styles.weekList}>
               {weekReview.map((item, index) => (
-                <Text key={`${item}-${index}`} style={styles.weekItem}>
-                  {item}
-                </Text>
+                <View key={`${item}-${index}`} style={styles.weekItemBox}>
+                  <Text style={styles.weekItem}>{item}</Text>
+                </View>
               ))}
             </View>
           ) : (
@@ -2076,12 +2076,14 @@ const createStyles = (theme) =>
       flex: 1,
       borderRadius: theme.radius.sm,
       paddingVertical: theme.spacing.sm,
-      backgroundColor: 'rgba(56,189,248,0.12)',
+      backgroundColor: `${theme.colors.accent}1f`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}40`,
       alignItems: 'center'
     },
     waterButtonText: {
       ...theme.typography.bodySmall,
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       fontWeight: '600'
     },
     waterButtonGhost: {
@@ -2114,14 +2116,16 @@ const createStyles = (theme) =>
       minWidth: 40,
       height: 28,
       borderRadius: 999,
-      backgroundColor: 'rgba(15,118,110,.2)',
+      backgroundColor: `${theme.colors.accent}20`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}60`,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 8
     },
     extrasCountText: {
       ...theme.typography.bodySmall,
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       fontWeight: '700'
     },
     extrasList: {
@@ -2205,8 +2209,8 @@ const createStyles = (theme) =>
     },
     mealAiPill: {
       ...theme.typography.caption,
-      backgroundColor: 'rgba(14,165,233,0.1)',
-      color: theme.colors.primary,
+      backgroundColor: `${theme.colors.accent}26`,
+      color: theme.colors.accent,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 999
@@ -2263,14 +2267,16 @@ const createStyles = (theme) =>
       gap: theme.spacing.sm
     },
     mealAIButton: {
-      backgroundColor: 'rgba(14,165,233,.15)',
+      backgroundColor: `${theme.colors.accent}26`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}50`,
       paddingHorizontal: 12,
       paddingVertical: 5,
       borderRadius: 999
     },
     mealAIText: {
       ...theme.typography.caption,
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       fontWeight: '600'
     },
     mealStatusText: {
@@ -2328,6 +2334,13 @@ const createStyles = (theme) =>
     weekList: {
       marginTop: theme.spacing.sm,
       gap: theme.spacing.xs
+    },
+    weekItemBox: {
+      backgroundColor: `${theme.colors.accent}12`,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: `${theme.colors.accent}40`
     },
     weekItem: {
       ...theme.typography.bodySmall,
