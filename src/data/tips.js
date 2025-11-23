@@ -51,9 +51,18 @@ export const motivationalMessages = {
 };
 
 export const localSmartTips = {
-  desayuno: 'Tip: ya tienes un desayuno base, úsalo y guarda IA para el día completo 😉',
-  almuerzo: 'Tip: puedes usar el almuerzo base y solo cambiar proteína.',
-  cena: 'Tip: si solo quieres variar la cena, prueba el swap manual antes de usar IA.'
+  desayuno: {
+    es: 'Tip: ya tienes un desayuno base, úsalo y guarda IA para el día completo 😉',
+    en: 'Tip: you already have a base breakfast, save AI for the full day 😉'
+  },
+  almuerzo: {
+    es: 'Tip: puedes usar el almuerzo base y solo cambiar proteína.',
+    en: 'Tip: keep the base lunch and just swap the protein.'
+  },
+  cena: {
+    es: 'Tip: si solo quieres variar la cena, prueba el swap manual antes de usar IA.',
+    en: 'Tip: if you only want to change dinner, try the manual swap before using AI.'
+  }
 };
 
 const getListByLanguage = (collection, language = 'es') => {
@@ -73,4 +82,9 @@ export const getMotivationalMessage = (language = 'es', dayIndex = 0) => {
   return list[Math.min(dayIndex, list.length - 1)];
 };
 
-export const getLocalMealTip = (mealKey) => localSmartTips[mealKey] || '';
+export const getLocalMealTip = (mealKey, language = 'es') => {
+  const tip = localSmartTips[mealKey];
+  if (!tip) return '';
+  if (typeof tip === 'string') return tip;
+  return tip[language] || tip.es || '';
+};

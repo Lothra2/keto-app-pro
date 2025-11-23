@@ -18,13 +18,14 @@ import {
   getLocalMealTip,
   getMotivationalMessage
 } from '../../data/tips'
+import { getMealDistribution } from '../../utils/calculations'
 
-const mealPercents = {
-  desayuno: 0.25,
-  snackAM: 0.1,
-  almuerzo: 0.35,
-  snackPM: 0.1,
-  cena: 0.2
+const mealLabels = {
+  desayuno: { es: 'Desayuno', en: 'Breakfast' },
+  snackAM: { es: 'Snack AM', en: 'Snack AM' },
+  almuerzo: { es: 'Almuerzo', en: 'Lunch' },
+  snackPM: { es: 'Snack PM', en: 'Snack PM' },
+  cena: { es: 'Cena', en: 'Dinner' }
 }
 
 const MealGeneratorModal = ({ route, navigation }) => {
@@ -33,6 +34,7 @@ const MealGeneratorModal = ({ route, navigation }) => {
     derivedPlan,
     theme: themeMode,
     language,
+    gender,
     foodPrefs,
     apiCredentials,
     user
@@ -48,6 +50,7 @@ const MealGeneratorModal = ({ route, navigation }) => {
   const [calorieState, setCalorieState] = useState(null)
 
   const isFullDay = mode === 'full-day'
+  const mealPercents = useMemo(() => getMealDistribution(gender), [gender])
 
   const titles = useMemo(
     () => ({
@@ -191,7 +194,9 @@ const MealGeneratorModal = ({ route, navigation }) => {
     navigation.goBack()
   }
 
-  const localTip = mealKey ? getLocalMealTip(mealKey) : getDailyTip(language, dayIndex)
+  const localTip = mealKey
+    ? getLocalMealTip(mealKey, language)
+    : getDailyTip(language, dayIndex)
   const motivation = getMotivationalMessage(language, dayIndex)
 
   return (
@@ -219,7 +224,7 @@ const MealGeneratorModal = ({ route, navigation }) => {
 
         {!isFullDay && mealKey ? (
           <MealCard
-            title={mealKey}
+            title={mealLabels?.[mealKey]?.[language] || mealKey}
             icon="🍽"
             mealData={result || storedDay?.[mealKey] || baseDay[mealKey]}
             showAIButton={false}
@@ -243,7 +248,9 @@ const MealGeneratorModal = ({ route, navigation }) => {
               if (!meal) return null
               return (
                 <View key={key} style={styles.mealRow}>
-                  <Text style={styles.mealKey}>{key.toUpperCase()}</Text>
+                  <Text style={styles.mealKey}>
+                    {(mealLabels?.[key]?.[language] || key).toUpperCase()}
+                  </Text>
                   <Text style={styles.mealName}>{meal.nombre || ''}</Text>
                   {meal.qty ? <Text style={styles.mealQty}>{meal.qty}</Text> : null}
                 </View>

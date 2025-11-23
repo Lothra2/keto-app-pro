@@ -21,7 +21,7 @@ export const AppProvider = ({ children }) => {
   const [currentWeek, setCurrentWeekState] = useState(1);
   const [planWeeks, setPlanWeeks] = useState(2);
   const [gender, setGender] = useState('male');
-  const [language, setLanguage] = useState('es');
+  const [language, setLanguage] = useState('en');
   const [loading, setLoading] = useState(true);
 
   // Plan derivado
@@ -326,7 +326,7 @@ export const AppProvider = ({ children }) => {
       setCurrentWeekState(1);
       setPlanWeeks(2);
       setGender('male');
-      setLanguage('es');
+      setLanguage('en');
       setThemeMode('dark');
       setFoodPrefs({ like: '', dislike: '' });
       setApiCredentials({ user: '', pass: '' });
