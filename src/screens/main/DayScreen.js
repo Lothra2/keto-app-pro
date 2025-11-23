@@ -38,6 +38,7 @@ const DayScreen = ({ navigation }) => {
     setCurrentWeek,
     derivedPlan,
     notifyProgressUpdate,
+    gender,
     metrics,
     user
   } = useApp();
@@ -89,7 +90,7 @@ const DayScreen = ({ navigation }) => {
     };
     setMealStates(mealsState);
 
-    const consumed = calculateConsumedCalories(mealsState, calState.goal);
+    const consumed = calculateConsumedCalories(mealsState, calState.goal, gender);
     setCalorieInfo({ consumed, goal: calState.goal });
 
     const water = await getWaterState(currentDay, baseWaterGoal);
@@ -104,7 +105,11 @@ const DayScreen = ({ navigation }) => {
     setMealStates(prev => ({ ...prev, [mealKey]: newState }));
     await saveMealCompletion(currentDay, mealKey, newState);
 
-    const newConsumed = calculateConsumedCalories({ ...mealStates, [mealKey]: newState }, calorieInfo.goal);
+    const newConsumed = calculateConsumedCalories(
+      { ...mealStates, [mealKey]: newState },
+      calorieInfo.goal,
+      gender
+    );
     setCalorieInfo(prev => ({ ...prev, consumed: newConsumed }));
   };
 
