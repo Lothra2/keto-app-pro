@@ -4,6 +4,7 @@ import TabNavigator from './TabNavigator';
 import MealGeneratorModal from '../screens/modals/MealGeneratorModal';
 import WorkoutModal from '../screens/modals/WorkoutModal';
 import HelpScreen from '../screens/main/HelpScreen';
+import ManualMealModal from '../screens/modals/ManualMealModal';
 
 const Stack = createStackNavigator();
 
@@ -18,6 +19,11 @@ const AppNavigator = () => {
       <Stack.Screen
         name="MealGenerator"
         component={MealGeneratorModal}
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="ManualMeal"
+        component={ManualMealModal}
         options={{ presentation: 'modal' }}
       />
       <Stack.Screen
