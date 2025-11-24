@@ -6,12 +6,14 @@ import Card from '../../components/shared/Card';
 import Button from '../../components/shared/Button';
 import {
   getCalorieState,
+  getCheatMeal,
   getDayData,
   saveCalorieState,
   saveDayData,
 } from '../../storage/storage';
 import aiService from '../../api/aiService';
 import { calculateDynamicDailyKcal, getMealDistribution } from '../../utils/calculations';
+import { mergePlanDay } from '../../utils/plan';
 
 const defaultMealState = {
   desayuno: false,
@@ -28,6 +30,7 @@ const ManualMealModal = ({ route, navigation }) => {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const baseDay = derivedPlan?.[dayIndex] || {};
+  const [activeDay, setActiveDay] = useState(baseDay);
   const [storedDay, setStoredDay] = useState(null);
   const [calorieState, setCalorieState] = useState(null);
   const [description, setDescription] = useState('');
@@ -48,18 +51,37 @@ const ManualMealModal = ({ route, navigation }) => {
 
   const loadData = useCallback(async () => {
     const stored = await getDayData(dayIndex);
-    const calState = await getCalorieState(dayIndex, baseDay.kcal || 1600);
+    const cheat = await getCheatMeal(dayIndex);
+    const calState = await getCalorieState(dayIndex, baseDay.kcal || stored?.kcal || 1600);
 
     setStoredDay(stored || {});
     setCalorieState(calState);
 
-    const existing = stored?.[mealKey] || baseDay?.[mealKey];
+    const mergedDay = mergePlanDay(baseDay, stored || {});
+
+    if (cheat?.mealKey) {
+      mergedDay[cheat.mealKey] = {
+        ...(mergedDay?.[cheat.mealKey] || {}),
+        nombre: language === 'en' ? 'Cheat meal' : 'Cheat meal',
+        descripcion: cheat.description || mergedDay?.[cheat.mealKey]?.descripcion || '',
+        qty: cheat.portion || mergedDay?.[cheat.mealKey]?.qty || '',
+        portion: cheat.portion || mergedDay?.[cheat.mealKey]?.portion || '',
+        kcal: cheat.kcalEstimate ? Number(cheat.kcalEstimate) : mergedDay?.[cheat.mealKey]?.kcal,
+        estimatedByAI: Boolean(cheat?.estimatedByAI),
+        note: cheat.note || mergedDay?.[cheat.mealKey]?.note || '',
+        isCheat: true,
+      };
+    }
+
+    setActiveDay(mergedDay);
+
+    const existing = mergedDay?.[mealKey] || {};
     setDescription(existing?.descripcion || existing?.qty || '');
-    setPortion(existing?.portion || '');
+    setPortion(existing?.portion || existing?.qty || '');
     setKcal(existing?.kcal ? String(existing.kcal) : '');
     setNote(existing?.note || '');
     setEstimatedByAI(Boolean(existing?.estimatedByAI));
-  }, [baseDay, dayIndex, mealKey]);
+  }, [baseDay, dayIndex, language, mealKey]);
 
   const computeConsumedFromDay = useCallback(
     (day, mealsState, fallbackGoal) => {
@@ -103,12 +125,16 @@ const ManualMealModal = ({ route, navigation }) => {
     setAiLoading(true);
     try {
       const dayKcal = calculateDynamicDailyKcal({
-        baseKcal: baseDay.kcal || storedDay?.kcal || 1600,
+        baseKcal: activeDay?.kcal || baseDay.kcal || storedDay?.kcal || 1600,
         gender,
         metrics,
         cheatKcal: storedDay?.cheatKcal || 0,
       });
-      const consumed = computeConsumedFromDay(storedDay || baseDay, calorieState?.meals || defaultMealState, dayKcal);
+      const consumed = computeConsumedFromDay(
+        activeDay || storedDay || baseDay,
+        calorieState?.meals || defaultMealState,
+        dayKcal
+      );
       const estimate = await aiService.estimateMealCalories({
         mealKey,
         description: description.trim(),
@@ -136,6 +162,7 @@ const ManualMealModal = ({ route, navigation }) => {
       setAiLoading(false);
     }
   }, [
+    activeDay,
     apiCredentials,
     baseDay,
     calorieState?.meals,
@@ -177,6 +204,7 @@ const ManualMealModal = ({ route, navigation }) => {
     try {
       const baseData = storedDay ? { ...storedDay } : {};
       const goal =
+        activeDay?.kcal ||
         baseDay?.kcal ||
         baseData.kcal ||
         calorieState?.goal ||
@@ -266,11 +294,7 @@ const ManualMealModal = ({ route, navigation }) => {
         />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Card style={styles.card}>
           <View style={styles.section}>
             <Text style={styles.label}>{mealTitles[mealKey] || mealKey}</Text>
@@ -281,7 +305,7 @@ const ManualMealModal = ({ route, navigation }) => {
             </Text>
           </View>
 
-          <View style={styles.section}>
+          <View style={styles.fieldGroup}>
             <TextInput
               style={[styles.input, styles.textarea, { borderColor: theme.colors.border }]}
               placeholder={language === 'en' ? 'Food, ingredients, swaps…' : 'Comida, ingredientes, cambios…'}
@@ -290,7 +314,9 @@ const ManualMealModal = ({ route, navigation }) => {
               onChangeText={setDescription}
               multiline
             />
+          </View>
 
+          <View style={[styles.fieldGroup, styles.portionGroup]}>
             <TextInput
               style={[styles.input, { borderColor: theme.colors.border }]}
               placeholder={language === 'en' ? 'Portion or amount (optional)' : 'Porción o cantidad (opcional)'}
@@ -300,7 +326,7 @@ const ManualMealModal = ({ route, navigation }) => {
             />
           </View>
 
-          <View style={styles.kcalPanel}>
+          <View style={[styles.kcalPanel, styles.fieldGroup]}>
             <View style={[styles.section, styles.kcalRow]}>
               <View style={styles.kcalColumn}>
                 <Text style={styles.subLabel}>{language === 'en' ? 'Estimated kcal' : 'Kcal estimadas'}</Text>
@@ -323,7 +349,11 @@ const ManualMealModal = ({ route, navigation }) => {
             </View>
           </View>
 
-          {note ? <Text style={styles.note}>{note}</Text> : null}
+          {note ? (
+            <View style={styles.noteBox}>
+              <Text style={styles.note}>{note}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.actions}>
             <Button
@@ -362,9 +392,15 @@ const createStyles = (theme) =>
     scroll: {
       flex: 1,
     },
+    scrollContent: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingBottom: theme.spacing.xl,
+      paddingTop: theme.spacing.md,
+      gap: theme.spacing.lg,
+    },
     card: {
       marginHorizontal: theme.spacing.lg,
-      gap: theme.spacing.lg,
+      gap: theme.spacing.xl,
       padding: theme.spacing.lg,
     },
     label: {
@@ -392,6 +428,13 @@ const createStyles = (theme) =>
     },
     section: {
       gap: theme.spacing.md,
+    },
+    fieldGroup: {
+      gap: theme.spacing.sm,
+    },
+    portionGroup: {
+      paddingTop: theme.spacing.xs,
+      marginBottom: theme.spacing.md,
     },
     subLabel: {
       ...theme.typography.caption,
@@ -444,14 +487,17 @@ const createStyles = (theme) =>
     saveButton: {
       width: '100%',
     },
+    noteBox: {
+      backgroundColor: theme.colors.bgSoft,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.md,
+    },
     note: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
-      borderRadius: theme.radius.md,
-      backgroundColor: theme.colors.bgSoft,
-      padding: theme.spacing.sm,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      lineHeight: 18,
     },
   });
 
