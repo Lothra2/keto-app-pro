@@ -476,17 +476,17 @@ const ProgressScreen = () => {
       {
         key: 'bodyFat',
         label: language === 'en' ? 'Body fat %' : '% de grasa',
-        color: '#f97316',
+        color: theme.colors.warning,
         formatter: (value) => `${value.toFixed(1)} %`
       },
       {
         key: 'energy',
         label: language === 'en' ? 'Energy (1-10)' : 'Energía (1-10)',
-        color: '#a855f7',
+        color: theme.colors.accent,
         formatter: (value) => `${value.toFixed(1)}/10`
       }
     ],
-    [language, theme.colors.primary]
+    [language, theme.colors.accent, theme.colors.primary, theme.colors.warning]
   )
 
   const handleShareProgressPdf = useCallback(
@@ -1489,7 +1489,7 @@ const getStyles = (theme) =>
   },
   editButtonText: {
     ...theme.typography.bodySmall,
-    color: '#fff',
+    color: theme.colors.onPrimary,
     fontWeight: '700'
   },
     addBaseDataButton: {
@@ -1948,11 +1948,11 @@ const getStyles = (theme) =>
     modalButtonSecondary: {
       backgroundColor: theme.colors.bgSoft
     },
-    modalButtonText: {
-      ...theme.typography.body,
-      color: '#fff',
-      fontWeight: '600'
-    }
-  })
+  modalButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.onPrimary,
+    fontWeight: '600'
+  }
+})
 
 export default ProgressScreen
