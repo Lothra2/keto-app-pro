@@ -422,6 +422,13 @@ const HomeScreen = ({ navigation }) => {
     });
   };
 
+  const handleManualMeal = (mealKey) => {
+    navigation.navigate('ManualMeal', {
+      dayIndex: currentDay,
+      mealKey
+    });
+  };
+
   // 👇 ESTA es la nueva versión: genera las 5 comidas acá y guarda
   const handleGenerateFullDay = async () => {
     if (!apiCredentials.user || !apiCredentials.pass) {
@@ -846,6 +853,7 @@ const HomeScreen = ({ navigation }) => {
         isCompleted: mealStates.desayuno,
         onToggle: () => handleToggleMeal('desayuno'),
         onGenerateAI: () => handleGenerateAI('desayuno'),
+        onManualLog: () => handleManualMeal('desayuno'),
         showAIButton: true,
         isAI: isAi(dayData.desayuno),
         kcal: getKcal(dayData.desayuno, 'desayuno')
@@ -860,6 +868,7 @@ const HomeScreen = ({ navigation }) => {
         cheatPortion: cheatMeal?.mealKey === 'snackAM' ? cheatMeal?.portion : '',
         isCompleted: mealStates.snackAM,
         onToggle: () => handleToggleMeal('snackAM'),
+        onManualLog: () => handleManualMeal('snackAM'),
         showAIButton: false,
         isAI: isAi(dayData.snackAM),
         kcal: getKcal(dayData.snackAM, 'snackAM')
@@ -875,6 +884,7 @@ const HomeScreen = ({ navigation }) => {
         isCompleted: mealStates.almuerzo,
         onToggle: () => handleToggleMeal('almuerzo'),
         onGenerateAI: () => handleGenerateAI('almuerzo'),
+        onManualLog: () => handleManualMeal('almuerzo'),
         showAIButton: true,
         isAI: isAi(dayData.almuerzo),
         kcal: getKcal(dayData.almuerzo, 'almuerzo')
@@ -889,6 +899,7 @@ const HomeScreen = ({ navigation }) => {
         cheatPortion: cheatMeal?.mealKey === 'snackPM' ? cheatMeal?.portion : '',
         isCompleted: mealStates.snackPM,
         onToggle: () => handleToggleMeal('snackPM'),
+        onManualLog: () => handleManualMeal('snackPM'),
         showAIButton: false,
         isAI: isAi(dayData.snackPM),
         kcal: getKcal(dayData.snackPM, 'snackPM')
@@ -904,6 +915,7 @@ const HomeScreen = ({ navigation }) => {
         isCompleted: mealStates.cena,
         onToggle: () => handleToggleMeal('cena'),
         onGenerateAI: () => handleGenerateAI('cena'),
+        onManualLog: () => handleManualMeal('cena'),
         showAIButton: true,
         isAI: isAi(dayData.cena),
         kcal: getKcal(dayData.cena, 'cena')
@@ -1246,18 +1258,26 @@ const HomeScreen = ({ navigation }) => {
                   </View>
                 ) : null}
                 <View style={styles.mealActions}>
-                  {meal.showAIButton ? (
+                  <View style={styles.mealActionButtons}>
                     <TouchableOpacity
-                      style={styles.mealAIButton}
-                      onPress={meal.onGenerateAI}
+                      style={styles.mealManualButton}
+                      onPress={meal.onManualLog}
                     >
-                      <Text style={styles.mealAIText}>
-                        {language === 'en' ? 'AI for this' : 'IA para esto'}
+                      <Text style={styles.mealManualText}>
+                        {language === 'en' ? 'Log manually' : 'Registrar manual'}
                       </Text>
                     </TouchableOpacity>
-                  ) : (
-                    <View style={{ flex: 1 }} />
-                  )}
+                    {meal.showAIButton ? (
+                      <TouchableOpacity
+                        style={styles.mealAIButton}
+                        onPress={meal.onGenerateAI}
+                      >
+                        <Text style={styles.mealAIText}>
+                          {language === 'en' ? 'AI for this' : 'IA para esto'}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                   <Text style={styles.mealStatusText}>
                     {meal.isCompleted
                       ? language === 'en'
@@ -1318,7 +1338,7 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <Card style={styles.cheatCard} outlined>
+      <Card style={styles.cheatCard}>
         <View style={styles.cheatHeaderRow}>
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={styles.sectionTitle}>🍕 {language === 'en' ? 'Cheat meal' : 'Cheat meal'}</Text>
@@ -1742,11 +1762,6 @@ const createStyles = (theme) =>
     },
     cheatCard: {
       marginHorizontal: theme.spacing.lg,
-      backgroundColor: theme.colors.card,
-      borderRadius: theme.radius.lg,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      padding: theme.spacing.md,
       gap: theme.spacing.sm
     },
     cheatHeaderRow: {
@@ -1789,12 +1804,14 @@ const createStyles = (theme) =>
     },
     cheatPill: {
       ...theme.typography.caption,
-      backgroundColor: theme.colors.primarySoft,
-      color: theme.colors.primary,
+      backgroundColor: withAlpha(theme.colors.accent, 0.18),
+      color: theme.colors.accent,
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
-      fontWeight: '700'
+      fontWeight: '700',
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.accent, 0.5)
     },
     cheatMeta: {
       ...theme.typography.caption,
@@ -2265,6 +2282,24 @@ const createStyles = (theme) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: theme.spacing.sm
+    },
+    mealActionButtons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8
+    },
+    mealManualButton: {
+      backgroundColor: `${theme.colors.primary}29`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}50`,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999
+    },
+    mealManualText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontWeight: '700'
     },
     mealAIButton: {
       backgroundColor: `${theme.colors.accent}26`,
