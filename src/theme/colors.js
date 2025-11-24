@@ -13,7 +13,7 @@ const emerald = {
     card: '#101a2e',
     cardSoft: 'rgba(31,41,69,0.5)',
     text: '#f8fafc',
-    textMuted: 'rgba(226,232,240,0.72)',
+    textMuted: 'rgba(226,232,240,0.82)',
     border: 'rgba(125,145,175,0.28)'
   },
   light: {
@@ -22,7 +22,7 @@ const emerald = {
     card: '#ffffff',
     cardSoft: 'rgba(11,59,106,0.05)',
     text: '#0f172a',
-    textMuted: 'rgba(15,23,42,0.58)',
+    textMuted: 'rgba(15,23,42,0.68)',
     border: 'rgba(15,23,42,0.12)'
   }
 };

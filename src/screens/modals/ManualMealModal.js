@@ -493,6 +493,7 @@ const createStyles = (theme) =>
       borderWidth: 1,
       borderColor: theme.colors.border,
       padding: theme.spacing.md,
+      marginTop: theme.spacing.sm,
     },
     note: {
       ...theme.typography.caption,
