@@ -396,7 +396,7 @@ const createStyles = (theme) =>
       paddingHorizontal: theme.spacing.lg,
       paddingBottom: theme.spacing.xl,
       paddingTop: theme.spacing.md,
-      gap: theme.spacing.lg,
+      gap: theme.spacing.xl,
     },
     card: {
       marginHorizontal: theme.spacing.lg,
@@ -428,13 +428,15 @@ const createStyles = (theme) =>
     },
     section: {
       gap: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
     },
     fieldGroup: {
       gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
     },
     portionGroup: {
       paddingTop: theme.spacing.xs,
-      marginBottom: theme.spacing.md,
+      marginBottom: theme.spacing.lg,
     },
     subLabel: {
       ...theme.typography.caption,
@@ -448,6 +450,7 @@ const createStyles = (theme) =>
       borderWidth: 1,
       borderColor: theme.colors.border,
       gap: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
       shadowColor: '#000',
       shadowOpacity: theme.mode === 'dark' ? 0.08 : 0.04,
       shadowRadius: 10,
