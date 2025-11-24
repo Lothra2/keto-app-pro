@@ -20,17 +20,16 @@ const Tab = createBottomTabNavigator();
 const TabIcon = ({ emoji, focused }) => {
   const { theme: themeMode } = useApp();
   const theme = getTheme(themeMode);
-  const focusColor = theme.colors.accent || theme.colors.primary;
+  const focusColor = theme.colors.primary;
+  const secondary = theme.colors.accent || theme.colors.primary;
 
   return (
     <View
       style={[
         styles.iconContainer,
         {
-          backgroundColor: focused
-            ? `${focusColor}20`
-            : theme.colors.cardSoft,
-          borderColor: focused ? `${focusColor}80` : 'transparent',
+          backgroundColor: focused ? `${focusColor}22` : theme.colors.cardSoft,
+          borderColor: focused ? `${focusColor}80` : theme.colors.border,
         },
       ]}
     >
@@ -39,7 +38,7 @@ const TabIcon = ({ emoji, focused }) => {
           focused
             ? [
                 `${focusColor}cc`,
-                theme.colors.primary,
+                secondary,
               ]
             : ['transparent', 'transparent']
         }
@@ -47,7 +46,7 @@ const TabIcon = ({ emoji, focused }) => {
         end={{ x: 1, y: 1 }}
         style={styles.iconGlow}
       />
-      <Text style={styles.emoji}>{emoji}</Text>
+      <Text style={[styles.emoji, { color: focused ? theme.colors.onPrimary : theme.colors.text }]}>{emoji}</Text>
     </View>
   );
 };
@@ -83,13 +82,13 @@ const TabNavigator = () => {
           overflow: 'hidden',
           backgroundColor:
             theme.mode === 'dark' ? 'rgba(10,16,30,0.72)' : 'rgba(255,255,255,0.82)',
-          shadowColor: theme.colors.accent || theme.colors.primary,
+          shadowColor: theme.colors.primary,
           shadowOpacity: 0.22,
           shadowRadius: 24,
           shadowOffset: { width: 0, height: 10 },
           elevation: 12,
         },
-        tabBarActiveTintColor: theme.colors.accent || theme.colors.primary,
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarShowLabel: false,
         tabBarBackground: () => (

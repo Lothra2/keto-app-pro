@@ -1420,12 +1420,12 @@ const getStyles = (theme) =>
     },
     bannerStatLabel: {
       ...theme.typography.caption,
-      color: 'rgba(226,232,240,0.85)'
+      color: theme.colors.textMuted
     },
     bannerStatValue: {
       ...theme.typography.body,
-      color: 'rgba(248,250,252,0.95)',
-      fontWeight: '600'
+      color: theme.colors.text,
+      fontWeight: '700'
     },
     card: {
       backgroundColor: theme.colors.card,
@@ -1464,7 +1464,7 @@ const getStyles = (theme) =>
   },
   statValue: {
     ...theme.typography.body,
-    color: theme.colors.accent,
+    color: theme.colors.primary,
     fontWeight: '700'
   },
   calculatedStats: {
