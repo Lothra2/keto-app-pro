@@ -1327,6 +1327,91 @@ const ProgressScreen = () => {
                   ? 'No adherence logged yet'
                   : 'Aún no registras adherencia'}
               </Text>
+              <Text style={styles.trackerSubhint}>
+                {language === 'en' ? 'Based on planned meals' : 'Sobre comidas planificadas'}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalBars}
+            >
+              {calorieHistory.map((item) => {
+                const clampedMeals = Math.min(140, Math.max(item.mealPercent || 0, 0))
+                const mealHeight = Math.max(
+                  8,
+                  Math.round((clampedMeals / maxMealPercent) * 100)
+                )
+
+                return (
+                  <View key={item.label} style={styles.trackerBarItem}>
+                    <View style={styles.trackerBarTrack}>
+                      <View
+                        style={[
+                          styles.trackerBarFill,
+                          styles.singleFill,
+                          {
+                            height: `${mealHeight}%`,
+                            backgroundColor: withAlpha(theme.colors.accent, 0.9)
+                          }
+                        ]}
+                      />
+                      <View style={styles.calorieTargetMarker} />
+                    </View>
+                    <Text style={styles.trackerLabel}>{item.label}</Text>
+                    <Text style={styles.trackerValue}>🍽️{item.mealPercent}%</Text>
+                  </View>
+                )
+              })}
+              {calorieHistory.length === 0 && (
+                <Text style={styles.emptyTrackerText}>
+                  {language === 'en'
+                    ? 'No adherence logged yet'
+                    : 'Aún no registras adherencia'}
+                </Text>
+              )}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* adherencia en % */}
+        {selectedTracker === 'calories' && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalBars}
+          >
+            {calorieHistory.map((item) => {
+              const clampedMeals = Math.min(140, Math.max(item.mealPercent || 0, 0))
+              const mealHeight = Math.max(
+                8,
+                Math.round((clampedMeals / maxMealPercent) * 100)
+              )
+
+              return (
+                <View key={item.label} style={styles.trackerBarItem}>
+                  <View style={styles.trackerBarTrack}>
+                    <View
+                      style={[
+                        styles.trackerBarFill,
+                        {
+                          height: `${mealHeight}%`,
+                          backgroundColor: withAlpha(theme.colors.accent, 0.9)
+                        }
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.trackerLabel}>{item.label}</Text>
+                  <Text style={styles.trackerValueStrong}>🍽️ {item.mealPercent}%</Text>
+                </View>
+              )
+            })}
+            {calorieHistory.length === 0 && (
+              <Text style={styles.emptyTrackerText}>
+                {language === 'en'
+                  ? 'No adherence logged yet'
+                  : 'Aún no registras adherencia'}
+              </Text>
             )}
           </ScrollView>
         )}
@@ -1944,6 +2029,9 @@ const getStyles = (theme) =>
       gap: 12,
       paddingRight: 4
     },
+    calorieTrackerWrap: {
+      gap: theme.spacing.xs
+    },
     trackerBarItem: {
       alignItems: 'center',
       width: 56
@@ -1962,6 +2050,24 @@ const getStyles = (theme) =>
     },
     trackerBarFill: {
       width: '100%',
+      borderRadius: 999
+    },
+    singleFill: {
+      position: 'absolute',
+      left: 6,
+      right: 6,
+      borderRadius: 999
+    },
+    calorieFill: {
+      position: 'absolute',
+      left: 4,
+      right: 14,
+      borderRadius: 999
+    },
+    mealFill: {
+      position: 'absolute',
+      left: 14,
+      right: 4,
       borderRadius: 999
     },
     trackerLabel: {
