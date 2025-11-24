@@ -19,7 +19,8 @@ const MealCard = ({
   const styles = getStyles(theme);
 
   const hasAIData = mealData?.isAI || false;
-  const isManual = mealData?.source === 'manual' || mealData?.isManual;
+  const isManual =
+    mealData?.source === 'manual' || mealData?.isManual || mealData?.manual === true;
   const ingredientLines = useMemo(() => {
     if (!mealData?.qty) return [];
 

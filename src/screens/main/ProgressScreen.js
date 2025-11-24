@@ -188,7 +188,8 @@ const ProgressScreen = () => {
   const computeConsumedFromDay = useCallback(
     (day, mealsState, fallbackGoal) => {
       const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena']
-      const dayKcal = Number(day?.kcal) || fallbackGoal
+      const dayKcal =
+        Number(day?.dynamicKcal || day?.planKcal || day?.kcal) || fallbackGoal
       const dist = getMealDistribution(gender)
 
       return mealKeys.reduce((sum, key) => {
@@ -222,7 +223,8 @@ const ProgressScreen = () => {
         const baseDay = plan[i] || {}
         const mergedDay = mergePlanDay(baseDay, storedDay || {})
         const cheat = await getCheatMeal(i)
-        const dayPlanKcal = mergedDay?.kcal || baseDay?.kcal || 1600
+        const dayPlanKcal =
+          mergedDay?.dynamicKcal || mergedDay?.planKcal || mergedDay?.kcal || baseDay?.kcal || 1600
         const dynamicGoal = calculateDynamicDailyKcal({
           baseKcal: dayPlanKcal,
           gender,

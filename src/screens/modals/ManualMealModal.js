@@ -222,6 +222,7 @@ const ManualMealModal = ({ route, navigation }) => {
         kcal: Math.round(parsedKcal),
         estimatedByAI,
         note,
+        isManual: true,
         source: 'manual',
         fromAI: false,
         isAI: false,
