@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 
 const ExerciseItem = ({ exercise, onPress }) => {
   const { theme: themeMode, language } = useApp();
@@ -117,9 +118,14 @@ const getStyles = (theme) =>
     },
     detailHint: {
       ...theme.typography.caption,
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       marginTop: theme.spacing.xs,
-      fontWeight: '600'
+      fontWeight: '700',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: withAlpha(theme.colors.accent, 0.14),
+      borderRadius: theme.radius.sm,
+      alignSelf: 'flex-start'
     }
   });
 

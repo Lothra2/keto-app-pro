@@ -710,15 +710,14 @@ const getStyles = (theme) => {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.primarySoft,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+    borderWidth: 0,
     minHeight: tileHeight,
     justifyContent: 'center'
   },
   inlineActionText: {
     ...theme.typography.caption,
-    color: theme.colors.primary,
+    color: '#fff',
     fontWeight: '700'
   },
   dateRow: {
@@ -746,14 +745,13 @@ const getStyles = (theme) => {
     paddingVertical: theme.spacing.sm,
     minHeight: tileHeight,
     justifyContent: 'center',
-    backgroundColor: theme.colors.primarySoft,
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.primary
+    borderWidth: 0
   },
   dateButtonText: {
     ...theme.typography.bodySmall,
-    color: theme.colors.primary,
+    color: '#fff',
     fontWeight: '700'
   },
   optionsRow: {
