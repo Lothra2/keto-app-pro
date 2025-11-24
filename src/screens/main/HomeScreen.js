@@ -834,6 +834,11 @@ const HomeScreen = ({ navigation }) => {
       );
     };
 
+    const isManualMeal = (mealObj) => {
+      if (!mealObj || typeof mealObj !== 'object') return false;
+      return mealObj.source === 'manual' || mealObj.tag === 'manual' || mealObj.isManual;
+    };
+
     const getKcal = (mealObj, mealKey) => {
       if (mealObj?.kcal) return Number(mealObj.kcal);
       const dayKcal = dayData?.kcal ? Number(dayData.kcal) : calorieGoal;
@@ -856,6 +861,7 @@ const HomeScreen = ({ navigation }) => {
         onManualLog: () => handleManualMeal('desayuno'),
         showAIButton: true,
         isAI: isAi(dayData.desayuno),
+        isManual: isManualMeal(dayData.desayuno),
         kcal: getKcal(dayData.desayuno, 'desayuno')
       },
       {
@@ -871,6 +877,7 @@ const HomeScreen = ({ navigation }) => {
         onManualLog: () => handleManualMeal('snackAM'),
         showAIButton: false,
         isAI: isAi(dayData.snackAM),
+        isManual: isManualMeal(dayData.snackAM),
         kcal: getKcal(dayData.snackAM, 'snackAM')
       },
       {
@@ -887,6 +894,7 @@ const HomeScreen = ({ navigation }) => {
         onManualLog: () => handleManualMeal('almuerzo'),
         showAIButton: true,
         isAI: isAi(dayData.almuerzo),
+        isManual: isManualMeal(dayData.almuerzo),
         kcal: getKcal(dayData.almuerzo, 'almuerzo')
       },
       {
@@ -902,6 +910,7 @@ const HomeScreen = ({ navigation }) => {
         onManualLog: () => handleManualMeal('snackPM'),
         showAIButton: false,
         isAI: isAi(dayData.snackPM),
+        isManual: isManualMeal(dayData.snackPM),
         kcal: getKcal(dayData.snackPM, 'snackPM')
       },
       {
@@ -918,6 +927,7 @@ const HomeScreen = ({ navigation }) => {
         onManualLog: () => handleManualMeal('cena'),
         showAIButton: true,
         isAI: isAi(dayData.cena),
+        isManual: isManualMeal(dayData.cena),
         kcal: getKcal(dayData.cena, 'cena')
       }
     ];
@@ -1215,6 +1225,11 @@ const HomeScreen = ({ navigation }) => {
                       <Text style={styles.mealTitle}>{meal.title}</Text>
                       {meal.isCheat ? (
                         <Text style={styles.mealCheatPill}>Cheat</Text>
+                      ) : null}
+                      {meal.isManual && !meal.isCheat ? (
+                        <Text style={styles.mealManualPill}>
+                          👜 {language === 'en' ? 'Manual' : 'Manual'}
+                        </Text>
                       ) : null}
                       {meal.isAI ? (
                         <Text style={styles.mealAiPill}>
@@ -2231,6 +2246,15 @@ const createStyles = (theme) =>
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 999
+    },
+    mealManualPill: {
+      ...theme.typography.caption,
+      backgroundColor: `${theme.colors.primarySoft}`,
+      color: theme.colors.primary,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+      fontWeight: '700'
     },
     mealCheatPill: {
       ...theme.typography.caption,
