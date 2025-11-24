@@ -1788,8 +1788,8 @@ const getStyles = (theme) =>
       marginRight: 10
     },
     dayChipActive: {
-      borderColor: theme.colors.primary,
-      backgroundColor: 'rgba(15,118,110,0.08)'
+      borderColor: withAlpha(theme.colors.primary, 0.9),
+      backgroundColor: withAlpha(theme.colors.primary, 0.14)
     },
     dayChipTitle: {
       ...theme.typography.bodySmall,
@@ -1799,7 +1799,7 @@ const getStyles = (theme) =>
     },
     dayChipBarTrack: {
       height: 5,
-      backgroundColor: theme.colors.bg,
+      backgroundColor: theme.colors.cardSoft,
       borderRadius: 999,
       marginBottom: 6,
       overflow: 'hidden'

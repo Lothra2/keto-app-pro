@@ -1228,7 +1228,7 @@ const HomeScreen = ({ navigation }) => {
                       ) : null}
                       {meal.isManual && !meal.isCheat ? (
                         <Text style={styles.mealManualPill}>
-                          👜 {language === 'en' ? 'Manual' : 'Manual'}
+                          {language === 'en' ? 'Manual' : 'Manual'}
                         </Text>
                       ) : null}
                       {meal.isAI ? (
@@ -2249,12 +2249,15 @@ const createStyles = (theme) =>
     },
     mealManualPill: {
       ...theme.typography.caption,
-      backgroundColor: `${theme.colors.primarySoft}`,
-      color: theme.colors.primary,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
+      backgroundColor: theme.colors.primary,
+      color: theme.colors.onPrimary,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
       borderRadius: 999,
-      fontWeight: '700'
+      fontWeight: '800',
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.onPrimary, 0.14),
+      letterSpacing: 0.3
     },
     mealCheatPill: {
       ...theme.typography.caption,
