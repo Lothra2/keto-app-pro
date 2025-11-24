@@ -176,12 +176,11 @@ const ManualMealModal = ({ route, navigation }) => {
     setSaving(true);
     try {
       const baseData = storedDay ? { ...storedDay } : {};
-      const goal = calculateDynamicDailyKcal({
-        baseKcal: baseDay.kcal || baseData.kcal || 1600,
-        gender,
-        metrics,
-        cheatKcal: baseData.cheatKcal || 0,
-      });
+      const goal =
+        calorieState?.goal ||
+        baseDay.kcal ||
+        baseData.kcal ||
+        calculateDynamicDailyKcal({ baseKcal: 1600, gender, metrics, cheatKcal: baseData.cheatKcal || 0 });
 
       baseData[mealKey] = {
         ...(baseData[mealKey] || baseDay?.[mealKey] || {}),
@@ -273,32 +272,36 @@ const ManualMealModal = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.card}>
-          <Text style={styles.label}>{mealTitles[mealKey] || mealKey}</Text>
-          <Text style={styles.hint}>
-            {language === 'en'
-              ? 'Describe what you actually ate. We will update this meal and your calories.'
-              : 'Describe lo que comiste. Actualizaremos esta comida y tus calorías.'}
-          </Text>
+          <View style={styles.section}>
+            <Text style={styles.label}>{mealTitles[mealKey] || mealKey}</Text>
+            <Text style={styles.hint}>
+              {language === 'en'
+                ? 'Describe what you actually ate. We will update this meal and your calories.'
+                : 'Describe lo que comiste. Actualizaremos esta comida y tus calorías.'}
+            </Text>
+          </View>
 
-          <TextInput
-            style={[styles.input, styles.textarea, { borderColor: theme.colors.border }]}
-            placeholder={language === 'en' ? 'Food, ingredients, swaps…' : 'Comida, ingredientes, cambios…'}
-            placeholderTextColor={theme.colors.textMuted}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-          />
+          <View style={styles.section}>
+            <TextInput
+              style={[styles.input, styles.textarea, { borderColor: theme.colors.border }]}
+              placeholder={language === 'en' ? 'Food, ingredients, swaps…' : 'Comida, ingredientes, cambios…'}
+              placeholderTextColor={theme.colors.textMuted}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
 
-          <TextInput
-            style={[styles.input, { borderColor: theme.colors.border }]}
-            placeholder={language === 'en' ? 'Portion or amount (optional)' : 'Porción o cantidad (opcional)'}
-            placeholderTextColor={theme.colors.textMuted}
-            value={portion}
-            onChangeText={setPortion}
-          />
+            <TextInput
+              style={[styles.input, { borderColor: theme.colors.border }]}
+              placeholder={language === 'en' ? 'Portion or amount (optional)' : 'Porción o cantidad (opcional)'}
+              placeholderTextColor={theme.colors.textMuted}
+              value={portion}
+              onChangeText={setPortion}
+            />
+          </View>
 
-          <View style={styles.kcalRow}>
-            <View style={{ flex: 1 }}>
+          <View style={[styles.section, styles.kcalRow]}>
+            <View style={styles.kcalColumn}>
               <Text style={styles.subLabel}>{language === 'en' ? 'Estimated kcal' : 'Kcal estimadas'}</Text>
               <TextInput
                 style={[styles.input, styles.kcalInput, { borderColor: theme.colors.border }]}
@@ -359,7 +362,8 @@ const createStyles = (theme) =>
     },
     card: {
       marginHorizontal: theme.spacing.lg,
-      gap: theme.spacing.sm,
+      gap: theme.spacing.md,
+      padding: theme.spacing.md,
     },
     label: {
       ...theme.typography.body,
@@ -384,6 +388,9 @@ const createStyles = (theme) =>
       minHeight: 90,
       textAlignVertical: 'top',
     },
+    section: {
+      gap: theme.spacing.sm,
+    },
     subLabel: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
@@ -391,15 +398,21 @@ const createStyles = (theme) =>
     },
     kcalRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'stretch',
       gap: theme.spacing.sm,
+    },
+    kcalColumn: {
+      flex: 1,
+      justifyContent: 'space-between',
+      gap: 6,
     },
     kcalInput: {
       marginTop: 4,
     },
     aiButton: {
-      minWidth: 120,
-      alignSelf: 'flex-end',
+      minWidth: 140,
+      alignSelf: 'stretch',
+      justifyContent: 'center',
     },
     actions: {
       marginTop: theme.spacing.sm,

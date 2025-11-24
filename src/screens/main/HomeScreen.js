@@ -2289,16 +2289,20 @@ const createStyles = (theme) =>
       gap: 8
     },
     mealManualButton: {
-      backgroundColor: `${theme.colors.primary}29`,
+      backgroundColor: theme.colors.cardSoft,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}50`,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999
+      borderColor: theme.colors.border,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      shadowColor: theme.colors.shadow,
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 }
     },
     mealManualText: {
       ...theme.typography.caption,
-      color: theme.colors.primary,
+      color: theme.colors.text,
       fontWeight: '700'
     },
     mealAIButton: {
