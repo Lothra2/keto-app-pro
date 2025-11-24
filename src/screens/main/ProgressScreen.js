@@ -707,16 +707,12 @@ const ProgressScreen = () => {
     [progressToDate, language, safePlan, user?.startDate]
   )
 
-  const maxCalPercent = calorieHistory.length
-    ? Math.max(
-        ...calorieHistory.map((item) =>
-          Math.max(
-            Math.min(140, Math.max(item.percent, 0)),
-            Math.min(140, Math.max(item.mealPercent || 0, 0))
-          )
-        ),
-        1
-      )
+  const maxCaloriePercent = calorieHistory.length
+    ? Math.max(...calorieHistory.map((item) => Math.min(140, Math.max(item.percent, 0))), 1)
+    : 1
+
+  const maxMealPercent = calorieHistory.length
+    ? Math.max(...calorieHistory.map((item) => Math.min(140, Math.max(item.mealPercent || 0, 0))), 1)
     : 1
 
   const trackedDays = Math.max(daysElapsed, 0)
@@ -1243,69 +1239,110 @@ const ProgressScreen = () => {
 
         {/* adherencia en % */}
         {selectedTracker === 'calories' && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalBars}
-          >
-            {calorieHistory.map((item) => {
-              const clampedPercent = Math.min(140, Math.max(item.percent, 0))
-              const clampedMeals = Math.min(140, Math.max(item.mealPercent || 0, 0))
-              const heightPercent = Math.max(
-                8,
-                Math.round((clampedPercent / maxCalPercent) * 100)
-              )
-              const mealHeight = Math.max(
-                8,
-                Math.round((clampedMeals / maxCalPercent) * 100)
-              )
-              const withinTarget = item.percent >= 90 && item.percent <= 110
-              const below = item.percent < 90
-              const barColor = withinTarget
-                ? 'rgba(34,197,94,0.75)'
-                : below
-                ? 'rgba(56,189,248,0.75)'
-                : 'rgba(248,113,113,0.8)'
-              const mealColor = 'rgba(99,102,241,0.85)'
-
-              return (
-                <View key={item.label} style={styles.trackerBarItem}>
-                  <View style={styles.trackerBarTrack}>
-                    <View
-                      style={[
-                        styles.trackerBarFill,
-                        styles.calorieFill,
-                        {
-                          height: `${heightPercent}%`,
-                          backgroundColor: barColor
-                        }
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.trackerBarFill,
-                        styles.mealFill,
-                        {
-                          height: `${mealHeight}%`,
-                          backgroundColor: mealColor
-                        }
-                      ]}
-                    />
-                    <View style={styles.calorieTargetMarker} />
-                  </View>
-                  <Text style={styles.trackerLabel}>{item.label}</Text>
-                  <Text style={styles.trackerValue}>
-                    ⚡{item.percent}% · 🍽️{item.mealPercent}%
-                  </Text>
-                </View>
-              )
-            })}
-            {calorieHistory.length === 0 && (
-              <Text style={styles.emptyTrackerText}>
-                {language === 'en' ? 'No calories logged yet' : 'Aún no registras calorías'}
+          <View style={styles.calorieTrackerWrap}>
+            <View style={styles.trackerSubheader}>
+              <Text style={styles.trackerSubheading}>
+                {language === 'en' ? 'Calories vs. goal' : 'Calorías vs meta'}
               </Text>
-            )}
-          </ScrollView>
+              <Text style={styles.trackerSubhint}>
+                {language === 'en' ? 'Aim for 90-110%' : 'Apunta a 90-110%'}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalBars}
+            >
+              {calorieHistory.map((item) => {
+                const clampedPercent = Math.min(140, Math.max(item.percent, 0))
+                const heightPercent = Math.max(
+                  8,
+                  Math.round((clampedPercent / maxCaloriePercent) * 100)
+                )
+                const withinTarget = item.percent >= 90 && item.percent <= 110
+                const below = item.percent < 90
+                const barColor = withinTarget
+                  ? withAlpha(theme.colors.success, 0.8)
+                  : below
+                  ? withAlpha(theme.colors.info, 0.85)
+                  : withAlpha(theme.colors.danger, 0.85)
+
+                return (
+                  <View key={item.label} style={styles.trackerBarItem}>
+                    <View style={styles.trackerBarTrack}>
+                      <View
+                        style={[
+                          styles.trackerBarFill,
+                          styles.singleFill,
+                          {
+                            height: `${heightPercent}%`,
+                            backgroundColor: barColor
+                          }
+                        ]}
+                      />
+                      <View style={styles.calorieTargetMarker} />
+                    </View>
+                    <Text style={styles.trackerLabel}>{item.label}</Text>
+                    <Text style={styles.trackerValue}>⚡{item.percent}%</Text>
+                  </View>
+                )
+              })}
+              {calorieHistory.length === 0 && (
+                <Text style={styles.emptyTrackerText}>
+                  {language === 'en' ? 'No calories logged yet' : 'Aún no registras calorías'}
+                </Text>
+              )}
+            </ScrollView>
+
+            <View style={[styles.trackerSubheader, styles.trackerSubheaderSpacing]}>
+              <Text style={styles.trackerSubheading}>
+                {language === 'en' ? 'Meal adherence' : 'Adherencia de comidas'}
+              </Text>
+              <Text style={styles.trackerSubhint}>
+                {language === 'en' ? 'Based on planned meals' : 'Sobre comidas planificadas'}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalBars}
+            >
+              {calorieHistory.map((item) => {
+                const clampedMeals = Math.min(140, Math.max(item.mealPercent || 0, 0))
+                const mealHeight = Math.max(
+                  8,
+                  Math.round((clampedMeals / maxMealPercent) * 100)
+                )
+
+                return (
+                  <View key={item.label} style={styles.trackerBarItem}>
+                    <View style={styles.trackerBarTrack}>
+                      <View
+                        style={[
+                          styles.trackerBarFill,
+                          styles.singleFill,
+                          {
+                            height: `${mealHeight}%`,
+                            backgroundColor: withAlpha(theme.colors.accent, 0.9)
+                          }
+                        ]}
+                      />
+                      <View style={styles.calorieTargetMarker} />
+                    </View>
+                    <Text style={styles.trackerLabel}>{item.label}</Text>
+                    <Text style={styles.trackerValue}>🍽️{item.mealPercent}%</Text>
+                  </View>
+                )
+              })}
+              {calorieHistory.length === 0 && (
+                <Text style={styles.emptyTrackerText}>
+                  {language === 'en'
+                    ? 'No adherence logged yet'
+                    : 'Aún no registras adherencia'}
+                </Text>
+              )}
+            </ScrollView>
+          </View>
         )}
       </View>
 
@@ -1893,9 +1930,31 @@ const getStyles = (theme) =>
       color: theme.colors.text,
       fontWeight: '600'
     },
+    trackerSubheader: {
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.xs,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    },
+    trackerSubheaderSpacing: {
+      marginTop: theme.spacing.md
+    },
+    trackerSubheading: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '700'
+    },
+    trackerSubhint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
     horizontalBars: {
       gap: 12,
       paddingRight: 4
+    },
+    calorieTrackerWrap: {
+      gap: theme.spacing.xs
     },
     trackerBarItem: {
       alignItems: 'center',
@@ -1915,6 +1974,12 @@ const getStyles = (theme) =>
     },
     trackerBarFill: {
       width: '100%',
+      borderRadius: 999
+    },
+    singleFill: {
+      position: 'absolute',
+      left: 6,
+      right: 6,
       borderRadius: 999
     },
     calorieFill: {
