@@ -189,7 +189,7 @@ const ProgressScreen = () => {
     (day, mealsState, fallbackGoal) => {
       const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena']
       const dayKcal =
-        Number(day?.dynamicKcal || day?.planKcal || day?.kcal) || fallbackGoal
+        Number(day?.kcal || day?.dynamicKcal || day?.planKcal) || fallbackGoal
       const dist = getMealDistribution(gender)
 
       return mealKeys.reduce((sum, key) => {
@@ -223,6 +223,20 @@ const ProgressScreen = () => {
         const baseDay = plan[i] || {}
         const mergedDay = mergePlanDay(baseDay, storedDay || {})
         const cheat = await getCheatMeal(i)
+
+        if (cheat?.mealKey) {
+          mergedDay[cheat.mealKey] = {
+            ...(mergedDay?.[cheat.mealKey] || {}),
+            nombre: language === 'en' ? 'Cheat meal' : 'Cheat meal',
+            descripcion: cheat.description || mergedDay?.[cheat.mealKey]?.descripcion || '',
+            qty: cheat.portion || mergedDay?.[cheat.mealKey]?.qty || '',
+            kcal: cheat.kcalEstimate
+              ? Number(cheat.kcalEstimate)
+              : mergedDay?.[cheat.mealKey]?.kcal,
+            estimatedByAI: Boolean(cheat?.estimatedByAI),
+            isCheat: true
+          }
+        }
         const dayPlanKcal =
           mergedDay?.dynamicKcal || mergedDay?.planKcal || mergedDay?.kcal || baseDay?.kcal || 1600
         const dynamicGoal = calculateDynamicDailyKcal({
@@ -242,6 +256,7 @@ const ProgressScreen = () => {
           cena: false,
           ...(calorieState.meals || {})
         }
+        const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena']
         const normalizedGoal =
           calorieState.goal && calorieState.goal !== dynamicGoal
             ? dynamicGoal
@@ -251,6 +266,8 @@ const ProgressScreen = () => {
           mealsState,
           normalizedGoal
         )
+        const totalMeals = mealKeys.length
+        const completedMeals = mealKeys.filter((key) => mealsState[key]).length
         const hasCalories = consumedCalories > 0
 
         const pesoNumber = dayProgress.peso !== undefined && dayProgress.peso !== null
@@ -286,6 +303,9 @@ const ProgressScreen = () => {
           waterGoal: water.goal,
           calGoal: normalizedGoal,
           calConsumed: consumedCalories,
+          mealCompletion: totalMeals ? Math.round((completedMeals / totalMeals) * 100) : 0,
+          mealsCompleted: completedMeals,
+          totalMeals,
           burnedKcal
         })
       }
@@ -711,10 +731,10 @@ const ProgressScreen = () => {
   const daysInPlan = Math.max(trackedDays, 1)
   const waterSummary = `${hydration.daysWithWater}/${trackedDays || 1}`
   const workoutSummary = `${exerciseSummary.daysLogged}/${trackedDays || 1}`
-  const adherenceDays = calorieHistory.filter(
-    (item) => item.percent >= 90 && item.percent <= 110
+  const adherenceDays = progressToDate.filter(
+    (item) => item.totalMeals > 0 && item.mealsCompleted >= item.totalMeals
   ).length
-  const adherenceSummary = `${adherenceDays}/${calorieHistory.length || (trackedDays || 1)}`
+  const adherenceSummary = `${adherenceDays}/${Math.max(trackedDays, 1)}`
 
   const avgWaterMl = Math.round(hydration.totalMl / daysInPlan)
   const avgWorkoutKcal = Math.round(exerciseSummary.totalKcal / daysInPlan)
@@ -731,7 +751,7 @@ const ProgressScreen = () => {
     ? Math.max(...exerciseHistory.map((item) => item.kcal || 0), 0)
     : 0
   const consistencyScore = Math.round(
-    (adherenceDays / Math.max(calorieHistory.length, 1)) * 40 +
+    (adherenceDays / Math.max(trackedDays, 1)) * 40 +
       (hydration.daysWithWater / daysInPlan) * 30 +
       (exerciseSummary.daysLogged / daysInPlan) * 30
   )
