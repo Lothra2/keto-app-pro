@@ -177,9 +177,9 @@ const ManualMealModal = ({ route, navigation }) => {
     try {
       const baseData = storedDay ? { ...storedDay } : {};
       const goal =
-        calorieState?.goal ||
-        baseDay.kcal ||
+        baseDay?.kcal ||
         baseData.kcal ||
+        calorieState?.goal ||
         calculateDynamicDailyKcal({ baseKcal: 1600, gender, metrics, cheatKcal: baseData.cheatKcal || 0 });
 
       baseData[mealKey] = {
@@ -300,25 +300,27 @@ const ManualMealModal = ({ route, navigation }) => {
             />
           </View>
 
-          <View style={[styles.section, styles.kcalRow]}>
-            <View style={styles.kcalColumn}>
-              <Text style={styles.subLabel}>{language === 'en' ? 'Estimated kcal' : 'Kcal estimadas'}</Text>
-              <TextInput
-                style={[styles.input, styles.kcalInput, { borderColor: theme.colors.border }]}
-                keyboardType="numeric"
-                placeholder="420"
-                placeholderTextColor={theme.colors.textMuted}
-                value={kcal}
-                onChangeText={setKcal}
+          <View style={styles.kcalPanel}>
+            <View style={[styles.section, styles.kcalRow]}>
+              <View style={styles.kcalColumn}>
+                <Text style={styles.subLabel}>{language === 'en' ? 'Estimated kcal' : 'Kcal estimadas'}</Text>
+                <TextInput
+                  style={[styles.input, styles.kcalInput, { borderColor: theme.colors.border }]}
+                  keyboardType="numeric"
+                  placeholder="420"
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={kcal}
+                  onChangeText={setKcal}
+                />
+              </View>
+              <Button
+                title={aiLoading ? (language === 'en' ? 'Estimating…' : 'Estimando…') : language === 'en' ? 'Ask AI' : 'Pedir a IA'}
+                onPress={aiLoading ? undefined : handleEstimate}
+                disabled={aiLoading}
+                variant="secondary"
+                style={styles.aiButton}
               />
             </View>
-            <Button
-              title={aiLoading ? (language === 'en' ? 'Estimating…' : 'Estimando…') : language === 'en' ? 'Ask AI' : 'Pedir a IA'}
-              onPress={aiLoading ? undefined : handleEstimate}
-              disabled={aiLoading}
-              variant="secondary"
-              style={styles.aiButton}
-            />
           </View>
 
           {note ? <Text style={styles.note}>{note}</Text> : null}
@@ -362,8 +364,8 @@ const createStyles = (theme) =>
     },
     card: {
       marginHorizontal: theme.spacing.lg,
-      gap: theme.spacing.md,
-      padding: theme.spacing.md,
+      gap: theme.spacing.lg,
+      padding: theme.spacing.lg,
     },
     label: {
       ...theme.typography.body,
@@ -389,12 +391,25 @@ const createStyles = (theme) =>
       textAlignVertical: 'top',
     },
     section: {
-      gap: theme.spacing.sm,
+      gap: theme.spacing.md,
     },
     subLabel: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
       marginBottom: 4,
+    },
+    kcalPanel: {
+      backgroundColor: theme.colors.cardSoft,
+      padding: theme.spacing.md,
+      borderRadius: theme.radius.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      gap: theme.spacing.sm,
+      shadowColor: '#000',
+      shadowOpacity: theme.mode === 'dark' ? 0.08 : 0.04,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 2,
     },
     kcalRow: {
       flexDirection: 'row',
@@ -404,18 +419,27 @@ const createStyles = (theme) =>
     kcalColumn: {
       flex: 1,
       justifyContent: 'space-between',
-      gap: 6,
+      gap: theme.spacing.sm,
     },
     kcalInput: {
-      marginTop: 4,
+      marginTop: 2,
+      paddingVertical: theme.spacing.sm + 2,
     },
     aiButton: {
-      minWidth: 140,
+      minWidth: 150,
+      minHeight: 54,
       alignSelf: 'stretch',
       justifyContent: 'center',
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.radius.md,
+      shadowColor: '#000',
+      shadowOpacity: theme.mode === 'dark' ? 0.12 : 0.08,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 3,
     },
     actions: {
-      marginTop: theme.spacing.sm,
+      marginTop: theme.spacing.md,
     },
     saveButton: {
       width: '100%',
