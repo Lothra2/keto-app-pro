@@ -26,8 +26,9 @@ import {
   calculateBMR,
   calculateBMI,
   getBMICategory,
-  calculateConsumedCalories,
-  calculateTDEE
+  calculateTDEE,
+  calculateDynamicDailyKcal,
+  getMealDistribution
 } from '../../utils/calculations'
 import storage, { KEYS } from '../../storage/storage'
 import MultiMetricChart from '../../components/progress/MultiMetricChart'
@@ -39,6 +40,8 @@ import Button from '../../components/shared/Button'
 import Card from '../../components/shared/Card'
 import { exportProgressPdf } from '../../utils/pdf'
 import aiService from '../../api/aiService'
+import { getDayData, getCheatMeal } from '../../storage/storage'
+import { mergePlanDay } from '../../utils/plan'
 
 const USER_HEIGHT_KEY = 'USER_HEIGHT_OVERRIDE'
 const USER_WEIGHT_KEY = 'USER_WEIGHT_OVERRIDE'
@@ -129,7 +132,7 @@ const ProgressScreen = () => {
   const [exerciseSummary, setExerciseSummary] = useState({ daysLogged: 0, totalKcal: 0 })
 
   const [selectedMetricKey, setSelectedMetricKey] = useState('weight')
-  const [selectedTracker, setSelectedTracker] = useState('water') // water | workout | calories
+  const [selectedTracker, setSelectedTracker] = useState('water') // water | workout | adherence | kcal
   const [exportingPdf, setExportingPdf] = useState(false)
   const [showPdfWeekModal, setShowPdfWeekModal] = useState(false)
   const [aiInsight, setAiInsight] = useState('')
@@ -170,15 +173,26 @@ const ProgressScreen = () => {
       const activityMap = { soft: 'light', medium: 'moderate', hard: 'active' }
       const activityLevel = activityMap[intensityLevel] || 'light'
       const tdee = bmrVal ? calculateTDEE(bmrVal, activityLevel) : null
-      const recommended = tdee ? Math.round(tdee * 0.85) : null
+      const avgPlanKcal = safePlan.length
+        ? Math.round(
+            safePlan.reduce((sum, day) => sum + (Number(day?.kcal) || 0), 0) /
+              Math.max(safePlan.length, 1)
+          )
+        : null
+      const ketoRecommended = tdee ? Math.round(tdee * 0.85) : null
+      const recommended = ketoRecommended || avgPlanKcal
+
+      const harmonizedRecommendation = recommended && avgPlanKcal
+        ? Math.round((recommended + avgPlanKcal) / 2)
+        : recommended || avgPlanKcal
 
       setBodyFat(bf)
       setBmr(bmrVal)
       setBmi(bmiVal)
       setBmiCategory(category)
-      setRecommendedCalories(recommended)
+      setRecommendedCalories(harmonizedRecommendation)
     },
-    [gender, language, metrics?.workoutIntensity]
+    [gender, language, metrics?.workoutIntensity, safePlan]
   )
 
   const loadAllProgress = useCallback(
@@ -192,19 +206,42 @@ const ProgressScreen = () => {
       const limit = Math.min(plan.length, Math.max(daysElapsed, 0) || 0)
 
       for (let i = 0; i < limit; i++) {
+        const baseDay = plan[i] || {}
+        const storedDay = await getDayData(i)
+        const cheat = await getCheatMeal(i)
+        const dynamicGoal = calculateDynamicDailyKcal({
+          baseKcal: baseDay.kcal || storedDay?.kcal || 1600,
+          gender,
+          metrics,
+          cheatKcal: cheat?.kcalEstimate || storedDay?.cheatKcal || 0
+        })
+        const calorieState = await getCalorieState(i, dynamicGoal)
+        const goal = calorieState.goal || dynamicGoal
+        const mealsState = calorieState.meals || {}
+        const mergedDay = mergePlanDay(baseDay, storedDay || {})
+        const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena']
+        const mealDist = getMealDistribution(gender)
+
+        if (goal !== calorieState.goal) {
+          await saveCalorieState(i, { ...calorieState, goal })
+        }
+
+        const consumedCalories = mealKeys.reduce((sum, key) => {
+          if (!mealsState[key]) return sum
+          const mealObj = mergedDay?.[key]
+          const value = Number(mealObj?.kcal)
+          const mealKcal = Number.isFinite(value) && value > 0
+            ? Math.round(value)
+            : Math.round(goal * (mealDist[key] || 0.2))
+          return sum + mealKcal
+        }, 0)
+
+        const completedMeals = mealKeys.filter((key) => mealsState[key]).length
+        const mealPercent = Math.round((completedMeals / Math.max(mealKeys.length, 1)) * 100)
+        const caloriePercent = goal ? Math.round((consumedCalories / goal) * 100) : 0
+
         const dayProgress = await getProgressData(i)
         const water = await getWaterState(i, userWaterGoal)
-        const calorieState = await getCalorieState(i, plan[i]?.kcal || 1600)
-        const hasProgress = Object.keys(dayProgress).length > 0
-        const hasWater = water.ml > 0
-        const mealsState = calorieState.meals || {}
-        const consumedCalories = calculateConsumedCalories(
-          mealsState,
-          calorieState.goal || plan[i]?.kcal || 1600,
-          gender
-        )
-        const hasCalories = consumedCalories > 0
-
         const pesoNumber = dayProgress.peso !== undefined && dayProgress.peso !== null
           ? toNumberOrNull(dayProgress.peso)
           : null
@@ -236,8 +273,10 @@ const ProgressScreen = () => {
           bodyFat: computedBodyFat,
           water: water.ml,
           waterGoal: water.goal,
-          calGoal: calorieState.goal || plan[i]?.kcal || 1600,
+          calGoal: goal,
           calConsumed: consumedCalories,
+          mealPercent,
+          caloriePercent,
           burnedKcal
         })
       }
@@ -248,7 +287,17 @@ const ProgressScreen = () => {
         totalKcal: Math.round(totalExerciseKcal)
       })
     },
-    [age, safePlan, gender, height, language, userWaterGoal, user?.startDate, daysElapsed]
+    [
+      age,
+      safePlan,
+      gender,
+      height,
+      language,
+      userWaterGoal,
+      user?.startDate,
+      daysElapsed,
+      metrics
+    ]
   )
 
   const hydrationStats = useCallback(
@@ -569,7 +618,7 @@ const ProgressScreen = () => {
         maxWorkout,
       },
       calories: {
-        adherenceDays,
+        adherenceDays: calorieAdherenceDays,
         totalTracked: totalTracked || daysInPlan,
       },
       weight: { start: startWeightNumber, latest: lastWeightNumber, delta: weightDelta },
@@ -609,7 +658,7 @@ const ProgressScreen = () => {
     exerciseSummary.daysLogged,
     avgWorkoutKcal,
     maxWorkout,
-    adherenceDays,
+    calorieAdherenceDays,
     calorieHistory,
     daysInPlan,
     startWeightNumber,
@@ -645,28 +694,37 @@ const ProgressScreen = () => {
         .map((itemEntry) => {
           const goal = itemEntry.calGoal || safePlan[itemEntry.dayIndex]?.kcal || 1600
           const consumed = itemEntry.calConsumed || 0
+          const mealPercent = itemEntry.mealPercent ?? 0
+          const caloriePercent = itemEntry.caloriePercent ?? (goal ? Math.round((consumed / goal) * 100) : 0)
           return {
             label: getDayTag(itemEntry.dayIndex, language, user?.startDate),
             goal,
             consumed,
-            percent: goal ? Math.round((consumed / goal) * 100) : 0
+            percent: caloriePercent,
+            mealPercent
           }
         }),
     [progressToDate, language, safePlan, user?.startDate]
   )
 
-  const maxCalPercent = calorieHistory.length
+  const maxCaloriePercent = calorieHistory.length
     ? Math.max(...calorieHistory.map((item) => Math.min(140, Math.max(item.percent, 0))), 1)
+    : 1
+
+  const maxMealPercent = calorieHistory.length
+    ? Math.max(...calorieHistory.map((item) => Math.min(140, Math.max(item.mealPercent || 0, 0))), 1)
     : 1
 
   const trackedDays = Math.max(daysElapsed, 0)
   const daysInPlan = Math.max(trackedDays, 1)
   const waterSummary = `${hydration.daysWithWater}/${trackedDays || 1}`
   const workoutSummary = `${exerciseSummary.daysLogged}/${trackedDays || 1}`
-  const adherenceDays = calorieHistory.filter(
+  const calorieAdherenceDays = calorieHistory.filter(
     (item) => item.percent >= 90 && item.percent <= 110
   ).length
-  const adherenceSummary = `${adherenceDays}/${calorieHistory.length || (trackedDays || 1)}`
+  const mealAdherenceDays = calorieHistory.filter((item) => item.mealPercent >= 90).length
+  const adherenceSummary = `${calorieAdherenceDays}/${calorieHistory.length || (trackedDays || 1)} kcal · ${mealAdherenceDays}/${calorieHistory.length || (trackedDays || 1)} meals`
+  const calorieTargetSummary = `${calorieAdherenceDays}/${calorieHistory.length || (trackedDays || 1)}`
 
   const avgWaterMl = Math.round(hydration.totalMl / daysInPlan)
   const avgWorkoutKcal = Math.round(exerciseSummary.totalKcal / daysInPlan)
@@ -683,7 +741,7 @@ const ProgressScreen = () => {
     ? Math.max(...exerciseHistory.map((item) => item.kcal || 0), 0)
     : 0
   const consistencyScore = Math.round(
-    (adherenceDays / Math.max(calorieHistory.length, 1)) * 40 +
+    (calorieAdherenceDays / Math.max(calorieHistory.length, 1)) * 40 +
       (hydration.daysWithWater / daysInPlan) * 30 +
       (exerciseSummary.daysLogged / daysInPlan) * 30
   )
@@ -821,35 +879,16 @@ const ProgressScreen = () => {
           </View>
 
           <View style={styles.analyticsGrid}>
-            <View style={styles.analyticsItem}>
-              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Avg hydration' : 'Hidratación prom.'}</Text>
-              <Text style={styles.analyticsValue}>{avgWaterMl} ml</Text>
-              <Text style={styles.analyticsHint}>{waterSummary} {language === 'en' ? 'days on goal' : 'días en meta'}</Text>
-            </View>
-            <View style={styles.analyticsItem}>
-              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Workout effort' : 'Esfuerzo entreno'}</Text>
-              <Text style={styles.analyticsValue}>{avgWorkoutKcal} kcal</Text>
-              <Text style={styles.analyticsHint}>{language === 'en' ? 'Peak' : 'Pico'}: {maxWorkout} kcal</Text>
-            </View>
-            <View style={styles.analyticsItem}>
-              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Weight trend' : 'Tendencia de peso'}</Text>
-              <Text style={styles.analyticsValue}>
-                {weightDelta === null
-                  ? '—'
-                  : `${weightDelta > 0 ? '+' : ''}${weightDelta} kg`}
+            <View style={[styles.analyticsItem, styles.analyticsItemFull]}>
+              <Text style={styles.analyticsLabel}>
+                {language === 'en' ? 'Adherence (kcal · meals)' : 'Adherencia (kcal · comidas)'}
               </Text>
-              <Text style={styles.analyticsHint}>
-                {lastWeightNumber !== null
-                  ? `${language === 'en' ? 'Latest' : 'Último'}: ${lastWeightNumber} kg`
-                  : language === 'en'
-                  ? 'Log a weight to unlock trend'
-                  : 'Registra un peso para ver la tendencia'}
-              </Text>
-            </View>
-            <View style={styles.analyticsItem}>
-              <Text style={styles.analyticsLabel}>{language === 'en' ? 'Adherence' : 'Adherencia'}</Text>
               <Text style={styles.analyticsValue}>{adherenceSummary}</Text>
-              <Text style={styles.analyticsHint}>{language === 'en' ? 'food log days' : 'días con registro'}</Text>
+              <Text style={styles.analyticsHint}>
+                {language === 'en'
+                  ? 'Same as daily progress header'
+                  : 'Igual al encabezado de progreso diario'}
+              </Text>
             </View>
           </View>
 
@@ -1057,6 +1096,9 @@ const ProgressScreen = () => {
             🔥 {language === 'en' ? 'Workout' : 'Entreno'}: {workoutSummary}
           </Text>
           <Text style={styles.trackerSummaryText}>
+            ⚡ {language === 'en' ? 'Kcal target' : 'Meta kcal'}: {calorieTargetSummary}
+          </Text>
+          <Text style={styles.trackerSummaryText}>
             🍽️ {language === 'en' ? 'Adherence' : 'Adherencia'}: {adherenceSummary}
           </Text>
         </View>
@@ -1085,6 +1127,19 @@ const ProgressScreen = () => {
               ]}
             >
               {language === 'en' ? 'Workout' : 'Entreno'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.trackerTab, selectedTracker === 'kcal' && styles.trackerTabActive]}
+            onPress={() => setSelectedTracker('kcal')}
+          >
+            <Text
+              style={[
+                styles.trackerTabText,
+                selectedTracker === 'kcal' && styles.trackerTabTextActive
+              ]}
+            >
+              {language === 'en' ? 'Kcal %' : '% Kcal'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1180,8 +1235,8 @@ const ProgressScreen = () => {
           </ScrollView>
         )}
 
-        {/* adherencia en % */}
-        {selectedTracker === 'calories' && (
+        {/* kcal target */}
+        {selectedTracker === 'kcal' && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1191,15 +1246,15 @@ const ProgressScreen = () => {
               const clampedPercent = Math.min(140, Math.max(item.percent, 0))
               const heightPercent = Math.max(
                 8,
-                Math.round((clampedPercent / maxCalPercent) * 100)
+                Math.round((clampedPercent / maxCaloriePercent) * 100)
               )
               const withinTarget = item.percent >= 90 && item.percent <= 110
               const below = item.percent < 90
               const barColor = withinTarget
-                ? 'rgba(34,197,94,0.75)'
+                ? withAlpha(theme.colors.success, 0.85)
                 : below
-                ? 'rgba(56,189,248,0.75)'
-                : 'rgba(248,113,113,0.8)'
+                ? withAlpha(theme.colors.info, 0.9)
+                : withAlpha(theme.colors.warning, 0.9)
 
               return (
                 <View key={item.label} style={styles.trackerBarItem}>
@@ -1213,16 +1268,57 @@ const ProgressScreen = () => {
                         }
                       ]}
                     />
-                    <View style={styles.calorieTargetMarker} />
                   </View>
                   <Text style={styles.trackerLabel}>{item.label}</Text>
-                  <Text style={styles.trackerValue}>{item.percent}%</Text>
+                  <Text style={styles.trackerValueStrong}>⚡ {item.percent}%</Text>
                 </View>
               )
             })}
             {calorieHistory.length === 0 && (
               <Text style={styles.emptyTrackerText}>
                 {language === 'en' ? 'No calories logged yet' : 'Aún no registras calorías'}
+              </Text>
+            )}
+          </ScrollView>
+        )}
+
+        {/* adherencia en % */}
+        {selectedTracker === 'calories' && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalBars}
+          >
+            {calorieHistory.map((item) => {
+              const clampedMeals = Math.min(140, Math.max(item.mealPercent || 0, 0))
+              const mealHeight = Math.max(
+                8,
+                Math.round((clampedMeals / maxMealPercent) * 100)
+              )
+
+              return (
+                <View key={item.label} style={styles.trackerBarItem}>
+                  <View style={styles.trackerBarTrack}>
+                    <View
+                      style={[
+                        styles.trackerBarFill,
+                        {
+                          height: `${mealHeight}%`,
+                          backgroundColor: withAlpha(theme.colors.accent, 0.9)
+                        }
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.trackerLabel}>{item.label}</Text>
+                  <Text style={styles.trackerValueStrong}>🍽️ {item.mealPercent}%</Text>
+                </View>
+              )
+            })}
+            {calorieHistory.length === 0 && (
+              <Text style={styles.emptyTrackerText}>
+                {language === 'en'
+                  ? 'No adherence logged yet'
+                  : 'Aún no registras adherencia'}
               </Text>
             )}
           </ScrollView>
@@ -1464,7 +1560,7 @@ const getStyles = (theme) =>
   },
   statValue: {
     ...theme.typography.body,
-    color: theme.colors.primary,
+    color: theme.colors.text,
     fontWeight: '700'
   },
   calculatedStats: {
@@ -1532,6 +1628,9 @@ const getStyles = (theme) =>
       padding: theme.spacing.sm,
       borderWidth: 1,
       borderColor: theme.colors.border,
+    },
+    analyticsItemFull: {
+      width: '100%'
     },
     analyticsLabel: {
       ...theme.typography.caption,
@@ -1708,8 +1807,8 @@ const getStyles = (theme) =>
       marginRight: 10
     },
     dayChipActive: {
-      borderColor: theme.colors.primary,
-      backgroundColor: 'rgba(15,118,110,0.08)'
+      borderColor: withAlpha(theme.colors.primary, 0.9),
+      backgroundColor: withAlpha(theme.colors.primary, 0.14)
     },
     dayChipTitle: {
       ...theme.typography.bodySmall,
@@ -1719,7 +1818,7 @@ const getStyles = (theme) =>
     },
     dayChipBarTrack: {
       height: 5,
-      backgroundColor: theme.colors.bg,
+      backgroundColor: theme.colors.cardSoft,
       borderRadius: 999,
       marginBottom: 6,
       overflow: 'hidden'
@@ -1783,7 +1882,9 @@ const getStyles = (theme) =>
     trackerSummaryRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 6
+      marginBottom: 6,
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm
     },
     trackerSummaryText: {
       ...theme.typography.caption,
@@ -1813,6 +1914,25 @@ const getStyles = (theme) =>
       color: theme.colors.text,
       fontWeight: '600'
     },
+    trackerSubheader: {
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.xs,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    },
+    trackerSubheaderSpacing: {
+      marginTop: theme.spacing.md
+    },
+    trackerSubheading: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '700'
+    },
+    trackerSubhint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted
+    },
     horizontalBars: {
       gap: 12,
       paddingRight: 4
@@ -1822,7 +1942,7 @@ const getStyles = (theme) =>
       width: 56
     },
     trackerBarTrack: {
-      width: 22,
+      width: 28,
       height: 120,
       borderRadius: 999,
       backgroundColor: theme.colors.bgSoft,
@@ -1846,12 +1966,10 @@ const getStyles = (theme) =>
       ...theme.typography.caption,
       color: theme.colors.textMuted
     },
-    calorieTargetMarker: {
-      position: 'absolute',
-      top: 0,
-      height: 2,
-      width: '100%',
-      backgroundColor: theme.colors.border
+    trackerValueStrong: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+      fontWeight: '700'
     },
     emptyTrackerText: {
       ...theme.typography.caption,
