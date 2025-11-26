@@ -12,6 +12,7 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { withAlpha } from '../../theme/utils';
@@ -47,6 +48,7 @@ const ConsultorScreen = () => {
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [showHighlights, setShowHighlights] = useState(false);
 
   const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
   const hasCredentials = Boolean(creds.user && creds.pass);
@@ -80,6 +82,10 @@ const ConsultorScreen = () => {
   }, [language]);
 
   const handleQuick = useCallback((text) => setInput(text), []);
+
+  const toggleHighlights = useCallback(() => {
+    setShowHighlights((prev) => !prev);
+  }, []);
 
   const onSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -183,6 +189,46 @@ const ConsultorScreen = () => {
   const navSpacer = 86;
   const bottomOffset = keyboardOffset > 0 ? keyboardOffset : navSpacer;
   const listBottomSpacing = 44 + bottomOffset + inputPaddingBottom;
+
+  const coachHighlights = useMemo(
+    () =>
+      language === 'en'
+        ? [
+            {
+              title: 'Sharper voice',
+              desc: 'Concise, professional answers with friendly nudges to keep you on track.',
+              icon: '🎯',
+            },
+            {
+              title: 'Visual polish',
+              desc: 'Refined bubbles, gradients and spacing so the conversation feels premium.',
+              icon: '✨',
+            },
+            {
+              title: 'Session clarity',
+              desc: 'Quick chips, mode label and badges keep the coach context crystal clear.',
+              icon: '🧠',
+            },
+          ]
+        : [
+            {
+              title: 'Voz más nítida',
+              desc: 'Respuestas concisas y profesionales con recordatorios amables para avanzar.',
+              icon: '🎯',
+            },
+            {
+              title: 'Estilo visual',
+              desc: 'Burbujas, gradientes y espacios refinados para un chat de alto nivel.',
+              icon: '✨',
+            },
+            {
+              title: 'Sesión clara',
+              desc: 'Chips rápidos, modo activo y badges que mantienen el contexto visible.',
+              icon: '🧠',
+            },
+          ],
+    [language]
+  );
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -295,22 +341,6 @@ const ConsultorScreen = () => {
         </ScreenBanner>
       </View>
 
-      <View style={[styles.personaRow, { borderColor: theme.colors.border }]}> 
-        <View style={styles.personaBadge}>
-          <Text style={styles.personaIcon}>✨</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.personaTitle, { color: theme.colors.text }]}>
-            {language === 'en' ? 'Natural coach mode' : 'Modo coach natural'}
-          </Text>
-          <Text style={[styles.personaSubtitle, { color: theme.colors.textMuted }]}>
-            {language === 'en'
-              ? 'Human, short and curious replies. No background blur, just clean chat.'
-              : 'Respuestas humanas, cortas y curiosas. Sin fondos pesados, solo chat limpio.'}
-          </Text>
-        </View>
-      </View>
-
       {/* chips rápidos */}
       <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
         <FlatList
@@ -337,7 +367,7 @@ const ConsultorScreen = () => {
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.onSurface }}>{label}</Text>
+                <Text style={[styles.quickChipLabel, { color: theme.colors.onSurface }]}>{label}</Text>
               </TouchableOpacity>
             );
           }}
@@ -485,35 +515,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  personaRow: {
-    marginHorizontal: 16,
-    marginBottom: 10,
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    backgroundColor: withAlpha('#0ea5e9', 0.08),
-  },
-  personaBadge: {
-    height: 44,
-    width: 44,
-    borderRadius: 14,
-    backgroundColor: withAlpha('#0ea5e9', 0.18),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  personaIcon: { fontSize: 20 },
-  personaTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  personaSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
   quickRow: {
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -528,6 +529,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
+    minWidth: 140,
+  },
+  quickChipLabel: {
+    color: '#0b172a',
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   modeRow: {
     flexDirection: 'row',
@@ -545,14 +552,14 @@ const styles = StyleSheet.create({
   bubble: {
     maxWidth: '88%',
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
-    marginVertical: 6,
-    gap: 6,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 20,
+    marginVertical: 8,
+    gap: 8,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   metaLabel: {
     fontSize: 11,

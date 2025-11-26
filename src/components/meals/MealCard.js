@@ -21,48 +21,55 @@ const MealCard = ({
   const styles = getStyles(theme);
 
   const hasAIData = mealData?.isAI || false;
-  const normalizedSource = (
-    mealData?.source ||
-    mealData?.origen ||
-    mealData?.origin ||
-    mealData?.sourceType ||
-    mealData?.logSource ||
-    mealData?.inputSource ||
-    mealData?.entryType ||
-    mealData?.entrySource ||
-    mealData?.type ||
-    mealData?.via ||
-    mealData?.createdFrom ||
-    mealData?.provider ||
-    mealData?.loggedFrom ||
-    mealData?.logMethod ||
-    mealData?.source_label ||
-    ''
-  )
-    .toString()
-    .toLowerCase();
+  const manualHints = [
+    mealData?.source,
+    mealData?.origen,
+    mealData?.origin,
+    mealData?.sourceType,
+    mealData?.logSource,
+    mealData?.inputSource,
+    mealData?.entryType,
+    mealData?.entrySource,
+    mealData?.type,
+    mealData?.via,
+    mealData?.createdFrom,
+    mealData?.provider,
+    mealData?.loggedFrom,
+    mealData?.logMethod,
+    mealData?.source_label,
+    mealData?.badge,
+    mealData?.manual,
+    mealData?.manualLabel,
+    mealData?.manualTag,
+    mealData?.manualBadge,
+    mealData?.createdBy,
+  ]
+    .filter(Boolean)
+    .map((value) => value.toString().toLowerCase())
+    .join(' ');
 
   const isManual = Boolean(
-    normalizedSource.includes('manual') ||
-      normalizedSource.includes('user') ||
-      normalizedSource.includes('custom') ||
-      normalizedSource.includes('offline') ||
-      normalizedSource.includes('diary') ||
-      normalizedSource.includes('log') ||
-      normalizedSource.includes('manual-entry') ||
-      normalizedSource === 'plan' ||
+    manualHints.includes('manual') ||
+      manualHints.includes('user') ||
+      manualHints.includes('custom') ||
+      manualHints.includes('offline') ||
+      manualHints.includes('diary') ||
+      manualHints.includes('log') ||
+      manualHints.includes('manual-entry') ||
+      manualHints.includes('cliente') ||
       mealData?.isManual ||
       mealData?.manual === true ||
       mealData?.manual === 'true' ||
+      (typeof mealData?.manual === 'string' && mealData.manual.toLowerCase().includes('manual')) ||
       mealData?.manualEntry ||
       mealData?.loggedManually ||
       mealData?.manualKcal ||
       mealData?.manualSource ||
       mealData?.fromManual ||
+      mealData?.badge === 'manual' ||
       mealData?.createdBy === 'user' ||
       mealData?.createdBy === 'cliente' ||
-      mealData?.createdBy === 'cliente_manual' ||
-      mealData?.entryType === 'manual'
+      mealData?.createdBy === 'cliente_manual'
   );
 
   const kcalValue = useMemo(() => {
@@ -97,6 +104,12 @@ const MealCard = ({
     mealData?.descripcion ||
     (hasAIData ? (language === 'en' ? 'Generated with AI' : 'Generado con IA') : '');
 
+  const displayName =
+    mealData?.nombre ||
+    mealData?.title ||
+    mealData?.manualLabel ||
+    (isManual ? (language === 'en' ? 'Manual entry' : 'Entrada manual') : '');
+
   const showIcon = icon && !hasLeadingEmoji(mealData?.nombre || '');
   const isDark = theme.mode === 'dark';
   const switchTrack = {
@@ -121,6 +134,20 @@ const MealCard = ({
             {showIcon ? <Text style={styles.icon}>{icon}</Text> : null}
             <View style={styles.titleContainer}>
               <Text style={styles.title}>{title}</Text>
+              <View style={styles.headerBadges}>
+                {mealData?.isCheat && (
+                  <View style={[styles.metaPill, styles.metaAccent, styles.headerPill]}>
+                    <Text style={styles.metaPillText}>{language === 'en' ? 'Cheat' : 'Cheat'}</Text>
+                  </View>
+                )}
+                {isManual && (
+                  <View style={[styles.manualBadge, styles.headerPill]}>
+                    <Text style={styles.manualBadgeText}>
+                      {language === 'en' ? 'Manual' : 'Manual'}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
 
@@ -147,25 +174,13 @@ const MealCard = ({
         </View>
 
         {/* Body */}
-        {mealData?.nombre && (
+        {displayName && (
           <View style={styles.body}>
             <View style={styles.nameRow}>
-              <Text style={styles.mealName}>{mealData.nombre}</Text>
+              <Text style={styles.mealName}>{displayName}</Text>
               {hasAIData && (
                 <View style={styles.aiBadge}>
                   <Text style={styles.aiBadgeText}>IA</Text>
-                </View>
-              )}
-              {mealData?.isCheat && (
-                <View style={[styles.metaPill, styles.metaAccent]}>
-                  <Text style={styles.metaPillText}>{language === 'en' ? 'Cheat' : 'Cheat'}</Text>
-                </View>
-              )}
-              {isManual && (
-                <View style={styles.manualBadge}>
-                  <Text style={styles.manualBadgeText}>
-                    {language === 'en' ? 'Manual' : 'Manual'}
-                  </Text>
                 </View>
               )}
             </View>
@@ -248,12 +263,19 @@ const getStyles = (theme) => StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
+    gap: 4,
   },
   title: {
     ...theme.typography.body,
     color: theme.colors.text,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  headerBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    alignItems: 'center',
   },
   actions: {
     flexDirection: 'row',
@@ -371,6 +393,9 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
+  },
+  headerPill: {
+    paddingVertical: 2,
   },
   note: {
     ...theme.typography.caption,
