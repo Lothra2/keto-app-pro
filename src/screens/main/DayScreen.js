@@ -263,11 +263,6 @@ const DayScreen = ({ navigation }) => {
     );
   }
 
-  const waterPercent = Math.min(100, Math.round((waterInfo.ml / waterInfo.goal) * 100));
-  const completedMeals = meals.filter((m) => m.isCompleted).length;
-  const totalMeals = meals.length;
-  const mealCompletion = totalMeals ? Math.round((completedMeals / totalMeals) * 100) : 0;
-
   const meals = [
     {
       key: 'desayuno',
@@ -310,6 +305,11 @@ const DayScreen = ({ navigation }) => {
       onToggle: () => handleToggleMeal('cena')
     }
   ];
+
+  const waterPercent = Math.min(100, Math.round((waterInfo.ml / waterInfo.goal) * 100));
+  const completedMeals = meals.filter((m) => m.isCompleted).length;
+  const totalMeals = meals.length;
+  const mealCompletion = totalMeals ? Math.round((completedMeals / totalMeals) * 100) : 0;
 
   const displayGoalKcal = calorieInfo.goal || dayData?.dynamicKcal || dayData?.kcal;
   const cheatLabel = cheatMeal
@@ -563,7 +563,10 @@ const DayScreen = ({ navigation }) => {
         {/* Meals */}
         <View style={styles.mealsSection}>
           <LinearGradient
-            colors={[withAlpha(theme.colors.card, 0.9), withAlpha(theme.colors.accent || theme.colors.primary, 0.08)]}
+            colors={[
+              withAlpha(theme.colors.primary, 0.38),
+              withAlpha(theme.colors.accent || theme.colors.primary, 0.16)
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.mealPanel}
@@ -577,8 +580,8 @@ const DayScreen = ({ navigation }) => {
               </View>
               <Text style={styles.mealPanelSubtitle}>
                 {language === 'en'
-                  ? 'Tap to check, swipe to scan ingredients; manual items show up with a bold badge.'
-                  : 'Marca para completar, desliza mentalmente los ingredientes; las entradas manuales lucen su badge.'}
+                  ? 'Curated glass cards with bold manual badges and soft glows for each dish.'
+                  : 'Tarjetas de cristal con badges manuales marcados y brillos suaves para cada plato.'}
               </Text>
               <View style={styles.mealChipsRow}>
                 <View style={[styles.mealChip, styles.mealChipPrimary]}>
