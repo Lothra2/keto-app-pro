@@ -834,6 +834,32 @@ const ProgressScreen = () => {
         </View>
       </LinearGradient>
 
+      <View style={styles.metricStrip}>
+        <View style={[styles.metricCard, styles.metricPrimary]}>
+          <Text style={styles.metricLabel}>{language === 'en' ? 'Weight trend' : 'Tendencia de peso'}</Text>
+          <Text style={styles.metricValue}>
+            {typeof weightDelta === 'number' ? `${weightDelta > 0 ? '+' : ''}${toOneDecimal(weightDelta)} kg` : '—'}
+          </Text>
+          <Text style={styles.metricHint}>
+            {language === 'en' ? 'From start to latest' : 'Del inicio al último registro'}
+          </Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>{language === 'en' ? 'Hydration avg' : 'Promedio de agua'}</Text>
+          <Text style={styles.metricValue}>{avgWaterMl ? `${Math.round(avgWaterMl)} ml` : '—'}</Text>
+          <Text style={styles.metricHint}>
+            {language === 'en' ? 'Logged across the plan' : 'Registrado a lo largo del plan'}
+          </Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>{language === 'en' ? 'Workout burn' : 'Quema en entrenos'}</Text>
+          <Text style={styles.metricValue}>{avgWorkoutKcal ? `${Math.round(avgWorkoutKcal)} kcal` : '—'}</Text>
+          <Text style={styles.metricHint}>
+            {language === 'en' ? 'Average kcal per session' : 'Kcal promedio por sesión'}
+          </Text>
+        </View>
+      </View>
+
       <View style={styles.progressHighlights}>
         <View style={[styles.progressHighlightCard, styles.progressPrimary]}>
           <Text style={styles.progressHighlightLabel}>{language === 'en' ? 'Current pace' : 'Ritmo actual'}</Text>
@@ -1585,6 +1611,45 @@ const getStyles = (theme) =>
       ...theme.typography.body,
       color: theme.colors.text,
       fontWeight: '700'
+    },
+    metricStrip: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.lg,
+    },
+    metricCard: {
+      flex: 1,
+      minWidth: '30%',
+      backgroundColor: withAlpha(theme.colors.card, 0.82),
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.border, 0.65),
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 4,
+    },
+    metricPrimary: {
+      backgroundColor: withAlpha(theme.colors.primary, 0.14),
+      borderColor: withAlpha(theme.colors.primary, 0.45),
+    },
+    metricLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 4,
+    },
+    metricValue: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '800',
+    },
+    metricHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: 4,
     },
     progressHighlights: {
       flexDirection: 'row',

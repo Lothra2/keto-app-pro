@@ -620,6 +620,30 @@ const WorkoutScreen = ({ route, navigation }) => {
               <Text style={styles.heroChipValue}>{workoutSource === 'ai' ? 'AI' : 'Base'}</Text>
             </View>
           </View>
+
+          <View style={styles.heroStats}>
+            <View style={[styles.heroStatCard, styles.heroStatPrimary]}>
+              <Text style={styles.heroStatLabel}>{language === 'en' ? 'Intensity' : 'Intensidad'}</Text>
+              <Text style={styles.heroStatValue}>{intensityLabel}</Text>
+              <Text style={styles.heroStatHint}>
+                {language === 'en' ? 'Tap to adjust the vibe' : 'Toca para ajustar la vibra'}
+              </Text>
+            </View>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatLabel}>{language === 'en' ? 'Flow type' : 'Tipo de flujo'}</Text>
+              <Text style={styles.heroStatValue}>{workoutSource === 'ai' ? 'AI coach' : 'Base plan'}</Text>
+              <Text style={styles.heroStatHint}>
+                {language === 'en' ? 'AI holds your preferences' : 'La IA guarda tus preferencias'}
+              </Text>
+            </View>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatLabel}>{language === 'en' ? 'Logged kcal' : 'Kcal registradas'}</Text>
+              <Text style={styles.heroStatValue}>{loggedKcal ?? '—'}</Text>
+              <Text style={styles.heroStatHint}>
+                {language === 'en' ? 'Sync with Progress after training' : 'Sincroniza con Progreso al terminar'}
+              </Text>
+            </View>
+          </View>
         </LinearGradient>
 
         <View style={styles.metricsRow}>
@@ -997,6 +1021,44 @@ const getStyles = theme => StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text,
     fontWeight: '700'
+  },
+  heroStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  heroStatCard: {
+    flex: 1,
+    minWidth: '30%',
+    backgroundColor: withAlpha(theme.colors.card, 0.82),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.6),
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  heroStatPrimary: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.14),
+    borderColor: withAlpha(theme.colors.primary, 0.45),
+  },
+  heroStatLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: 4,
+  },
+  heroStatValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700',
+  },
+  heroStatHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginTop: 4,
   },
   metricsRow: {
     flexDirection: 'row',

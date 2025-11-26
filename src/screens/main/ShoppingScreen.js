@@ -279,6 +279,30 @@ const ShoppingScreen = () => {
         </View>
       </LinearGradient>
 
+      <View style={styles.statusStrip}>
+        <View style={[styles.statusCard, styles.statusPrimary]}>
+          <Text style={styles.statusLabel}>{language === 'en' ? 'Essentials' : 'Esenciales'}</Text>
+          <Text style={styles.statusValue}>{baseList.length}</Text>
+          <Text style={styles.statusHint}>
+            {language === 'en' ? 'Core staples ready' : 'Básicos listos'}
+          </Text>
+        </View>
+        <View style={styles.statusCard}>
+          <Text style={styles.statusLabel}>{language === 'en' ? 'Smart adds' : 'Sugerencias'}</Text>
+          <Text style={styles.statusValue}>{aiSections.length || 0}</Text>
+          <Text style={styles.statusHint}>
+            {language === 'en' ? 'Grouped by AI' : 'Agrupado por IA'}
+          </Text>
+        </View>
+        <View style={styles.statusCard}>
+          <Text style={styles.statusLabel}>{language === 'en' ? 'View' : 'Vista'}</Text>
+          <Text style={styles.statusValue}>{showBaseList ? 'Full' : 'Compact'}</Text>
+          <Text style={styles.statusHint}>
+            {language === 'en' ? 'Toggle base staples' : 'Alterna los básicos'}
+          </Text>
+        </View>
+      </View>
+
       <View style={styles.highlightRow}>
         <View style={[styles.highlightCard, styles.highlightPrimary]}>
           <Text style={styles.highlightLabel}>{language === 'en' ? 'Week' : 'Semana'}</Text>
@@ -542,6 +566,45 @@ const getStyles = (theme) =>
       ...theme.typography.body,
       color: theme.colors.text,
       fontWeight: '700'
+    },
+    statusStrip: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
+      marginVertical: theme.spacing.md,
+    },
+    statusCard: {
+      flex: 1,
+      minWidth: '30%',
+      backgroundColor: withAlpha(theme.colors.card, 0.82),
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.border, 0.65),
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 4,
+    },
+    statusPrimary: {
+      backgroundColor: withAlpha(theme.colors.primary, 0.14),
+      borderColor: withAlpha(theme.colors.primary, 0.45),
+    },
+    statusLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2,
+    },
+    statusValue: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      fontWeight: '800',
+    },
+    statusHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: 4,
     },
     highlightRow: {
       flexDirection: 'row',

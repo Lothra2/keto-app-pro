@@ -348,6 +348,36 @@ const DayScreen = ({ navigation }) => {
           </View>
         </LinearGradient>
 
+        <View style={styles.glassGrid}>
+          <View style={[styles.glassCard, styles.glassAccent]}>
+            <Text style={styles.glassLabel}>{language === 'en' ? 'Macros' : 'Macros'}</Text>
+            <Text style={styles.glassValue}>
+              C {dayData.macros?.carbs} · P {dayData.macros?.prot} · G {dayData.macros?.fat}
+            </Text>
+            <Text style={styles.glassHint}>
+              {language === 'en' ? 'Balanced for today' : 'Balanceado para hoy'}
+            </Text>
+          </View>
+          <View style={styles.glassCard}>
+            <Text style={styles.glassLabel}>{language === 'en' ? 'Hydration' : 'Hidratación'}</Text>
+            <Text style={styles.glassValue}>{waterPercent}%</Text>
+            <Text style={styles.glassHint}>
+              {language === 'en' ? 'Keep the flow above 80%' : 'Mantén el flujo arriba de 80%'}
+            </Text>
+          </View>
+          <View style={styles.glassCard}>
+            <Text style={styles.glassLabel}>{language === 'en' ? 'Cheat control' : 'Control cheat'}</Text>
+            <Text style={styles.glassValue}>{cheatMeal ? '✅' : '—'}</Text>
+            <Text style={styles.glassHint}>
+              {cheatMeal
+                ? cheatLabel
+                : language === 'en'
+                ? 'Plan it once per week'
+                : 'Planéalo 1x por semana'}
+            </Text>
+          </View>
+        </View>
+
         {/* Week Selector */}
         <WeekSelector
           currentWeek={currentWeek} 
@@ -580,6 +610,46 @@ const getStyles = (theme) => StyleSheet.create({
   heroChipPrimary: {
     backgroundColor: withAlpha(theme.colors.primary, 0.16),
     borderColor: withAlpha(theme.colors.primary, 0.45)
+  },
+  glassGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  glassCard: {
+    flex: 1,
+    minWidth: '30%',
+    backgroundColor: withAlpha(theme.colors.card, 0.8),
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.65),
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  glassAccent: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.12),
+    borderColor: withAlpha(theme.colors.primary, 0.4),
+  },
+  glassLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  glassValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700',
+  },
+  glassHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginTop: 4,
   },
   heroChipLabel: {
     ...theme.typography.caption,
