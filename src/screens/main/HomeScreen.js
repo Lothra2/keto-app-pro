@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
-  TextInput
+  TextInput,
+  Animated
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -202,6 +203,8 @@ const HomeScreen = ({ navigation }) => {
   const [showFullDayReview, setShowFullDayReview] = useState(false);
   const [aiDayLoading, setAiDayLoading] = useState(false); // 👈 nuevo
   const [exportingPdf, setExportingPdf] = useState(false);
+  const summaryAnim = useRef(new Animated.Value(0)).current;
+  const summaryTranslate = summaryAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] });
 
   const totalDays = Array.isArray(derivedPlan) ? derivedPlan.length : 0;
   const totalWeeks = Math.max(Math.ceil(totalDays / 7), 1);
@@ -228,6 +231,15 @@ const HomeScreen = ({ navigation }) => {
   useEffect(() => {
     setWaterInfo((prev) => ({ ...prev, goal: weeklyWaterGoal || prev.goal || 2400 }));
   }, [weeklyWaterGoal]);
+
+  useEffect(() => {
+    Animated.timing(summaryAnim, {
+      toValue: 1,
+      duration: 550,
+      delay: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [summaryAnim]);
 
   const loadDayData = useCallback(async () => {
     const baseDay = derivedPlan[currentDay];
@@ -994,103 +1006,110 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <ScreenBanner
-        theme={theme}
-        icon="🍽️"
-        title={greeting}
-        subtitle={dayData.dia}
-        description={language === 'en' ? `Week ${safeWeek}` : `Semana ${safeWeek}`}
-        badge={
-          isDone
-            ? language === 'en'
-              ? 'Completed'
-              : 'Completado'
-            : language === 'en'
-            ? 'In progress'
-            : 'En progreso'
-        }
-        badgeTone={isDone ? 'success' : 'muted'}
-        rightSlot={
-          <TouchableOpacity
-            style={[styles.bannerToggle, isDone && styles.bannerToggleActive]}
-            onPress={handleToggleDayComplete}
-          >
-            <Text style={[styles.bannerToggleText, isDone && styles.bannerToggleTextActive]}>
-              {isDone
-                ? language === 'en'
-                  ? 'Undo'
-                  : 'Desmarcar'
-                : language === 'en'
-                ? 'Mark day'
-                : 'Marcar día'}
-            </Text>
-          </TouchableOpacity>
-        }
-        footnote={
-          language === 'en'
-            ? 'Track meals, water and workouts to keep your day on point.'
-            : 'Registra comidas, agua y entrenos para mantener tu día en ruta.'
-        }
-        style={styles.homeBanner}
+      <Animated.View
+        style={{
+          opacity: summaryAnim,
+          transform: [{ translateY: summaryTranslate }],
+        }}
       >
-        <View style={styles.bannerStatsRow}>
-          <View style={styles.bannerStat}>
-            <Text style={styles.bannerStatLabel}>
-              {language === 'en' ? 'Daily calories' : 'Calorías diarias'}
-            </Text>
-            <Text style={styles.bannerStatValue}>{(dayData.dynamicKcal || calorieGoal || dayData.kcal)} kcal</Text>
+        <ScreenBanner
+          theme={theme}
+          icon="🍽️"
+          title={greeting}
+          subtitle={dayData.dia}
+          description={language === 'en' ? `Week ${safeWeek}` : `Semana ${safeWeek}`}
+          badge={
+            isDone
+              ? language === 'en'
+                ? 'Completed'
+                : 'Completado'
+              : language === 'en'
+              ? 'In progress'
+              : 'En progreso'
+          }
+          badgeTone={isDone ? 'success' : 'muted'}
+          rightSlot={
+            <TouchableOpacity
+              style={[styles.bannerToggle, isDone && styles.bannerToggleActive]}
+              onPress={handleToggleDayComplete}
+            >
+              <Text style={[styles.bannerToggleText, isDone && styles.bannerToggleTextActive]}>
+                {isDone
+                  ? language === 'en'
+                    ? 'Undo'
+                    : 'Desmarcar'
+                  : language === 'en'
+                  ? 'Mark day'
+                  : 'Marcar día'}
+              </Text>
+            </TouchableOpacity>
+          }
+          footnote={
+            language === 'en'
+              ? 'Track meals, water and workouts to keep your day on point.'
+              : 'Registra comidas, agua y entrenos para mantener tu día en ruta.'
+          }
+          style={styles.homeBanner}
+        >
+          <View style={styles.bannerStatsRow}>
+            <View style={styles.bannerStat}>
+              <Text style={styles.bannerStatLabel}>
+                {language === 'en' ? 'Daily calories' : 'Calorías diarias'}
+              </Text>
+              <Text style={styles.bannerStatValue}>{(dayData.dynamicKcal || calorieGoal || dayData.kcal)} kcal</Text>
+            </View>
+            <View style={styles.bannerMacros}>
+              <View style={styles.bannerMacroChip}>
+                <Text style={styles.bannerMacroLabel}>C</Text>
+                <Text style={styles.bannerMacroValue}>{macrosDisplay.carbs}</Text>
+              </View>
+              <View style={styles.bannerMacroChip}>
+                <Text style={styles.bannerMacroLabel}>P</Text>
+                <Text style={styles.bannerMacroValue}>{macrosDisplay.prot}</Text>
+              </View>
+              <View style={styles.bannerMacroChip}>
+                <Text style={styles.bannerMacroLabel}>G</Text>
+                <Text style={styles.bannerMacroValue}>{macrosDisplay.fat}</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.bannerMacros}>
-            <View style={styles.bannerMacroChip}>
-              <Text style={styles.bannerMacroLabel}>C</Text>
-              <Text style={styles.bannerMacroValue}>{macrosDisplay.carbs}</Text>
-            </View>
-            <View style={styles.bannerMacroChip}>
-              <Text style={styles.bannerMacroLabel}>P</Text>
-              <Text style={styles.bannerMacroValue}>{macrosDisplay.prot}</Text>
-            </View>
-            <View style={styles.bannerMacroChip}>
-              <Text style={styles.bannerMacroLabel}>G</Text>
-              <Text style={styles.bannerMacroValue}>{macrosDisplay.fat}</Text>
-            </View>
-          </View>
-        </View>
-        <CalorieBar consumed={caloriesConsumed} goal={calorieGoal} variant="overlay" />
-      </ScreenBanner>
+          <CalorieBar consumed={caloriesConsumed} goal={calorieGoal} variant="overlay" />
+        </ScreenBanner>
 
-      <View style={styles.quickRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>
-            {language === 'en' ? 'Meals' : 'Comidas'}
-          </Text>
-          <Text style={styles.statValue}>
-            {completedMealsCount}/{totalMeals}
-          </Text>
-          <Text style={styles.statHint}>
-            {language === 'en' ? 'today' : 'hoy'}
-          </Text>
+        <View style={styles.quickRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>
+              {language === 'en' ? 'Meals' : 'Comidas'}
+            </Text>
+            <Text style={styles.statValue}>
+              {completedMealsCount}/{totalMeals}
+            </Text>
+            <Text style={styles.statHint}>
+              {language === 'en' ? 'today' : 'hoy'}
+            </Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>
+              {language === 'en' ? 'Water' : 'Agua'}
+            </Text>
+            <Text style={styles.statValue}>{waterPercent}%</Text>
+            <Text style={styles.statHint}>
+              {waterInfo.ml}/{waterInfo.goal} ml
+            </Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>
+              {language === 'en' ? 'Kcal used' : 'Kcal usadas'}
+            </Text>
+            <Text style={styles.statValue}>
+              {Math.min(100, Math.round((caloriesConsumed / (calorieGoal || 1)) * 100))}%
+            </Text>
+            <Text style={styles.statHint}>
+              {language === 'en' ? 'of goal' : 'del objetivo'}
+            </Text>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>
-            {language === 'en' ? 'Water' : 'Agua'}
-          </Text>
-          <Text style={styles.statValue}>{waterPercent}%</Text>
-          <Text style={styles.statHint}>
-            {waterInfo.ml}/{waterInfo.goal} ml
-          </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>
-            {language === 'en' ? 'Kcal used' : 'Kcal usadas'}
-          </Text>
-          <Text style={styles.statValue}>
-            {Math.min(100, Math.round((caloriesConsumed / (calorieGoal || 1)) * 100))}%
-          </Text>
-          <Text style={styles.statHint}>
-            {language === 'en' ? 'of goal' : 'del objetivo'}
-          </Text>
-        </View>
-      </View>
+      </Animated.View>
 
     <Card style={styles.tipCard}>
       <LinearGradient
@@ -1643,8 +1662,8 @@ const createStyles = (theme) =>
       backgroundColor: theme.colors.bg
     },
     content: {
-      paddingBottom: 120,
-      gap: theme.spacing.md
+      paddingBottom: 140,
+      gap: theme.spacing.lg
     },
     stickyWrapper: {
       paddingHorizontal: theme.spacing.lg,
@@ -1652,16 +1671,21 @@ const createStyles = (theme) =>
       backgroundColor: theme.colors.bg
     },
     topNavCard: {
-      backgroundColor: theme.colors.card,
-      borderRadius: theme.radius.lg,
+      backgroundColor: withAlpha(theme.colors.glassBg, 0.9),
+      borderRadius: theme.radius.xl,
       borderWidth: 1,
-      borderColor: 'rgba(226,232,240,0.02)',
-      padding: theme.spacing.sm,
-      gap: theme.spacing.sm
+      borderColor: theme.colors.glassBorder,
+      padding: theme.spacing.md,
+      gap: theme.spacing.sm,
+      shadowColor: theme.colors.shadow,
+      shadowOpacity: 0.15,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 6,
     },
     topSeparator: {
       height: 1,
-      backgroundColor: 'rgba(226,232,240,0.03)',
+      backgroundColor: withAlpha(theme.colors.glassBorder, 0.6),
       marginHorizontal: 4
     },
     center: {
@@ -1675,11 +1699,11 @@ const createStyles = (theme) =>
     homeBanner: {
       marginHorizontal: theme.spacing.lg,
       marginTop: theme.spacing.md,
-      shadowColor: '#000',
-      shadowOpacity: 0.25,
-      shadowRadius: 14,
-      shadowOffset: { width: 0, height: 10 },
-      elevation: 6
+      shadowColor: theme.colors.glow,
+      shadowOpacity: 0.35,
+      shadowRadius: 22,
+      shadowOffset: { width: 0, height: 14 },
+      elevation: 10
     },
     bannerToggle: {
       paddingHorizontal: 16,
@@ -1702,30 +1726,37 @@ const createStyles = (theme) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      gap: theme.spacing.md
+      gap: theme.spacing.lg
     },
     bannerStat: {
       flex: 1,
-      gap: 4
+      gap: theme.spacing.xs
     },
     bannerStatLabel: {
       ...theme.typography.caption,
       color: 'rgba(226,232,240,0.85)'
     },
     bannerStatValue: {
-      ...theme.typography.h2,
-      color: 'rgba(248,250,252,0.98)' 
+      ...theme.typography.h1,
+      color: 'rgba(248,250,252,0.98)'
     },
     bannerMacros: {
       flexDirection: 'row',
       gap: theme.spacing.sm
     },
     bannerMacroChip: {
-      paddingHorizontal: theme.spacing.sm,
-      paddingVertical: 6,
-      borderRadius: theme.radius.md,
-      backgroundColor: 'rgba(15,23,42,0.25)',
-      alignItems: 'center'
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.full,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.35)',
+      shadowColor: '#000',
+      shadowOpacity: 0.1,
+      shadowOffset: { width: 0, height: 6 },
+      shadowRadius: 12,
+      elevation: 6
     },
     bannerMacroLabel: {
       ...theme.typography.caption,
@@ -1739,26 +1770,38 @@ const createStyles = (theme) =>
     },
     quickRow: {
       flexDirection: 'row',
-      gap: theme.spacing.sm,
-      marginHorizontal: theme.spacing.lg
+      gap: theme.spacing.md,
+      marginHorizontal: theme.spacing.lg,
+      marginTop: theme.spacing.md
     },
     statCard: {
       flex: 1,
-      backgroundColor: theme.colors.cardSoft,
-      borderRadius: theme.radius.md,
-      padding: theme.spacing.sm
+      backgroundColor: withAlpha(theme.colors.glassBg, 0.9),
+      borderRadius: theme.radius.lg,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.glassBorder,
+      shadowColor: theme.colors.shadow,
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 6
     },
     statLabel: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      letterSpacing: 0.2
     },
     statValue: {
       ...theme.typography.h2,
-      color: theme.colors.text
+      color: theme.colors.text,
+      fontWeight: '800'
     },
     statHint: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.textMuted,
+      marginTop: 2
     },
     cheatCard: {
       marginHorizontal: theme.spacing.lg,

@@ -48,23 +48,30 @@ const getStyles = (theme) => StyleSheet.create({
     paddingHorizontal: 4
   },
   weekButton: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.glassBg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: theme.colors.glassBorder,
+    borderRadius: theme.radius.full,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    minWidth: 100,
-    alignItems: 'center'
+    paddingHorizontal: theme.spacing.lg,
+    minWidth: 110,
+    alignItems: 'center',
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   weekButtonActive: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary
+    borderColor: theme.colors.primary,
+    shadowOpacity: 0.2,
+    shadowColor: theme.colors.glow,
   },
   weekTitle: {
     ...theme.typography.body,
     color: theme.colors.text,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 2
   },
   weekTitleActive: {
@@ -75,7 +82,7 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textMuted
   },
   weekRangeActive: {
-    color: 'rgba(255,255,255,0.8)'
+    color: 'rgba(255,255,255,0.86)'
   }
 });
 

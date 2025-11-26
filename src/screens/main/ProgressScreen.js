@@ -2078,12 +2078,18 @@ const getStyles = (theme) =>
       fontStyle: 'italic'
     },
     chartCard: {
-      backgroundColor: theme.colors.card,
+      backgroundColor: withAlpha(theme.colors.glassBg, 0.9),
       borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.radius.md,
-      padding: theme.spacing.md,
-      marginBottom: theme.spacing.md
+      borderColor: theme.colors.glassBorder,
+      borderRadius: theme.radius.xl,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      shadowColor: theme.colors.shadow,
+      shadowOpacity: 0.16,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 8,
+      overflow: 'hidden'
     },
     chartCaption: {
       ...theme.typography.caption,
@@ -2093,14 +2099,16 @@ const getStyles = (theme) =>
     },
     metricSelector: {
       flexDirection: 'row',
-      backgroundColor: theme.colors.bgSoft,
+      backgroundColor: withAlpha(theme.colors.cardSoft || theme.colors.bgSoft, 0.9),
       borderRadius: 999,
-      padding: 4,
-      marginBottom: theme.spacing.sm
+      padding: 6,
+      marginBottom: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.glassBorder
     },
     metricButton: {
       flex: 1,
-      paddingVertical: 6,
+      paddingVertical: 8,
       borderRadius: 999,
       alignItems: 'center'
     },
@@ -2118,11 +2126,24 @@ const getStyles = (theme) =>
     trackerSummaryRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 6
+      marginBottom: 10,
+      gap: theme.spacing.sm
     },
     trackerSummaryText: {
       ...theme.typography.caption,
-      color: theme.colors.textMuted
+      color: theme.colors.text,
+      backgroundColor: withAlpha(theme.colors.cardSoft || theme.colors.bgSoft, 0.8),
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 6,
+      borderRadius: theme.radius.full,
+      borderWidth: 1,
+      borderColor: theme.colors.glassBorder,
+      overflow: 'hidden',
+      shadowColor: theme.colors.shadow,
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3
     },
     trackerTabs: {
       flexDirection: 'row',
