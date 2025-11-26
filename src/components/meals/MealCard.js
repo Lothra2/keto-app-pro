@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 import { hasLeadingEmoji } from '../../utils/labels';
 
 const MealCard = ({
@@ -19,12 +20,41 @@ const MealCard = ({
   const styles = getStyles(theme);
 
   const hasAIData = mealData?.isAI || false;
+  const normalizedSource = (
+    mealData?.source ||
+    mealData?.origen ||
+    mealData?.origin ||
+    mealData?.sourceType ||
+    mealData?.logSource ||
+    mealData?.inputSource ||
+    mealData?.entryType ||
+    mealData?.entrySource ||
+    mealData?.type ||
+    mealData?.via ||
+    mealData?.createdFrom ||
+    mealData?.provider ||
+    ''
+  )
+    .toString()
+    .toLowerCase();
+
   const isManual = Boolean(
-    mealData?.source === 'manual' ||
+    normalizedSource.includes('manual') ||
+      normalizedSource.includes('user') ||
+      normalizedSource.includes('custom') ||
+      normalizedSource.includes('offline') ||
+      normalizedSource === 'plan' ||
+      normalizedSource === 'log' ||
       mealData?.isManual ||
       mealData?.manual === true ||
       mealData?.manual === 'true' ||
-      mealData?.loggedManually
+      mealData?.manualEntry ||
+      mealData?.loggedManually ||
+      mealData?.manualKcal ||
+      mealData?.createdBy === 'user' ||
+      mealData?.createdBy === 'cliente' ||
+      mealData?.createdBy === 'cliente_manual' ||
+      mealData?.entryType === 'manual'
   );
   const ingredientLines = useMemo(() => {
     if (!mealData?.qty) return [];
@@ -223,18 +253,19 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '600',
   },
   manualBadge: {
-    backgroundColor: 'rgba(147, 51, 234, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    backgroundColor: withAlpha(theme.colors.accent || '#7c3aed', 0.16),
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(147, 51, 234, 0.35)',
+    borderColor: withAlpha(theme.colors.accent || '#7c3aed', 0.45),
   },
   manualBadgeText: {
-    color: '#6d28d9',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    color: theme.colors.accent || '#6d28d9',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   note: {
     ...theme.typography.caption,

@@ -9,6 +9,7 @@ import {
   Modal,
   Alert
 } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { differenceInCalendarDays, isValid, startOfDay } from 'date-fns'
 import { useFocusEffect } from '@react-navigation/native'
 import { useApp } from '../../context/AppContext'
@@ -805,6 +806,84 @@ const ProgressScreen = () => {
         </View>
       </ScreenBanner>
 
+      <LinearGradient
+        colors={[withAlpha(theme.colors.primary, 0.35), withAlpha(theme.colors.accent || theme.colors.primary, 0.25)]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <Text style={styles.heroTitle}>{language === 'en' ? 'Premium analytics' : 'Analítica premium'}</Text>
+        <Text style={styles.heroSubtitle}>
+          {language === 'en'
+            ? 'A calmer, glassy surface for your charts plus quick chips for hydration, workouts, and adherence.'
+            : 'Superficie suave tipo cristal para tus gráficas y chips rápidos de agua, entrenos y adherencia.'}
+        </Text>
+        <View style={styles.heroRow}>
+          <View style={[styles.heroChip, styles.heroChipPrimary]}>
+            <Text style={styles.heroChipLabel}>{language === 'en' ? 'Hydration' : 'Hidratación'}</Text>
+            <Text style={styles.heroChipValue}>{waterSummary}</Text>
+          </View>
+          <View style={styles.heroChip}>
+            <Text style={styles.heroChipLabel}>{language === 'en' ? 'Workouts' : 'Entrenos'}</Text>
+            <Text style={styles.heroChipValue}>{workoutSummary}</Text>
+          </View>
+          <View style={styles.heroChip}>
+            <Text style={styles.heroChipLabel}>{language === 'en' ? 'Adherence' : 'Adherencia'}</Text>
+            <Text style={styles.heroChipValue}>{adherenceSummary}</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.metricStrip}>
+        <View style={[styles.metricCard, styles.metricPrimary]}>
+          <Text style={styles.metricLabel}>{language === 'en' ? 'Weight trend' : 'Tendencia de peso'}</Text>
+          <Text style={styles.metricValue}>
+            {typeof weightDelta === 'number' ? `${weightDelta > 0 ? '+' : ''}${toOneDecimal(weightDelta)} kg` : '—'}
+          </Text>
+          <Text style={styles.metricHint}>
+            {language === 'en' ? 'From start to latest' : 'Del inicio al último registro'}
+          </Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>{language === 'en' ? 'Hydration avg' : 'Promedio de agua'}</Text>
+          <Text style={styles.metricValue}>{avgWaterMl ? `${Math.round(avgWaterMl)} ml` : '—'}</Text>
+          <Text style={styles.metricHint}>
+            {language === 'en' ? 'Logged across the plan' : 'Registrado a lo largo del plan'}
+          </Text>
+        </View>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>{language === 'en' ? 'Workout burn' : 'Quema en entrenos'}</Text>
+          <Text style={styles.metricValue}>{avgWorkoutKcal ? `${Math.round(avgWorkoutKcal)} kcal` : '—'}</Text>
+          <Text style={styles.metricHint}>
+            {language === 'en' ? 'Average kcal per session' : 'Kcal promedio por sesión'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.progressHighlights}>
+        <View style={[styles.progressHighlightCard, styles.progressPrimary]}>
+          <Text style={styles.progressHighlightLabel}>{language === 'en' ? 'Current pace' : 'Ritmo actual'}</Text>
+          <Text style={styles.progressHighlightValue}>{daysElapsed || 0}d</Text>
+          <Text style={styles.progressHighlightHint}>
+            {language === 'en' ? 'Days since you started' : 'Días desde que iniciaste'}
+          </Text>
+        </View>
+        <View style={styles.progressHighlightCard}>
+          <Text style={styles.progressHighlightLabel}>{language === 'en' ? 'BMI' : 'IMC'}</Text>
+          <Text style={styles.progressHighlightValue}>{bmi ? bmi.toFixed(1) : '—'}</Text>
+          <Text style={styles.progressHighlightHint}>{bmiCategory || (language === 'en' ? 'Add weight' : 'Agrega peso')}</Text>
+        </View>
+        <View style={styles.progressHighlightCard}>
+          <Text style={styles.progressHighlightLabel}>{language === 'en' ? 'Target kcal' : 'Kcal objetivo'}</Text>
+          <Text style={styles.progressHighlightValue}>
+            {recommendedCalories ? `${recommendedCalories}` : '—'}
+          </Text>
+          <Text style={styles.progressHighlightHint}>
+            {language === 'en' ? 'Auto-adjusted by intensity' : 'Ajustado por intensidad'}
+          </Text>
+        </View>
+      </View>
+
       {/* Base Data */}
       {hasBaseData ? (
         <View style={styles.card}>
@@ -1481,6 +1560,135 @@ const getStyles = (theme) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       gap: theme.spacing.md
+    },
+    hero: {
+      borderRadius: theme.radius.xl,
+      padding: theme.spacing.lg,
+      gap: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.primary, 0.35),
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
+      marginBottom: theme.spacing.lg
+    },
+    heroTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      letterSpacing: 0.2
+    },
+    heroSubtitle: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      lineHeight: 18
+    },
+    heroRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap',
+      marginTop: theme.spacing.sm
+    },
+    heroChip: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.full,
+      backgroundColor: withAlpha(theme.colors.card, 0.7),
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.border, 0.7)
+    },
+    heroChipPrimary: {
+      backgroundColor: withAlpha(theme.colors.primary, 0.16),
+      borderColor: withAlpha(theme.colors.primary, 0.45)
+    },
+    heroChipLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2
+    },
+    heroChipValue: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '700'
+    },
+    metricStrip: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.lg,
+    },
+    metricCard: {
+      flex: 1,
+      minWidth: '30%',
+      backgroundColor: withAlpha(theme.colors.card, 0.82),
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.border, 0.65),
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 4,
+    },
+    metricPrimary: {
+      backgroundColor: withAlpha(theme.colors.primary, 0.14),
+      borderColor: withAlpha(theme.colors.primary, 0.45),
+    },
+    metricLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 4,
+    },
+    metricValue: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '800',
+    },
+    metricHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginTop: 4,
+    },
+    progressHighlights: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap',
+      marginBottom: theme.spacing.lg
+    },
+    progressHighlightCard: {
+      flex: 1,
+      minWidth: '30%',
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3
+    },
+    progressPrimary: {
+      backgroundColor: `${theme.colors.primary}16`,
+      borderColor: `${theme.colors.primary}55`
+    },
+    progressHighlightLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2
+    },
+    progressHighlightValue: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+      fontWeight: '800'
+    },
+    progressHighlightHint: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      marginTop: 2
     },
     bannerStat: {
       flex: 1,
