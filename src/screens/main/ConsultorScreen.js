@@ -295,22 +295,6 @@ const ConsultorScreen = () => {
         </ScreenBanner>
       </View>
 
-      <View style={[styles.personaRow, { borderColor: theme.colors.border }]}> 
-        <View style={styles.personaBadge}>
-          <Text style={styles.personaIcon}>✨</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.personaTitle, { color: theme.colors.text }]}>
-            {language === 'en' ? 'Natural coach mode' : 'Modo coach natural'}
-          </Text>
-          <Text style={[styles.personaSubtitle, { color: theme.colors.textMuted }]}>
-            {language === 'en'
-              ? 'Human, short and curious replies. No background blur, just clean chat.'
-              : 'Respuestas humanas, cortas y curiosas. Sin fondos pesados, solo chat limpio.'}
-          </Text>
-        </View>
-      </View>
-
       {/* chips rápidos */}
       <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
         <FlatList
@@ -337,7 +321,7 @@ const ConsultorScreen = () => {
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.onSurface }}>{label}</Text>
+                <Text style={[styles.quickChipLabel, { color: theme.colors.onSurface }]}>{label}</Text>
               </TouchableOpacity>
             );
           }}
@@ -485,35 +469,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  personaRow: {
-    marginHorizontal: 16,
-    marginBottom: 10,
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    backgroundColor: withAlpha('#0ea5e9', 0.08),
-  },
-  personaBadge: {
-    height: 44,
-    width: 44,
-    borderRadius: 14,
-    backgroundColor: withAlpha('#0ea5e9', 0.18),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  personaIcon: { fontSize: 20 },
-  personaTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  personaSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
   quickRow: {
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -528,6 +483,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
+    minWidth: 140,
+  },
+  quickChipLabel: {
+    color: '#0b172a',
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   modeRow: {
     flexDirection: 'row',
@@ -545,14 +506,14 @@ const styles = StyleSheet.create({
   bubble: {
     maxWidth: '88%',
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
-    marginVertical: 6,
-    gap: 6,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 20,
+    marginVertical: 8,
+    gap: 8,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   metaLabel: {
     fontSize: 11,
