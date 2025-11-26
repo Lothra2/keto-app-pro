@@ -250,6 +250,36 @@ const ShoppingScreen = () => {
         style={styles.banner}
       />
 
+      <View style={styles.highlightRow}>
+        <View style={[styles.highlightCard, styles.highlightPrimary]}>
+          <Text style={styles.highlightLabel}>{language === 'en' ? 'Week' : 'Semana'}</Text>
+          <Text style={styles.highlightValue}>{currentWeek}</Text>
+          <Text style={styles.highlightHint}>
+            {language === 'en' ? 'Synced with your plan' : 'Sincronizada con tu plan'}
+          </Text>
+        </View>
+        <View style={styles.highlightCard}>
+          <Text style={styles.highlightLabel}>{language === 'en' ? 'AI status' : 'Estado IA'}</Text>
+          <Text style={styles.highlightValue}>
+            {prettyDate ? (language === 'en' ? 'Ready' : 'Lista') : language === 'en' ? 'Pending' : 'Pendiente'}
+          </Text>
+          <Text style={styles.highlightHint}>
+            {prettyDate
+              ? `${language === 'en' ? 'Updated' : 'Actualizada'} ${prettyDate}`
+              : language === 'en'
+              ? 'Generate and keep it handy'
+              : 'Genera y déjala lista'}
+          </Text>
+        </View>
+        <View style={styles.highlightCard}>
+          <Text style={styles.highlightLabel}>{language === 'en' ? 'Base staples' : 'Básicos'}</Text>
+          <Text style={styles.highlightValue}>{baseList.length}</Text>
+          <Text style={styles.highlightHint}>
+            {language === 'en' ? 'Tap to reorder quickly' : 'Toca para reordenar rápido'}
+          </Text>
+        </View>
+      </View>
+
       {/* card acción */}
       <View style={styles.actionCard}>
         <Text style={styles.actionTitle}>
@@ -433,6 +463,44 @@ const getStyles = (theme) =>
       shadowRadius: 12,
       shadowOffset: { width: 0, height: 8 },
       elevation: 6
+    },
+    highlightRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap'
+    },
+    highlightCard: {
+      flex: 1,
+      minWidth: '30%',
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3
+    },
+    highlightPrimary: {
+      backgroundColor: `${theme.colors.accent}16`,
+      borderColor: `${theme.colors.accent}55`
+    },
+    highlightLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2
+    },
+    highlightValue: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+      fontWeight: '800'
+    },
+    highlightHint: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      marginTop: 2
     },
     actionCard: {
       backgroundColor: theme.colors.card,

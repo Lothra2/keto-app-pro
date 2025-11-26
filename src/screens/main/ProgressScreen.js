@@ -805,6 +805,30 @@ const ProgressScreen = () => {
         </View>
       </ScreenBanner>
 
+      <View style={styles.progressHighlights}>
+        <View style={[styles.progressHighlightCard, styles.progressPrimary]}>
+          <Text style={styles.progressHighlightLabel}>{language === 'en' ? 'Current pace' : 'Ritmo actual'}</Text>
+          <Text style={styles.progressHighlightValue}>{daysElapsed || 0}d</Text>
+          <Text style={styles.progressHighlightHint}>
+            {language === 'en' ? 'Days since you started' : 'Días desde que iniciaste'}
+          </Text>
+        </View>
+        <View style={styles.progressHighlightCard}>
+          <Text style={styles.progressHighlightLabel}>{language === 'en' ? 'BMI' : 'IMC'}</Text>
+          <Text style={styles.progressHighlightValue}>{bmi ? bmi.toFixed(1) : '—'}</Text>
+          <Text style={styles.progressHighlightHint}>{bmiCategory || (language === 'en' ? 'Add weight' : 'Agrega peso')}</Text>
+        </View>
+        <View style={styles.progressHighlightCard}>
+          <Text style={styles.progressHighlightLabel}>{language === 'en' ? 'Target kcal' : 'Kcal objetivo'}</Text>
+          <Text style={styles.progressHighlightValue}>
+            {recommendedCalories ? `${recommendedCalories}` : '—'}
+          </Text>
+          <Text style={styles.progressHighlightHint}>
+            {language === 'en' ? 'Auto-adjusted by intensity' : 'Ajustado por intensidad'}
+          </Text>
+        </View>
+      </View>
+
       {/* Base Data */}
       {hasBaseData ? (
         <View style={styles.card}>
@@ -1481,6 +1505,45 @@ const getStyles = (theme) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       gap: theme.spacing.md
+    },
+    progressHighlights: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap',
+      marginBottom: theme.spacing.lg
+    },
+    progressHighlightCard: {
+      flex: 1,
+      minWidth: '30%',
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3
+    },
+    progressPrimary: {
+      backgroundColor: `${theme.colors.primary}16`,
+      borderColor: `${theme.colors.primary}55`
+    },
+    progressHighlightLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2
+    },
+    progressHighlightValue: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+      fontWeight: '800'
+    },
+    progressHighlightHint: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      marginTop: 2
     },
     bannerStat: {
       flex: 1,
