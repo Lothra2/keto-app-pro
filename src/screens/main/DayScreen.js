@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { withAlpha } from '../../theme/utils';
@@ -319,8 +320,66 @@ const DayScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
+        <LinearGradient
+          colors={[withAlpha(theme.colors.primary, 0.35), withAlpha(theme.colors.accent || theme.colors.primary, 0.2)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <Text style={styles.heroTitle}>{language === 'en' ? 'Premium menu' : 'Menú premium'}</Text>
+          <Text style={styles.heroSubtitle}>
+            {language === 'en'
+              ? 'Glass cards, calmer spacing and inline chips to keep meals, water and extras at a glance.'
+              : 'Cartas tipo cristal, espacios calmados y chips en línea para ver comidas, agua y extras de un vistazo.'}
+          </Text>
+          <View style={styles.heroRow}>
+            <View style={[styles.heroChip, styles.heroChipPrimary]}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Today' : 'Hoy'}</Text>
+              <Text style={styles.heroChipValue}>{dayData.dia}</Text>
+            </View>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Calories' : 'Calorías'}</Text>
+              <Text style={styles.heroChipValue}>{displayGoalKcal} kcal</Text>
+            </View>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Water' : 'Agua'}</Text>
+              <Text style={styles.heroChipValue}>{waterPercent}%</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.glassGrid}>
+          <View style={[styles.glassCard, styles.glassAccent]}>
+            <Text style={styles.glassLabel}>{language === 'en' ? 'Macros' : 'Macros'}</Text>
+            <Text style={styles.glassValue}>
+              C {dayData.macros?.carbs} · P {dayData.macros?.prot} · G {dayData.macros?.fat}
+            </Text>
+            <Text style={styles.glassHint}>
+              {language === 'en' ? 'Balanced for today' : 'Balanceado para hoy'}
+            </Text>
+          </View>
+          <View style={styles.glassCard}>
+            <Text style={styles.glassLabel}>{language === 'en' ? 'Hydration' : 'Hidratación'}</Text>
+            <Text style={styles.glassValue}>{waterPercent}%</Text>
+            <Text style={styles.glassHint}>
+              {language === 'en' ? 'Keep the flow above 80%' : 'Mantén el flujo arriba de 80%'}
+            </Text>
+          </View>
+          <View style={styles.glassCard}>
+            <Text style={styles.glassLabel}>{language === 'en' ? 'Cheat control' : 'Control cheat'}</Text>
+            <Text style={styles.glassValue}>{cheatMeal ? '✅' : '—'}</Text>
+            <Text style={styles.glassHint}>
+              {cheatMeal
+                ? cheatLabel
+                : language === 'en'
+                ? 'Plan it once per week'
+                : 'Planéalo 1x por semana'}
+            </Text>
+          </View>
+        </View>
+
         {/* Week Selector */}
-        <WeekSelector 
+        <WeekSelector
           currentWeek={currentWeek} 
           onWeekChange={handleWeekChange} 
         />
@@ -510,6 +569,97 @@ const getStyles = (theme) => StyleSheet.create({
   content: {
     padding: theme.spacing.lg,
     paddingBottom: 100
+  },
+  hero: {
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.primary, 0.35),
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    marginBottom: theme.spacing.lg
+  },
+  heroTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.text,
+    letterSpacing: 0.2
+  },
+  heroSubtitle: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textMuted,
+    lineHeight: 18
+  },
+  heroRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap',
+    marginTop: theme.spacing.sm
+  },
+  heroChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.card, 0.7),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.7)
+  },
+  heroChipPrimary: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.16),
+    borderColor: withAlpha(theme.colors.primary, 0.45)
+  },
+  glassGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  glassCard: {
+    flex: 1,
+    minWidth: '30%',
+    backgroundColor: withAlpha(theme.colors.card, 0.8),
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.65),
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  glassAccent: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.12),
+    borderColor: withAlpha(theme.colors.primary, 0.4),
+  },
+  glassLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  glassValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700',
+  },
+  glassHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginTop: 4,
+  },
+  heroChipLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: 2
+  },
+  heroChipValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700'
   },
   loadingText: {
     ...theme.typography.body,
