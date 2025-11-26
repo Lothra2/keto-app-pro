@@ -37,6 +37,7 @@ const MealCard = ({
     mealData?.loggedFrom ||
     mealData?.logMethod ||
     mealData?.source_label ||
+    mealData?.badge ||
     ''
   )
     .toString()
@@ -59,6 +60,9 @@ const MealCard = ({
       mealData?.manualKcal ||
       mealData?.manualSource ||
       mealData?.fromManual ||
+      mealData?.manualTag ||
+      mealData?.manualBadge ||
+      mealData?.badge === 'manual' ||
       mealData?.createdBy === 'user' ||
       mealData?.createdBy === 'cliente' ||
       mealData?.createdBy === 'cliente_manual' ||
@@ -97,6 +101,12 @@ const MealCard = ({
     mealData?.descripcion ||
     (hasAIData ? (language === 'en' ? 'Generated with AI' : 'Generado con IA') : '');
 
+  const displayName =
+    mealData?.nombre ||
+    mealData?.title ||
+    mealData?.manualLabel ||
+    (isManual ? (language === 'en' ? 'Manual entry' : 'Entrada manual') : '');
+
   const showIcon = icon && !hasLeadingEmoji(mealData?.nombre || '');
   const isDark = theme.mode === 'dark';
   const switchTrack = {
@@ -121,6 +131,20 @@ const MealCard = ({
             {showIcon ? <Text style={styles.icon}>{icon}</Text> : null}
             <View style={styles.titleContainer}>
               <Text style={styles.title}>{title}</Text>
+              <View style={styles.headerBadges}>
+                {mealData?.isCheat && (
+                  <View style={[styles.metaPill, styles.metaAccent, styles.headerPill]}>
+                    <Text style={styles.metaPillText}>{language === 'en' ? 'Cheat' : 'Cheat'}</Text>
+                  </View>
+                )}
+                {isManual && (
+                  <View style={[styles.manualBadge, styles.headerPill]}>
+                    <Text style={styles.manualBadgeText}>
+                      {language === 'en' ? 'Manual' : 'Manual'}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
 
@@ -147,25 +171,13 @@ const MealCard = ({
         </View>
 
         {/* Body */}
-        {mealData?.nombre && (
+        {displayName && (
           <View style={styles.body}>
             <View style={styles.nameRow}>
-              <Text style={styles.mealName}>{mealData.nombre}</Text>
+              <Text style={styles.mealName}>{displayName}</Text>
               {hasAIData && (
                 <View style={styles.aiBadge}>
                   <Text style={styles.aiBadgeText}>IA</Text>
-                </View>
-              )}
-              {mealData?.isCheat && (
-                <View style={[styles.metaPill, styles.metaAccent]}>
-                  <Text style={styles.metaPillText}>{language === 'en' ? 'Cheat' : 'Cheat'}</Text>
-                </View>
-              )}
-              {isManual && (
-                <View style={styles.manualBadge}>
-                  <Text style={styles.manualBadgeText}>
-                    {language === 'en' ? 'Manual' : 'Manual'}
-                  </Text>
                 </View>
               )}
             </View>
@@ -248,12 +260,19 @@ const getStyles = (theme) => StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
+    gap: 4,
   },
   title: {
     ...theme.typography.body,
     color: theme.colors.text,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  headerBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    alignItems: 'center',
   },
   actions: {
     flexDirection: 'row',
@@ -371,6 +390,9 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
+  },
+  headerPill: {
+    paddingVertical: 2,
   },
   note: {
     ...theme.typography.caption,

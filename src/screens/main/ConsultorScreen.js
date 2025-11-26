@@ -12,6 +12,7 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { withAlpha } from '../../theme/utils';
@@ -47,6 +48,7 @@ const ConsultorScreen = () => {
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [showHighlights, setShowHighlights] = useState(false);
 
   const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
   const hasCredentials = Boolean(creds.user && creds.pass);
@@ -80,6 +82,10 @@ const ConsultorScreen = () => {
   }, [language]);
 
   const handleQuick = useCallback((text) => setInput(text), []);
+
+  const toggleHighlights = useCallback(() => {
+    setShowHighlights((prev) => !prev);
+  }, []);
 
   const onSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -183,6 +189,46 @@ const ConsultorScreen = () => {
   const navSpacer = 86;
   const bottomOffset = keyboardOffset > 0 ? keyboardOffset : navSpacer;
   const listBottomSpacing = 44 + bottomOffset + inputPaddingBottom;
+
+  const coachHighlights = useMemo(
+    () =>
+      language === 'en'
+        ? [
+            {
+              title: 'Sharper voice',
+              desc: 'Concise, professional answers with friendly nudges to keep you on track.',
+              icon: '🎯',
+            },
+            {
+              title: 'Visual polish',
+              desc: 'Refined bubbles, gradients and spacing so the conversation feels premium.',
+              icon: '✨',
+            },
+            {
+              title: 'Session clarity',
+              desc: 'Quick chips, mode label and badges keep the coach context crystal clear.',
+              icon: '🧠',
+            },
+          ]
+        : [
+            {
+              title: 'Voz más nítida',
+              desc: 'Respuestas concisas y profesionales con recordatorios amables para avanzar.',
+              icon: '🎯',
+            },
+            {
+              title: 'Estilo visual',
+              desc: 'Burbujas, gradientes y espacios refinados para un chat de alto nivel.',
+              icon: '✨',
+            },
+            {
+              title: 'Sesión clara',
+              desc: 'Chips rápidos, modo activo y badges que mantienen el contexto visible.',
+              icon: '🧠',
+            },
+          ],
+    [language]
+  );
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -295,7 +341,7 @@ const ConsultorScreen = () => {
         </ScreenBanner>
       </View>
 
-      <View style={[styles.personaRow, { borderColor: theme.colors.border }]}> 
+      <View style={[styles.personaRow, { borderColor: theme.colors.border }]}>
         <View style={styles.personaBadge}>
           <Text style={styles.personaIcon}>✨</Text>
         </View>
@@ -310,6 +356,58 @@ const ConsultorScreen = () => {
           </Text>
         </View>
       </View>
+
+      <TouchableOpacity
+        onPress={toggleHighlights}
+        style={[
+          styles.accordion,
+          {
+            borderColor: withAlpha(theme.colors.border, 0.9),
+            backgroundColor: withAlpha(theme.colors.surface, 0.92),
+            shadowColor: '#000',
+          },
+        ]}
+      >
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={[styles.accordionTitle, { color: theme.colors.text }]}>
+            {language === 'en' ? 'Coach upgrades' : 'Mejoras del coach'}
+          </Text>
+          <Text style={[styles.accordionSubtitle, { color: theme.colors.textMuted }]}>
+            {showHighlights
+              ? language === 'en'
+                ? 'Hide the preview cards to focus on chat.'
+                : 'Oculta las tarjetas para enfocarte en el chat.'
+              : language === 'en'
+              ? 'Tap to see what changed (collapsible).'
+              : 'Toca para ver cambios (colapsable).'}
+          </Text>
+        </View>
+        <View style={[styles.accordionIcon, { borderColor: withAlpha(theme.colors.border, 0.7) }]}>
+          <Text style={{ color: theme.colors.text }}>{showHighlights ? '−' : '+'}</Text>
+        </View>
+      </TouchableOpacity>
+
+      {showHighlights ? (
+        <View style={styles.highlightGrid}>
+          {coachHighlights.map((item) => (
+            <LinearGradient
+              key={item.title}
+              colors={[withAlpha(theme.colors.primary, 0.18), withAlpha(theme.colors.surface, 0.92)]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.highlightCard, { borderColor: withAlpha(theme.colors.border, 0.8) }]}
+            >
+              <View style={styles.highlightIconWrap}>
+                <Text style={styles.highlightIcon}>{item.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.highlightTitle, { color: theme.colors.text }]}>{item.title}</Text>
+                <Text style={[styles.highlightDesc, { color: theme.colors.textMuted }]}>{item.desc}</Text>
+              </View>
+            </LinearGradient>
+          ))}
+        </View>
+      ) : null}
 
       {/* chips rápidos */}
       <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
@@ -337,7 +435,7 @@ const ConsultorScreen = () => {
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.onSurface }}>{label}</Text>
+                <Text style={[styles.quickChipLabel, { color: theme.colors.onSurface }]}>{label}</Text>
               </TouchableOpacity>
             );
           }}
@@ -514,6 +612,73 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  highlightGrid: {
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 6,
+  },
+  highlightCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  highlightIconWrap: {
+    height: 38,
+    width: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  highlightIcon: { fontSize: 18 },
+  highlightTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  highlightDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  accordion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    gap: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  accordionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  accordionSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  accordionIcon: {
+    height: 32,
+    width: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   quickRow: {
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -528,6 +693,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
+    minWidth: 140,
+  },
+  quickChipLabel: {
+    color: '#0b172a',
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   modeRow: {
     flexDirection: 'row',
@@ -545,14 +716,14 @@ const styles = StyleSheet.create({
   bubble: {
     maxWidth: '88%',
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
-    marginVertical: 6,
-    gap: 6,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 20,
+    marginVertical: 8,
+    gap: 8,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   metaLabel: {
     fontSize: 11,

@@ -17,13 +17,14 @@ const HelpScreen = ({ navigation }) => {
           points: [
             'Open Menu to review meals, your hydration goal and the daily AI shortcuts.',
             'Use the new meal toggles to mark portions as done and watch calories update instantly.',
-            'Need a refresh? “Full day with AI” rewrites every meal keeping your macros aligned.'
+            'Need a refresh? “Full day with AI” rewrites every meal keeping your macros aligned.',
+            'Manual entries now show a purple “Manual” badge so you know what you logged yourself.'
           ]
         },
         {
           title: 'AI superpowers',
           points: [
-            'Consultor or Coach now shows clearer bubbles, so you never lose track of the conversation.',
+            'Consultor or Coach now shows clearer bubbles, badges and gradients for a premium feel.',
             'Shopping list and AI workout cards are collapsible—expand only what you need.',
             'Export a beautiful weekly PDF from the Menu to share or print your plan.'
           ]
@@ -43,13 +44,14 @@ const HelpScreen = ({ navigation }) => {
           points: [
             'Entra al Menú para ver comidas, meta de agua y accesos directos IA del día.',
             'Usa los nuevos toggles de comida para marcar avances y ver calorías al instante.',
-            '¿Necesitas ideas frescas? “Día completo IA” reescribe todo manteniendo tus macros.'
+            '¿Necesitas ideas frescas? “Día completo IA” reescribe todo manteniendo tus macros.',
+            'Las entradas manuales ahora lucen el badge morado “Manual” para identificar tus ajustes.'
           ]
         },
         {
           title: 'Superpoderes IA',
           points: [
-            'El chat Consultor luce burbujas más claras para seguir cada respuesta.',
+            'El chat Consultor ahora luce burbujas, badges y gradientes para un estilo premium.',
             'La lista de compras y el entreno IA ahora son plegables: abre solo lo que necesitas.',
             'Exporta un PDF elegante de la semana desde el Menú para compartir tu plan.'
           ]
@@ -77,6 +79,10 @@ const HelpScreen = ({ navigation }) => {
         {
           label: 'Tune hydration',
           description: 'Water goals from onboarding auto-fill every day—adjust from Settings if your needs change.'
+        },
+        {
+          label: 'Spot manual meals',
+          description: 'Every food you log by hand now shows a “Manual” badge on the day cards so nothing gets lost.'
         }
       ]
     : [
@@ -91,6 +97,10 @@ const HelpScreen = ({ navigation }) => {
         {
           label: 'Ajusta tu hidratación',
           description: 'La meta de agua del onboarding se aplica a cada día; modifícala en Ajustes si cambia tu rutina.'
+        },
+        {
+          label: 'Detecta comidas manuales',
+          description: 'Cada comida ingresada a mano ahora muestra el badge “Manual” en las tarjetas diarias.'
         }
       ];
 
