@@ -12,6 +12,7 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { withAlpha } from '../../theme/utils';
@@ -184,6 +185,46 @@ const ConsultorScreen = () => {
   const bottomOffset = keyboardOffset > 0 ? keyboardOffset : navSpacer;
   const listBottomSpacing = 44 + bottomOffset + inputPaddingBottom;
 
+  const coachHighlights = useMemo(
+    () =>
+      language === 'en'
+        ? [
+            {
+              title: 'Sharper voice',
+              desc: 'Concise, professional answers with friendly nudges to keep you on track.',
+              icon: '🎯',
+            },
+            {
+              title: 'Visual polish',
+              desc: 'Refined bubbles, gradients and spacing so the conversation feels premium.',
+              icon: '✨',
+            },
+            {
+              title: 'Session clarity',
+              desc: 'Quick chips, mode label and badges keep the coach context crystal clear.',
+              icon: '🧠',
+            },
+          ]
+        : [
+            {
+              title: 'Voz más nítida',
+              desc: 'Respuestas concisas y profesionales con recordatorios amables para avanzar.',
+              icon: '🎯',
+            },
+            {
+              title: 'Estilo visual',
+              desc: 'Burbujas, gradientes y espacios refinados para un chat de alto nivel.',
+              icon: '✨',
+            },
+            {
+              title: 'Sesión clara',
+              desc: 'Chips rápidos, modo activo y badges que mantienen el contexto visible.',
+              icon: '🧠',
+            },
+          ],
+    [language]
+  );
+
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -295,7 +336,7 @@ const ConsultorScreen = () => {
         </ScreenBanner>
       </View>
 
-      <View style={[styles.personaRow, { borderColor: theme.colors.border }]}> 
+      <View style={[styles.personaRow, { borderColor: theme.colors.border }]}>
         <View style={styles.personaBadge}>
           <Text style={styles.personaIcon}>✨</Text>
         </View>
@@ -309,6 +350,26 @@ const ConsultorScreen = () => {
               : 'Respuestas humanas, cortas y curiosas. Sin fondos pesados, solo chat limpio.'}
           </Text>
         </View>
+      </View>
+
+      <View style={styles.highlightGrid}>
+        {coachHighlights.map((item) => (
+          <LinearGradient
+            key={item.title}
+            colors={[withAlpha(theme.colors.primary, 0.18), withAlpha(theme.colors.surface, 0.92)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.highlightCard, { borderColor: withAlpha(theme.colors.border, 0.8) }]}
+          >
+            <View style={styles.highlightIconWrap}>
+              <Text style={styles.highlightIcon}>{item.icon}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.highlightTitle, { color: theme.colors.text }]}>{item.title}</Text>
+              <Text style={[styles.highlightDesc, { color: theme.colors.textMuted }]}>{item.desc}</Text>
+            </View>
+          </LinearGradient>
+        ))}
       </View>
 
       {/* chips rápidos */}
@@ -337,7 +398,7 @@ const ConsultorScreen = () => {
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.onSurface }}>{label}</Text>
+                <Text style={[styles.quickChipLabel, { color: theme.colors.onSurface }]}>{label}</Text>
               </TouchableOpacity>
             );
           }}
@@ -514,6 +575,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  highlightGrid: {
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 6,
+  },
+  highlightCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  highlightIconWrap: {
+    height: 38,
+    width: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  highlightIcon: { fontSize: 18 },
+  highlightTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  highlightDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
   quickRow: {
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -528,6 +625,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
+    minWidth: 140,
+  },
+  quickChipLabel: {
+    color: '#0b172a',
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   modeRow: {
     flexDirection: 'row',
@@ -545,14 +648,14 @@ const styles = StyleSheet.create({
   bubble: {
     maxWidth: '88%',
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
-    marginVertical: 6,
-    gap: 6,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 20,
+    marginVertical: 8,
+    gap: 8,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   metaLabel: {
     fontSize: 11,
