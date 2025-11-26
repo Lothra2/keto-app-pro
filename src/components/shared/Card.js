@@ -12,15 +12,15 @@ const Card = ({ children, style, outlined = false, tone = 'default' }) => {
 
   const palette = {
     default: [
-      theme.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.04)',
-      theme.colors.cardSoft || 'rgba(15,23,42,0.06)',
+      withAlpha(theme.colors.glassBg, 1),
+      withAlpha(theme.colors.glassBg, 0.7)
     ],
     info: [
-      `${theme.colors.info}29`,
-      `${theme.colors.info}14`,
+      `${theme.colors.info}33`,
+      `${theme.colors.info}12`
     ],
-    success: [withAlpha(theme.colors.success, 0.2), withAlpha(theme.colors.success, 0.08)],
-    warning: [withAlpha(theme.colors.warning, 0.18), withAlpha(theme.colors.warning, 0.08)],
+    success: [withAlpha(theme.colors.success, 0.22), withAlpha(theme.colors.success, 0.1)],
+    warning: [withAlpha(theme.colors.warning, 0.2), withAlpha(theme.colors.warning, 0.1)],
   };
 
   const gradient = palette[tone] || palette.default;
@@ -42,32 +42,37 @@ const Card = ({ children, style, outlined = false, tone = 'default' }) => {
 const getStyles = (theme) =>
   StyleSheet.create({
     shadowWrap: {
-      borderRadius: theme.radius.lg,
+      borderRadius: theme.radius.xl,
       overflow: 'hidden',
-      shadowColor: theme.colors.accent || theme.colors.primary,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.12,
-      shadowRadius: 14,
-      elevation: 4,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 18 },
+      shadowOpacity: theme.mode === 'dark' ? 0.35 : 0.16,
+      shadowRadius: 24,
+      elevation: 8,
       backgroundColor: 'transparent',
     },
     base: {
-      borderRadius: theme.radius.lg,
+      borderRadius: theme.radius.xl,
       padding: 1,
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: withAlpha(theme.colors.glassBorder, 0.4),
+      backgroundColor: withAlpha(theme.colors.glassBg, 0.7),
     },
     inner: {
-      borderRadius: theme.radius.lg,
-      padding: theme.spacing.md,
-      backgroundColor: theme.colors.surface,
+      borderRadius: theme.radius.xl,
+      padding: theme.spacing.lg,
+      backgroundColor: withAlpha(theme.colors.surface, 0.9),
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.glassBorder, 0.4),
     },
     innerOutlined: {
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: theme.colors.glassBorder,
     },
     filled: {},
     outlined: {
+      borderWidth: 1.25,
+      borderColor: theme.colors.glassBorder,
       backgroundColor: 'transparent'
     }
   });
