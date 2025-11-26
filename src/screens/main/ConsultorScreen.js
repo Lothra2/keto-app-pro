@@ -12,18 +12,18 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 import aiService from '../../api/aiService';
 import ScreenBanner from '../../components/shared/ScreenBanner';
 import { stripMarkdownHeadings } from '../../utils/labels';
 
 const QUICK = [
-  { id: 'q1', textEs: 'Plan keto 1800 kcal', textEn: 'Keto plan 1800 kcal' },
-  { id: 'q2', textEs: 'Rutina calistenia 30 min', textEn: 'Calisthenics routine 30 min' },
-  { id: 'q3', textEs: 'Receta con atún y aguacate', textEn: 'Recipe with tuna and avocado' },
-  { id: 'q4', textEs: 'Analiza mi día, proteína baja', textEn: 'Review my day, low protein' },
+  { id: 'q1', textEs: '¿Qué cenar keto rápido hoy?', textEn: 'Quick keto dinner idea for tonight?' },
+  { id: 'q2', textEs: 'Rutina express con mancuernas', textEn: 'Dumbbell-only express routine' },
+  { id: 'q3', textEs: 'Ajusta mi día: mucha hambre', textEn: 'Tweak my day: super hungry' },
+  { id: 'q4', textEs: 'Snacks bajos en carbs para oficina', textEn: 'Low-carb office snacks' },
 ];
 
 const MODES = [{ id: 'auto', labelEs: 'Auto', labelEn: 'Auto' }];
@@ -33,8 +33,8 @@ const getWelcomeMessage = (language) => ({
   role: 'assistant',
   text:
     language === 'en'
-      ? 'Hi, I am your keto and calisthenics coach. Ask me for meal plans, recipes, or bodyweight workouts.'
-      : 'Hola, soy tu consultor de dieta keto y calistenia. Pídeme planes, recetas o entrenos con peso corporal.',
+      ? 'Hey! I’m your keto + calisthenics coach. Tell me what you need and I’ll keep it short and practical.'
+      : '¡Hola! Soy tu coach keto + calistenia. Cuéntame qué necesitas y te respondo corto y al grano.',
 });
 
 const ConsultorScreen = () => {
@@ -131,12 +131,22 @@ const ConsultorScreen = () => {
           text: msg.text,
         }));
 
+        const friendlyPrompt =
+          language === 'en'
+            ? `${trimmed}\nUse a warm, human tone. Avoid dumping full meal plans unless I ask. Offer 1-2 concrete ideas and ask a quick follow up.`
+            : `${trimmed}\nResponde con tono cercano y humano. No des planes enormes si no los pido. Ofrece 1-2 ideas concretas y cierra con una repregunta corta.`;
+
         const res = await aiService.chat({
-          prompt: trimmed,
+          prompt: friendlyPrompt,
           mode,
           language,
           credentials: creds,
-          context: { domain: 'keto-calisthenics', experienceYears: 20 },
+          context: {
+            domain: 'keto-calisthenics',
+            experienceYears: 20,
+            tone: 'friendly',
+            keepListsShort: true,
+          },
           history: historyForAi,
         });
 
@@ -285,37 +295,21 @@ const ConsultorScreen = () => {
         </ScreenBanner>
       </View>
 
-      <LinearGradient
-        colors={
-          theme.mode === 'dark'
-            ? ['rgba(11,59,106,0.4)', 'rgba(10,18,32,0.75)']
-            : ['rgba(11,59,106,0.12)', 'rgba(255,255,255,0.92)']
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.coachCard, { borderColor: theme.colors.border, shadowColor: theme.colors.primary }]}
-      >
-        <View style={styles.coachCardContent}>
-          <Text style={[styles.coachCardTitle, { color: theme.colors.text }]}>
-            {language === 'en' ? 'Coach tips' : 'Tips del coach'}
-          </Text>
-          <Text style={[styles.coachCardSubtitle, { color: theme.colors.textMuted }]}>
-            {language === 'en'
-              ? 'Ask for form cues, lighter meals or quick swaps. The coach will adapt to your gear and schedule.'
-              : 'Pídele cues de técnica, comidas más ligeras o swaps rápidos. El coach se adapta a tu equipo y tiempo.'}
-          </Text>
-          <View style={styles.coachCardRow}>
-            <View style={[styles.coachBadge, { backgroundColor: theme.colors.primarySoft }]}>
-              <Text style={[styles.coachBadgeText, { color: theme.colors.primary }]}>{language === 'en' ? 'New' : 'Nuevo'}</Text>
-            </View>
-            <Text style={[styles.coachCardHint, { color: theme.colors.text }]}>
-              {language === 'en'
-                ? 'Tap a quick prompt below or request more detail on an exercise.'
-                : 'Toca un prompt rápido abajo o pide más detalle de un ejercicio.'}
-            </Text>
-          </View>
+      <View style={[styles.personaRow, { borderColor: theme.colors.border }]}> 
+        <View style={styles.personaBadge}>
+          <Text style={styles.personaIcon}>✨</Text>
         </View>
-      </LinearGradient>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.personaTitle, { color: theme.colors.text }]}>
+            {language === 'en' ? 'Natural coach mode' : 'Modo coach natural'}
+          </Text>
+          <Text style={[styles.personaSubtitle, { color: theme.colors.textMuted }]}>
+            {language === 'en'
+              ? 'Human, short and curious replies. No background blur, just clean chat.'
+              : 'Respuestas humanas, cortas y curiosas. Sin fondos pesados, solo chat limpio.'}
+          </Text>
+        </View>
+      </View>
 
       {/* chips rápidos */}
       <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
@@ -392,21 +386,13 @@ const ConsultorScreen = () => {
       />
 
       {/* input */}
-      <LinearGradient
-        colors={
-          theme.mode === 'dark'
-            ? ['rgba(11,18,32,0.95)', 'rgba(11,59,106,0.6)']
-            : ['rgba(255,255,255,0.97)', 'rgba(90,212,255,0.16)']
-        }
+      <View
         style={[
           styles.inputBar,
           {
-            borderTopColor: theme.colors.border,
-            shadowColor: '#000',
-            shadowOpacity: 0.12,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: -6 },
-            elevation: 10,
+            borderTopColor: withAlpha(theme.colors.border, 0.85),
+            backgroundColor: theme.colors.bg,
+            shadowColor: 'transparent',
             paddingBottom: inputPaddingBottom,
             bottom: bottomOffset,
           },
@@ -417,8 +403,8 @@ const ConsultorScreen = () => {
             styles.input,
             {
               color: theme.colors.onSurface,
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
+              backgroundColor: withAlpha(theme.colors.surface, 0.92),
+              borderColor: withAlpha(theme.colors.border, 0.9),
             },
           ]}
           placeholder={language === 'en' ? 'Ask your coach...' : 'Pregunta a tu consultor...'}
@@ -465,7 +451,7 @@ const ConsultorScreen = () => {
             <Text style={[styles.sendTxt, { color: theme.colors.onPrimary }]}>➤</Text>
           )}
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
     </KeyboardAvoidingView>
   );
 };
@@ -499,52 +485,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  coachCard: {
+  personaRow: {
     marginHorizontal: 16,
-    marginTop: 6,
     marginBottom: 10,
+    padding: 14,
     borderRadius: 18,
     borderWidth: 1,
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+    backgroundColor: withAlpha('#0ea5e9', 0.08),
   },
-  coachCardContent: {
-    padding: 16,
-    gap: 6,
+  personaBadge: {
+    height: 44,
+    width: 44,
+    borderRadius: 14,
+    backgroundColor: withAlpha('#0ea5e9', 0.18),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  coachCardTitle: {
+  personaIcon: { fontSize: 20 },
+  personaTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f172a',
     letterSpacing: 0.2,
   },
-  coachCardSubtitle: {
+  personaSubtitle: {
     fontSize: 13,
     lineHeight: 18,
-  },
-  coachCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  coachBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  coachBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  coachCardHint: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '500',
   },
   quickRow: {
     paddingVertical: 12,
