@@ -12,6 +12,7 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { withAlpha } from '../../theme/utils';
@@ -47,6 +48,7 @@ const ConsultorScreen = () => {
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [showHighlights, setShowHighlights] = useState(false);
 
   const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
   const hasCredentials = Boolean(creds.user && creds.pass);
@@ -80,6 +82,10 @@ const ConsultorScreen = () => {
   }, [language]);
 
   const handleQuick = useCallback((text) => setInput(text), []);
+
+  const toggleHighlights = useCallback(() => {
+    setShowHighlights((prev) => !prev);
+  }, []);
 
   const onSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -183,6 +189,46 @@ const ConsultorScreen = () => {
   const navSpacer = 86;
   const bottomOffset = keyboardOffset > 0 ? keyboardOffset : navSpacer;
   const listBottomSpacing = 44 + bottomOffset + inputPaddingBottom;
+
+  const coachHighlights = useMemo(
+    () =>
+      language === 'en'
+        ? [
+            {
+              title: 'Sharper voice',
+              desc: 'Concise, professional answers with friendly nudges to keep you on track.',
+              icon: '🎯',
+            },
+            {
+              title: 'Visual polish',
+              desc: 'Refined bubbles, gradients and spacing so the conversation feels premium.',
+              icon: '✨',
+            },
+            {
+              title: 'Session clarity',
+              desc: 'Quick chips, mode label and badges keep the coach context crystal clear.',
+              icon: '🧠',
+            },
+          ]
+        : [
+            {
+              title: 'Voz más nítida',
+              desc: 'Respuestas concisas y profesionales con recordatorios amables para avanzar.',
+              icon: '🎯',
+            },
+            {
+              title: 'Estilo visual',
+              desc: 'Burbujas, gradientes y espacios refinados para un chat de alto nivel.',
+              icon: '✨',
+            },
+            {
+              title: 'Sesión clara',
+              desc: 'Chips rápidos, modo activo y badges que mantienen el contexto visible.',
+              icon: '🧠',
+            },
+          ],
+    [language]
+  );
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
