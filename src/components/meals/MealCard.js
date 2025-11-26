@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
+import { withAlpha } from '../../theme/utils';
 import { hasLeadingEmoji } from '../../utils/labels';
 
 const MealCard = ({
@@ -19,12 +21,67 @@ const MealCard = ({
   const styles = getStyles(theme);
 
   const hasAIData = mealData?.isAI || false;
+  const normalizedSource = (
+    mealData?.source ||
+    mealData?.origen ||
+    mealData?.origin ||
+    mealData?.sourceType ||
+    mealData?.logSource ||
+    mealData?.inputSource ||
+    mealData?.entryType ||
+    mealData?.entrySource ||
+    mealData?.type ||
+    mealData?.via ||
+    mealData?.createdFrom ||
+    mealData?.provider ||
+    mealData?.loggedFrom ||
+    mealData?.logMethod ||
+    mealData?.source_label ||
+    ''
+  )
+    .toString()
+    .toLowerCase();
+
   const isManual = Boolean(
-    mealData?.source === 'manual' ||
+    normalizedSource.includes('manual') ||
+      normalizedSource.includes('user') ||
+      normalizedSource.includes('custom') ||
+      normalizedSource.includes('offline') ||
+      normalizedSource.includes('diary') ||
+      normalizedSource.includes('log') ||
+      normalizedSource.includes('manual-entry') ||
+      normalizedSource === 'plan' ||
       mealData?.isManual ||
       mealData?.manual === true ||
       mealData?.manual === 'true' ||
-      mealData?.loggedManually
+      mealData?.manualEntry ||
+      mealData?.loggedManually ||
+      mealData?.manualKcal ||
+      mealData?.manualSource ||
+      mealData?.fromManual ||
+      mealData?.createdBy === 'user' ||
+      mealData?.createdBy === 'cliente' ||
+      mealData?.createdBy === 'cliente_manual' ||
+      mealData?.entryType === 'manual'
+  );
+
+  const kcalValue = useMemo(() => {
+    const raw =
+      mealData?.kcal ??
+      mealData?.calorias ??
+      mealData?.kcalEstimate ??
+      mealData?.calorieEstimate;
+    return Number.isFinite(Number(raw)) ? Math.round(Number(raw)) : null;
+  }, [mealData?.calorias, mealData?.calorieEstimate, mealData?.kcal, mealData?.kcalEstimate]);
+
+  const portionLabel = useMemo(
+    () =>
+      mealData?.portion ||
+      mealData?.porcion ||
+      mealData?.racion ||
+      mealData?.qtyLabel ||
+      '',
+    [mealData?.portion, mealData?.porcion, mealData?.qtyLabel, mealData?.racion]
   );
   const ingredientLines = useMemo(() => {
     if (!mealData?.qty) return [];
@@ -48,94 +105,132 @@ const MealCard = ({
   };
 
   return (
-    <View style={[styles.container, isCompleted && styles.containerCompleted]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          {showIcon ? <Text style={styles.icon}>{icon}</Text> : null}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>{title}</Text>
-          </View>
-        </View>
-
-        <View style={styles.actions}>
-          {showAIButton && !readOnly && (
-            <TouchableOpacity
-              style={styles.aiButton}
-              onPress={onGenerateAI}
-            >
-              <Text style={styles.aiButtonText}>IA</Text>
-            </TouchableOpacity>
-          )}
-
-          {!readOnly && (
-            <Switch
-              value={isCompleted}
-              onValueChange={onToggleComplete}
-              trackColor={switchTrack}
-              thumbColor={isCompleted ? theme.colors.onPrimary : theme.colors.card}
-              ios_backgroundColor={switchTrack.false}
-            />
-          )}
-        </View>
-      </View>
-
-      {/* Body */}
-      {mealData?.nombre && (
-        <View style={styles.body}>
-          <View style={styles.nameRow}>
-            <Text style={styles.mealName}>{mealData.nombre}</Text>
-            {hasAIData && (
-              <View style={styles.aiBadge}>
-                <Text style={styles.aiBadgeText}>IA</Text>
-              </View>
-            )}
-            {isManual && (
-              <View style={styles.manualBadge}>
-                <Text style={styles.manualBadgeText}>
-                  {language === 'en' ? 'Manual' : 'Manual'}
-                </Text>
-              </View>
-            )}
-          </View>
-          {ingredientLines.length > 0 && (
-            <View style={styles.ingredientsList}>
-              {ingredientLines.map((line, index) => (
-                <View key={`${line}-${index}`} style={styles.ingredientRow}>
-                  <Text style={styles.ingredientBullet}>•</Text>
-                  <Text style={styles.ingredientText}>{line}</Text>
-                </View>
-              ))}
+    <LinearGradient
+      colors={[
+        withAlpha(theme.colors.primary, isCompleted ? 0.22 : 0.14),
+        withAlpha(theme.colors.card, 0.96),
+      ]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientShell}
+    >
+      <View style={[styles.container, isCompleted && styles.containerCompleted]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            {showIcon ? <Text style={styles.icon}>{icon}</Text> : null}
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>{title}</Text>
             </View>
-          )}
-        </View>
-      )}
+          </View>
 
-      {/* Note */}
-      {noteText ? (
-        <Text style={styles.note}>{noteText}</Text>
-      ) : null}
-    </View>
+          <View style={styles.actions}>
+            {showAIButton && !readOnly && (
+              <TouchableOpacity
+                style={styles.aiButton}
+                onPress={onGenerateAI}
+              >
+                <Text style={styles.aiButtonText}>IA</Text>
+              </TouchableOpacity>
+            )}
+
+            {!readOnly && (
+              <Switch
+                value={isCompleted}
+                onValueChange={onToggleComplete}
+                trackColor={switchTrack}
+                thumbColor={isCompleted ? theme.colors.onPrimary : theme.colors.card}
+                ios_backgroundColor={switchTrack.false}
+              />
+            )}
+          </View>
+        </View>
+
+        {/* Body */}
+        {mealData?.nombre && (
+          <View style={styles.body}>
+            <View style={styles.nameRow}>
+              <Text style={styles.mealName}>{mealData.nombre}</Text>
+              {hasAIData && (
+                <View style={styles.aiBadge}>
+                  <Text style={styles.aiBadgeText}>IA</Text>
+                </View>
+              )}
+              {mealData?.isCheat && (
+                <View style={[styles.metaPill, styles.metaAccent]}>
+                  <Text style={styles.metaPillText}>{language === 'en' ? 'Cheat' : 'Cheat'}</Text>
+                </View>
+              )}
+              {isManual && (
+                <View style={styles.manualBadge}>
+                  <Text style={styles.manualBadgeText}>
+                    {language === 'en' ? 'Manual' : 'Manual'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.metaRow}>
+              {kcalValue ? (
+                <View style={[styles.metaPill, styles.metaPrimary]}>
+                  <Text style={styles.metaPillText}>🔥 {kcalValue} kcal</Text>
+                </View>
+              ) : null}
+              {portionLabel ? (
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaPillText}>🍽️ {portionLabel}</Text>
+                </View>
+              ) : null}
+              {hasAIData ? (
+                <View style={styles.metaPillMuted}>
+                  <Text style={styles.metaPillText}>{language === 'en' ? 'AI guided' : 'IA sugerida'}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {ingredientLines.length > 0 && (
+              <View style={styles.ingredientsList}>
+                {ingredientLines.map((line, index) => (
+                  <View key={`${line}-${index}`} style={styles.ingredientRow}>
+                    <Text style={styles.ingredientBullet}>•</Text>
+                    <Text style={styles.ingredientText}>{line}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Note */}
+        {noteText ? (
+          <Text style={styles.note}>{noteText}</Text>
+        ) : null}
+      </View>
+    </LinearGradient>
   );
 };
 
 const getStyles = (theme) => StyleSheet.create({
+  gradientShell: {
+    borderRadius: theme.radius.lg,
+    padding: 1.5,
+    marginBottom: theme.spacing.md,
+  },
   container: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: withAlpha(theme.colors.card, 0.92),
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
+    borderColor: withAlpha(theme.colors.border, 0.6),
+    borderRadius: theme.radius.lg,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   containerCompleted: {
-    backgroundColor: theme.colors.primarySoft,
-    borderColor: 'rgba(15,118,110,0.45)',
+    backgroundColor: withAlpha(theme.colors.primarySoft, 0.9),
+    borderColor: withAlpha(theme.colors.primary, 0.65),
   },
   header: {
     flexDirection: 'row',
@@ -190,6 +285,42 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.text,
     lineHeight: 18,
   },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
+  },
+  metaPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.border, 0.4),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.8),
+  },
+  metaPillMuted: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.textMuted, 0.1),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.textMuted, 0.3),
+  },
+  metaPillText: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  metaPrimary: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.16),
+    borderColor: withAlpha(theme.colors.primary, 0.6),
+  },
+  metaAccent: {
+    backgroundColor: withAlpha(theme.colors.accent || theme.colors.primary, 0.16),
+    borderColor: withAlpha(theme.colors.accent || theme.colors.primary, 0.6),
+  },
   ingredientsList: {
     marginTop: theme.spacing.xs,
     gap: 6,
@@ -223,18 +354,23 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: '600',
   },
   manualBadge: {
-    backgroundColor: 'rgba(147, 51, 234, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    backgroundColor: withAlpha(theme.colors.accent || '#7c3aed', 0.26),
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(147, 51, 234, 0.35)',
+    borderColor: withAlpha(theme.colors.accent || '#7c3aed', 0.65),
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
   manualBadgeText: {
-    color: '#6d28d9',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    color: theme.colors.accent || '#6d28d9',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   note: {
     ...theme.typography.caption,
