@@ -48,6 +48,7 @@ const ConsultorScreen = () => {
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [showHighlights, setShowHighlights] = useState(false);
 
   const creds = useMemo(() => apiCredentials || { user: '', pass: '' }, [apiCredentials]);
   const hasCredentials = Boolean(creds.user && creds.pass);
@@ -81,6 +82,10 @@ const ConsultorScreen = () => {
   }, [language]);
 
   const handleQuick = useCallback((text) => setInput(text), []);
+
+  const toggleHighlights = useCallback(() => {
+    setShowHighlights((prev) => !prev);
+  }, []);
 
   const onSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -352,25 +357,57 @@ const ConsultorScreen = () => {
         </View>
       </View>
 
-      <View style={styles.highlightGrid}>
-        {coachHighlights.map((item) => (
-          <LinearGradient
-            key={item.title}
-            colors={[withAlpha(theme.colors.primary, 0.18), withAlpha(theme.colors.surface, 0.92)]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.highlightCard, { borderColor: withAlpha(theme.colors.border, 0.8) }]}
-          >
-            <View style={styles.highlightIconWrap}>
-              <Text style={styles.highlightIcon}>{item.icon}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.highlightTitle, { color: theme.colors.text }]}>{item.title}</Text>
-              <Text style={[styles.highlightDesc, { color: theme.colors.textMuted }]}>{item.desc}</Text>
-            </View>
-          </LinearGradient>
-        ))}
-      </View>
+      <TouchableOpacity
+        onPress={toggleHighlights}
+        style={[
+          styles.accordion,
+          {
+            borderColor: withAlpha(theme.colors.border, 0.9),
+            backgroundColor: withAlpha(theme.colors.surface, 0.92),
+            shadowColor: '#000',
+          },
+        ]}
+      >
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={[styles.accordionTitle, { color: theme.colors.text }]}>
+            {language === 'en' ? 'Coach upgrades' : 'Mejoras del coach'}
+          </Text>
+          <Text style={[styles.accordionSubtitle, { color: theme.colors.textMuted }]}>
+            {showHighlights
+              ? language === 'en'
+                ? 'Hide the preview cards to focus on chat.'
+                : 'Oculta las tarjetas para enfocarte en el chat.'
+              : language === 'en'
+              ? 'Tap to see what changed (collapsible).'
+              : 'Toca para ver cambios (colapsable).'}
+          </Text>
+        </View>
+        <View style={[styles.accordionIcon, { borderColor: withAlpha(theme.colors.border, 0.7) }]}>
+          <Text style={{ color: theme.colors.text }}>{showHighlights ? '−' : '+'}</Text>
+        </View>
+      </TouchableOpacity>
+
+      {showHighlights ? (
+        <View style={styles.highlightGrid}>
+          {coachHighlights.map((item) => (
+            <LinearGradient
+              key={item.title}
+              colors={[withAlpha(theme.colors.primary, 0.18), withAlpha(theme.colors.surface, 0.92)]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.highlightCard, { borderColor: withAlpha(theme.colors.border, 0.8) }]}
+            >
+              <View style={styles.highlightIconWrap}>
+                <Text style={styles.highlightIcon}>{item.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.highlightTitle, { color: theme.colors.text }]}>{item.title}</Text>
+                <Text style={[styles.highlightDesc, { color: theme.colors.textMuted }]}>{item.desc}</Text>
+              </View>
+            </LinearGradient>
+          ))}
+        </View>
+      ) : null}
 
       {/* chips rápidos */}
       <View style={[styles.quickRow, { backgroundColor: theme.colors.bgSoft }]}>
@@ -610,6 +647,37 @@ const styles = StyleSheet.create({
   highlightDesc: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  accordion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    gap: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  accordionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  accordionSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  accordionIcon: {
+    height: 32,
+    width: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quickRow: {
     paddingVertical: 12,

@@ -216,6 +216,7 @@ const ManualMealModal = ({ route, navigation }) => {
           baseData[mealKey]?.nombre ||
           baseDay?.[mealKey]?.nombre ||
           (language === 'en' ? 'Manual meal' : 'Comida manual'),
+        manualLabel: language === 'en' ? 'Manual entry' : 'Entrada manual',
         qty: cleanDescription,
         descripcion: cleanDescription,
         portion: portion.trim(),
@@ -230,6 +231,9 @@ const ManualMealModal = ({ route, navigation }) => {
         logSource: 'manual',
         source: 'manual',
         manualKcal: Math.round(parsedKcal),
+        manualBadge: true,
+        manualTag: 'manual',
+        badge: 'manual',
         fromAI: false,
         isAI: false,
         createdBy: 'cliente_manual',
