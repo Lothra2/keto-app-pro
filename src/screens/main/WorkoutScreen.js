@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, Switch } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useApp } from '../../context/AppContext'
 import { getTheme } from '../../theme'
 import { getWorkoutData, saveWorkoutData, getProgressData, saveProgressData } from '../../storage/storage'
@@ -13,6 +14,7 @@ import ScreenBanner from '../../components/shared/ScreenBanner'
 import { exportWorkoutPlanPdf } from '../../utils/pdf'
 import { getDayDisplayName } from '../../utils/labels'
 import { calculateEstimatedWorkoutKcal, estimateAiWorkoutCalories } from '../../utils/calculations'
+import { withAlpha } from '../../theme/utils'
 
 const WorkoutScreen = ({ route, navigation }) => {
   const { dayIndex, weekNumber, focusDay } = route.params || {}
@@ -590,6 +592,66 @@ const WorkoutScreen = ({ route, navigation }) => {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
+        <LinearGradient
+          colors={[withAlpha(theme.colors.primary, 0.35), withAlpha(theme.colors.accent || theme.colors.primary, 0.2)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.heroHeader}>
+            <Text style={styles.heroTitle}>{language === 'en' ? 'Premium training view' : 'Vista premium de entreno'}</Text>
+            <Text style={styles.heroSubtitle}>
+              {language === 'en'
+                ? 'Sharper metrics, softer gradients, and action chips to jump into your flow.'
+                : 'Métricas claras, gradientes suaves y accesos rápidos para moverte en tu plan.'}
+            </Text>
+          </View>
+          <View style={styles.heroChips}>
+            <View style={[styles.heroChip, styles.heroChipPrimary]}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Today' : 'Hoy'}</Text>
+              <Text style={styles.heroChipValue}>{dayDisplayName}</Text>
+            </View>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Energy' : 'Energía'}</Text>
+              <Text style={styles.heroChipValue}>{selectedKcal} kcal</Text>
+            </View>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Source' : 'Origen'}</Text>
+              <Text style={styles.heroChipValue}>{workoutSource === 'ai' ? 'AI' : 'Base'}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.metricsRow}>
+          <View style={[styles.metricCard, styles.metricPrimary]}>
+            <Text style={styles.metricLabel}>{language === 'en' ? 'Burn today' : 'Quema estimada'}</Text>
+            <Text style={styles.metricValue}>{selectedKcal} kcal</Text>
+            <Text style={styles.metricHint}>
+              {workoutSource === 'ai'
+                ? language === 'en'
+                  ? 'Based on your AI flow'
+                  : 'Basado en tu rutina IA'
+                : language === 'en'
+                ? 'Base routine estimate'
+                : 'Estimado del plan base'}
+            </Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>{language === 'en' ? 'Exercises' : 'Ejercicios'}</Text>
+            <Text style={styles.metricValue}>{workout.length || referenceExercises.length}</Text>
+            <Text style={styles.metricHint}>
+              {language === 'en' ? 'Tap any move to see form tips' : 'Toca un ejercicio para ver tips de técnica'}
+            </Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>{language === 'en' ? 'Week pace' : 'Ritmo semanal'}</Text>
+            <Text style={styles.metricValue}>{weekLabel}</Text>
+            <Text style={styles.metricHint}>
+              {language === 'en' ? 'Swipe days to jump around' : 'Cambia de día deslizando'}
+            </Text>
+          </View>
+        </View>
+
         <Card style={styles.focusCard}>
           <View style={styles.focusHeader}>
             <Text style={styles.sectionTitle}>
@@ -883,6 +945,98 @@ const getStyles = theme => StyleSheet.create({
     padding: theme.spacing.lg,
     paddingBottom: 120,
     gap: theme.spacing.lg
+  },
+  hero: {
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.primary, 0.35)
+  },
+  heroHeader: {
+    gap: theme.spacing.xs
+  },
+  heroTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.text,
+    letterSpacing: 0.2
+  },
+  heroSubtitle: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textMuted,
+    lineHeight: 18
+  },
+  heroChips: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap'
+  },
+  heroChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: withAlpha(theme.colors.card, 0.7),
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.6)
+  },
+  heroChipPrimary: {
+    borderColor: withAlpha(theme.colors.primary, 0.5),
+    backgroundColor: withAlpha(theme.colors.primary, 0.16)
+  },
+  heroChipLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: 2
+  },
+  heroChipValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap'
+  },
+  metricCard: {
+    flex: 1,
+    minWidth: '30%',
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    padding: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3
+  },
+  metricPrimary: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.12),
+    borderColor: withAlpha(theme.colors.primary, 0.35)
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    letterSpacing: 0.2,
+    marginBottom: 4
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: theme.colors.text
+  },
+  metricHint: {
+    fontSize: 12,
+    color: theme.colors.textMuted,
+    marginTop: 4,
+    lineHeight: 16
   },
   focusCard: {
     gap: theme.spacing.sm

@@ -20,10 +20,10 @@ import ScreenBanner from '../../components/shared/ScreenBanner';
 import { stripMarkdownHeadings } from '../../utils/labels';
 
 const QUICK = [
-  { id: 'q1', textEs: 'Plan keto 1800 kcal', textEn: 'Keto plan 1800 kcal' },
-  { id: 'q2', textEs: 'Rutina calistenia 30 min', textEn: 'Calisthenics routine 30 min' },
-  { id: 'q3', textEs: 'Receta con atún y aguacate', textEn: 'Recipe with tuna and avocado' },
-  { id: 'q4', textEs: 'Analiza mi día, proteína baja', textEn: 'Review my day, low protein' },
+  { id: 'q1', textEs: '¿Qué cenar keto rápido hoy?', textEn: 'Quick keto dinner idea for tonight?' },
+  { id: 'q2', textEs: 'Rutina express con mancuernas', textEn: 'Dumbbell-only express routine' },
+  { id: 'q3', textEs: 'Ajusta mi día: mucha hambre', textEn: 'Tweak my day: super hungry' },
+  { id: 'q4', textEs: 'Snacks bajos en carbs para oficina', textEn: 'Low-carb office snacks' },
 ];
 
 const MODES = [{ id: 'auto', labelEs: 'Auto', labelEn: 'Auto' }];
@@ -33,8 +33,8 @@ const getWelcomeMessage = (language) => ({
   role: 'assistant',
   text:
     language === 'en'
-      ? 'Hi, I am your keto and calisthenics coach. Ask me for meal plans, recipes, or bodyweight workouts.'
-      : 'Hola, soy tu consultor de dieta keto y calistenia. Pídeme planes, recetas o entrenos con peso corporal.',
+      ? 'Hey! I’m your keto + calisthenics coach. Tell me what you need and I’ll keep it short and practical.'
+      : '¡Hola! Soy tu coach keto + calistenia. Cuéntame qué necesitas y te respondo corto y al grano.',
 });
 
 const ConsultorScreen = () => {
@@ -131,12 +131,22 @@ const ConsultorScreen = () => {
           text: msg.text,
         }));
 
+        const friendlyPrompt =
+          language === 'en'
+            ? `${trimmed}\nUse a warm, human tone. Avoid dumping full meal plans unless I ask. Offer 1-2 concrete ideas and ask a quick follow up.`
+            : `${trimmed}\nResponde con tono cercano y humano. No des planes enormes si no los pido. Ofrece 1-2 ideas concretas y cierra con una repregunta corta.`;
+
         const res = await aiService.chat({
-          prompt: trimmed,
+          prompt: friendlyPrompt,
           mode,
           language,
           credentials: creds,
-          context: { domain: 'keto-calisthenics', experienceYears: 20 },
+          context: {
+            domain: 'keto-calisthenics',
+            experienceYears: 20,
+            tone: 'friendly',
+            keepListsShort: true,
+          },
           history: historyForAi,
         });
 

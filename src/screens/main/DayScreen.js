@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from '../../context/AppContext';
 import { getTheme } from '../../theme';
 import { withAlpha } from '../../theme/utils';
@@ -319,8 +320,36 @@ const DayScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
+        <LinearGradient
+          colors={[withAlpha(theme.colors.primary, 0.35), withAlpha(theme.colors.accent || theme.colors.primary, 0.2)]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <Text style={styles.heroTitle}>{language === 'en' ? 'Premium menu' : 'Menú premium'}</Text>
+          <Text style={styles.heroSubtitle}>
+            {language === 'en'
+              ? 'Glass cards, calmer spacing and inline chips to keep meals, water and extras at a glance.'
+              : 'Cartas tipo cristal, espacios calmados y chips en línea para ver comidas, agua y extras de un vistazo.'}
+          </Text>
+          <View style={styles.heroRow}>
+            <View style={[styles.heroChip, styles.heroChipPrimary]}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Today' : 'Hoy'}</Text>
+              <Text style={styles.heroChipValue}>{dayData.dia}</Text>
+            </View>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Calories' : 'Calorías'}</Text>
+              <Text style={styles.heroChipValue}>{displayGoalKcal} kcal</Text>
+            </View>
+            <View style={styles.heroChip}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Water' : 'Agua'}</Text>
+              <Text style={styles.heroChipValue}>{waterPercent}%</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
         {/* Week Selector */}
-        <WeekSelector 
+        <WeekSelector
           currentWeek={currentWeek} 
           onWeekChange={handleWeekChange} 
         />
@@ -510,6 +539,57 @@ const getStyles = (theme) => StyleSheet.create({
   content: {
     padding: theme.spacing.lg,
     paddingBottom: 100
+  },
+  hero: {
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.primary, 0.35),
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    marginBottom: theme.spacing.lg
+  },
+  heroTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.text,
+    letterSpacing: 0.2
+  },
+  heroSubtitle: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textMuted,
+    lineHeight: 18
+  },
+  heroRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    flexWrap: 'wrap',
+    marginTop: theme.spacing.sm
+  },
+  heroChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.card, 0.7),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.7)
+  },
+  heroChipPrimary: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.16),
+    borderColor: withAlpha(theme.colors.primary, 0.45)
+  },
+  heroChipLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: 2
+  },
+  heroChipValue: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700'
   },
   loadingText: {
     ...theme.typography.body,

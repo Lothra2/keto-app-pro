@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert
 } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useApp } from '../../context/AppContext'
 import { getTheme } from '../../theme'
 import { withAlpha } from '../../theme/utils'
@@ -250,6 +251,64 @@ const ShoppingScreen = () => {
         style={styles.banner}
       />
 
+      <LinearGradient
+        colors={[withAlpha(theme.colors.accent || theme.colors.primary, 0.35), withAlpha(theme.colors.primary, 0.2)]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <Text style={styles.heroTitle}>{language === 'en' ? 'Premium cart' : 'Carrito premium'}</Text>
+        <Text style={styles.heroSubtitle}>
+          {language === 'en'
+            ? 'Layered cards, gentle glassmorphism, and quick stats to glide through shopping.'
+            : 'Capas con efecto cristal, stats rápidas y orden suave para pasear por la tienda.'}
+        </Text>
+        <View style={styles.heroRow}>
+          <View style={[styles.heroPill, styles.heroPillPrimary]}>
+            <Text style={styles.heroPillLabel}>{language === 'en' ? 'Planned days' : 'Días planificados'}</Text>
+            <Text style={styles.heroPillValue}>{totalDays || 7}</Text>
+          </View>
+          <View style={styles.heroPill}>
+            <Text style={styles.heroPillLabel}>{language === 'en' ? 'AI sections' : 'Secciones IA'}</Text>
+            <Text style={styles.heroPillValue}>{aiSections.length || 1}</Text>
+          </View>
+          <View style={styles.heroPill}>
+            <Text style={styles.heroPillLabel}>{language === 'en' ? 'Base list' : 'Lista base'}</Text>
+            <Text style={styles.heroPillValue}>{showBaseList ? 'On' : 'Hidden'}</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.highlightRow}>
+        <View style={[styles.highlightCard, styles.highlightPrimary]}>
+          <Text style={styles.highlightLabel}>{language === 'en' ? 'Week' : 'Semana'}</Text>
+          <Text style={styles.highlightValue}>{currentWeek}</Text>
+          <Text style={styles.highlightHint}>
+            {language === 'en' ? 'Synced with your plan' : 'Sincronizada con tu plan'}
+          </Text>
+        </View>
+        <View style={styles.highlightCard}>
+          <Text style={styles.highlightLabel}>{language === 'en' ? 'AI status' : 'Estado IA'}</Text>
+          <Text style={styles.highlightValue}>
+            {prettyDate ? (language === 'en' ? 'Ready' : 'Lista') : language === 'en' ? 'Pending' : 'Pendiente'}
+          </Text>
+          <Text style={styles.highlightHint}>
+            {prettyDate
+              ? `${language === 'en' ? 'Updated' : 'Actualizada'} ${prettyDate}`
+              : language === 'en'
+              ? 'Generate and keep it handy'
+              : 'Genera y déjala lista'}
+          </Text>
+        </View>
+        <View style={styles.highlightCard}>
+          <Text style={styles.highlightLabel}>{language === 'en' ? 'Base staples' : 'Básicos'}</Text>
+          <Text style={styles.highlightValue}>{baseList.length}</Text>
+          <Text style={styles.highlightHint}>
+            {language === 'en' ? 'Tap to reorder quickly' : 'Toca para reordenar rápido'}
+          </Text>
+        </View>
+      </View>
+
       {/* card acción */}
       <View style={styles.actionCard}>
         <Text style={styles.actionTitle}>
@@ -433,6 +492,94 @@ const getStyles = (theme) =>
       shadowRadius: 12,
       shadowOffset: { width: 0, height: 8 },
       elevation: 6
+    },
+    hero: {
+      borderRadius: theme.radius.xl,
+      padding: theme.spacing.lg,
+      gap: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.primary, 0.35),
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6
+    },
+    heroTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      letterSpacing: 0.2
+    },
+    heroSubtitle: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      lineHeight: 18
+    },
+    heroRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap',
+      marginTop: theme.spacing.sm
+    },
+    heroPill: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.full,
+      backgroundColor: withAlpha(theme.colors.card, 0.7),
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.border, 0.7)
+    },
+    heroPillPrimary: {
+      backgroundColor: withAlpha(theme.colors.primary, 0.16),
+      borderColor: withAlpha(theme.colors.primary, 0.45)
+    },
+    heroPillLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2
+    },
+    heroPillValue: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '700'
+    },
+    highlightRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      flexWrap: 'wrap'
+    },
+    highlightCard: {
+      flex: 1,
+      minWidth: '30%',
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3
+    },
+    highlightPrimary: {
+      backgroundColor: `${theme.colors.accent}16`,
+      borderColor: `${theme.colors.accent}55`
+    },
+    highlightLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      marginBottom: 2
+    },
+    highlightValue: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+      fontWeight: '800'
+    },
+    highlightHint: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.textMuted,
+      marginTop: 2
     },
     actionCard: {
       backgroundColor: theme.colors.card,
