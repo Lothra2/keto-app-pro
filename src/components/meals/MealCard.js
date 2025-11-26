@@ -97,6 +97,11 @@ const MealCard = ({
     mealData?.descripcion ||
     (hasAIData ? (language === 'en' ? 'Generated with AI' : 'Generado con IA') : '');
 
+  const displayName =
+    mealData?.nombre ||
+    mealData?.title ||
+    (isManual ? (language === 'en' ? 'Manual entry' : 'Entrada manual') : '');
+
   const showIcon = icon && !hasLeadingEmoji(mealData?.nombre || '');
   const isDark = theme.mode === 'dark';
   const switchTrack = {
@@ -147,10 +152,10 @@ const MealCard = ({
         </View>
 
         {/* Body */}
-        {mealData?.nombre && (
+        {displayName && (
           <View style={styles.body}>
             <View style={styles.nameRow}>
-              <Text style={styles.mealName}>{mealData.nombre}</Text>
+              <Text style={styles.mealName}>{displayName}</Text>
               {hasAIData && (
                 <View style={styles.aiBadge}>
                   <Text style={styles.aiBadgeText}>IA</Text>

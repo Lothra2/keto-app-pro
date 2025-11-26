@@ -223,9 +223,16 @@ const ManualMealModal = ({ route, navigation }) => {
         estimatedByAI,
         note,
         isManual: true,
+        manual: true,
+        manualEntry: true,
+        manualSource: 'manual',
+        entryType: 'manual',
+        logSource: 'manual',
         source: 'manual',
+        manualKcal: Math.round(parsedKcal),
         fromAI: false,
         isAI: false,
+        createdBy: 'cliente_manual',
       };
 
       const newMealsState = {
