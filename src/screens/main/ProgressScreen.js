@@ -19,15 +19,18 @@ import {
   saveProgressData,
   getCompletedDaysCount,
   getWaterState,
-  getCalorieState
+  getCalorieState,
+  getDayData,
+  getCheatMeal
 } from '../../storage/storage'
 import {
   estimateBodyFat,
   calculateBMR,
   calculateBMI,
   getBMICategory,
-  calculateConsumedCalories,
-  calculateTDEE
+  calculateDynamicDailyKcal,
+  calculateTDEE,
+  getMealDistribution
 } from '../../utils/calculations'
 import storage, { KEYS } from '../../storage/storage'
 import MultiMetricChart from '../../components/progress/MultiMetricChart'
@@ -39,6 +42,7 @@ import Button from '../../components/shared/Button'
 import Card from '../../components/shared/Card'
 import { exportProgressPdf } from '../../utils/pdf'
 import aiService from '../../api/aiService'
+import { mergePlanDay } from '../../utils/plan'
 
 const USER_HEIGHT_KEY = 'USER_HEIGHT_OVERRIDE'
 const USER_WEIGHT_KEY = 'USER_WEIGHT_OVERRIDE'
@@ -181,6 +185,27 @@ const ProgressScreen = () => {
     [gender, language, metrics?.workoutIntensity]
   )
 
+  const computeConsumedFromDay = useCallback(
+    (day, mealsState, fallbackGoal) => {
+      const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena']
+      const dayKcal =
+        Number(day?.kcal || day?.dynamicKcal || day?.planKcal) || fallbackGoal
+      const dist = getMealDistribution(gender)
+
+      return mealKeys.reduce((sum, key) => {
+        if (!mealsState?.[key]) return sum
+
+        const mealObj = day?.[key]
+        const kcal = mealObj?.kcal
+          ? Number(mealObj.kcal)
+          : Math.round(dayKcal * (dist[key] || 0.2))
+
+        return sum + (Number.isFinite(kcal) ? kcal : 0)
+      }, 0)
+    },
+    [gender]
+  )
+
   const loadAllProgress = useCallback(
     async (baseMetrics = {}) => {
       const plan = Array.isArray(safePlan) ? safePlan : []
@@ -194,15 +219,55 @@ const ProgressScreen = () => {
       for (let i = 0; i < limit; i++) {
         const dayProgress = await getProgressData(i)
         const water = await getWaterState(i, userWaterGoal)
-        const calorieState = await getCalorieState(i, plan[i]?.kcal || 1600)
+        const storedDay = await getDayData(i)
+        const baseDay = plan[i] || {}
+        const mergedDay = mergePlanDay(baseDay, storedDay || {})
+        const cheat = await getCheatMeal(i)
+
+        if (cheat?.mealKey) {
+          mergedDay[cheat.mealKey] = {
+            ...(mergedDay?.[cheat.mealKey] || {}),
+            nombre: language === 'en' ? 'Cheat meal' : 'Cheat meal',
+            descripcion: cheat.description || mergedDay?.[cheat.mealKey]?.descripcion || '',
+            qty: cheat.portion || mergedDay?.[cheat.mealKey]?.qty || '',
+            kcal: cheat.kcalEstimate
+              ? Number(cheat.kcalEstimate)
+              : mergedDay?.[cheat.mealKey]?.kcal,
+            estimatedByAI: Boolean(cheat?.estimatedByAI),
+            isCheat: true
+          }
+        }
+        const dayPlanKcal =
+          mergedDay?.dynamicKcal || mergedDay?.planKcal || mergedDay?.kcal || baseDay?.kcal || 1600
+        const dynamicGoal = calculateDynamicDailyKcal({
+          baseKcal: dayPlanKcal,
+          gender,
+          metrics,
+          cheatKcal: cheat?.kcalEstimate || storedDay?.cheatKcal || 0
+        })
+        const calorieState = await getCalorieState(i, dynamicGoal)
         const hasProgress = Object.keys(dayProgress).length > 0
         const hasWater = water.ml > 0
-        const mealsState = calorieState.meals || {}
-        const consumedCalories = calculateConsumedCalories(
+        const mealsState = {
+          desayuno: false,
+          snackAM: false,
+          almuerzo: false,
+          snackPM: false,
+          cena: false,
+          ...(calorieState.meals || {})
+        }
+        const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena']
+        const normalizedGoal =
+          calorieState.goal && calorieState.goal !== dynamicGoal
+            ? dynamicGoal
+            : calorieState.goal || dynamicGoal
+        const consumedCalories = computeConsumedFromDay(
+          mergedDay,
           mealsState,
-          calorieState.goal || plan[i]?.kcal || 1600,
-          gender
+          normalizedGoal
         )
+        const totalMeals = mealKeys.length
+        const completedMeals = mealKeys.filter((key) => mealsState[key]).length
         const hasCalories = consumedCalories > 0
 
         const pesoNumber = dayProgress.peso !== undefined && dayProgress.peso !== null
@@ -236,8 +301,11 @@ const ProgressScreen = () => {
           bodyFat: computedBodyFat,
           water: water.ml,
           waterGoal: water.goal,
-          calGoal: calorieState.goal || plan[i]?.kcal || 1600,
+          calGoal: normalizedGoal,
           calConsumed: consumedCalories,
+          mealCompletion: totalMeals ? Math.round((completedMeals / totalMeals) * 100) : 0,
+          mealsCompleted: completedMeals,
+          totalMeals,
           burnedKcal
         })
       }
@@ -663,10 +731,10 @@ const ProgressScreen = () => {
   const daysInPlan = Math.max(trackedDays, 1)
   const waterSummary = `${hydration.daysWithWater}/${trackedDays || 1}`
   const workoutSummary = `${exerciseSummary.daysLogged}/${trackedDays || 1}`
-  const adherenceDays = calorieHistory.filter(
-    (item) => item.percent >= 90 && item.percent <= 110
+  const adherenceDays = progressToDate.filter(
+    (item) => item.totalMeals > 0 && item.mealsCompleted >= item.totalMeals
   ).length
-  const adherenceSummary = `${adherenceDays}/${calorieHistory.length || (trackedDays || 1)}`
+  const adherenceSummary = `${adherenceDays}/${Math.max(trackedDays, 1)}`
 
   const avgWaterMl = Math.round(hydration.totalMl / daysInPlan)
   const avgWorkoutKcal = Math.round(exerciseSummary.totalKcal / daysInPlan)
@@ -683,7 +751,7 @@ const ProgressScreen = () => {
     ? Math.max(...exerciseHistory.map((item) => item.kcal || 0), 0)
     : 0
   const consistencyScore = Math.round(
-    (adherenceDays / Math.max(calorieHistory.length, 1)) * 40 +
+    (adherenceDays / Math.max(trackedDays, 1)) * 40 +
       (hydration.daysWithWater / daysInPlan) * 30 +
       (exerciseSummary.daysLogged / daysInPlan) * 30
   )

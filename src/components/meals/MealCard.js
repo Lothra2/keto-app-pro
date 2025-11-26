@@ -19,6 +19,13 @@ const MealCard = ({
   const styles = getStyles(theme);
 
   const hasAIData = mealData?.isAI || false;
+  const isManual = Boolean(
+    mealData?.source === 'manual' ||
+      mealData?.isManual ||
+      mealData?.manual === true ||
+      mealData?.manual === 'true' ||
+      mealData?.loggedManually
+  );
   const ingredientLines = useMemo(() => {
     if (!mealData?.qty) return [];
 
@@ -50,7 +57,7 @@ const MealCard = ({
             <Text style={styles.title}>{title}</Text>
           </View>
         </View>
-        
+
         <View style={styles.actions}>
           {showAIButton && !readOnly && (
             <TouchableOpacity
@@ -81,6 +88,13 @@ const MealCard = ({
             {hasAIData && (
               <View style={styles.aiBadge}>
                 <Text style={styles.aiBadgeText}>IA</Text>
+              </View>
+            )}
+            {isManual && (
+              <View style={styles.manualBadge}>
+                <Text style={styles.manualBadgeText}>
+                  {language === 'en' ? 'Manual' : 'Manual'}
+                </Text>
               </View>
             )}
           </View>
@@ -207,6 +221,20 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.primary,
     fontSize: 10,
     fontWeight: '600',
+  },
+  manualBadge: {
+    backgroundColor: 'rgba(147, 51, 234, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(147, 51, 234, 0.35)',
+  },
+  manualBadgeText: {
+    color: '#6d28d9',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   note: {
     ...theme.typography.caption,
