@@ -231,7 +231,7 @@ const ManualMealModal = ({ route, navigation }) => {
         logSource: 'manual',
         source: 'manual',
         manualKcal: Math.round(parsedKcal),
-        manualBadge: true,
+        manualBadge: 'manual',
         manualTag: 'manual',
         badge: 'manual',
         fromAI: false,

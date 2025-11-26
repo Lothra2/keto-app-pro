@@ -21,52 +21,55 @@ const MealCard = ({
   const styles = getStyles(theme);
 
   const hasAIData = mealData?.isAI || false;
-  const normalizedSource = (
-    mealData?.source ||
-    mealData?.origen ||
-    mealData?.origin ||
-    mealData?.sourceType ||
-    mealData?.logSource ||
-    mealData?.inputSource ||
-    mealData?.entryType ||
-    mealData?.entrySource ||
-    mealData?.type ||
-    mealData?.via ||
-    mealData?.createdFrom ||
-    mealData?.provider ||
-    mealData?.loggedFrom ||
-    mealData?.logMethod ||
-    mealData?.source_label ||
-    mealData?.badge ||
-    ''
-  )
-    .toString()
-    .toLowerCase();
+  const manualHints = [
+    mealData?.source,
+    mealData?.origen,
+    mealData?.origin,
+    mealData?.sourceType,
+    mealData?.logSource,
+    mealData?.inputSource,
+    mealData?.entryType,
+    mealData?.entrySource,
+    mealData?.type,
+    mealData?.via,
+    mealData?.createdFrom,
+    mealData?.provider,
+    mealData?.loggedFrom,
+    mealData?.logMethod,
+    mealData?.source_label,
+    mealData?.badge,
+    mealData?.manual,
+    mealData?.manualLabel,
+    mealData?.manualTag,
+    mealData?.manualBadge,
+    mealData?.createdBy,
+  ]
+    .filter(Boolean)
+    .map((value) => value.toString().toLowerCase())
+    .join(' ');
 
   const isManual = Boolean(
-    normalizedSource.includes('manual') ||
-      normalizedSource.includes('user') ||
-      normalizedSource.includes('custom') ||
-      normalizedSource.includes('offline') ||
-      normalizedSource.includes('diary') ||
-      normalizedSource.includes('log') ||
-      normalizedSource.includes('manual-entry') ||
-      normalizedSource === 'plan' ||
+    manualHints.includes('manual') ||
+      manualHints.includes('user') ||
+      manualHints.includes('custom') ||
+      manualHints.includes('offline') ||
+      manualHints.includes('diary') ||
+      manualHints.includes('log') ||
+      manualHints.includes('manual-entry') ||
+      manualHints.includes('cliente') ||
       mealData?.isManual ||
       mealData?.manual === true ||
       mealData?.manual === 'true' ||
+      (typeof mealData?.manual === 'string' && mealData.manual.toLowerCase().includes('manual')) ||
       mealData?.manualEntry ||
       mealData?.loggedManually ||
       mealData?.manualKcal ||
       mealData?.manualSource ||
       mealData?.fromManual ||
-      mealData?.manualTag ||
-      mealData?.manualBadge ||
       mealData?.badge === 'manual' ||
       mealData?.createdBy === 'user' ||
       mealData?.createdBy === 'cliente' ||
-      mealData?.createdBy === 'cliente_manual' ||
-      mealData?.entryType === 'manual'
+      mealData?.createdBy === 'cliente_manual'
   );
 
   const kcalValue = useMemo(() => {
