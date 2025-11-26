@@ -264,6 +264,9 @@ const DayScreen = ({ navigation }) => {
   }
 
   const waterPercent = Math.min(100, Math.round((waterInfo.ml / waterInfo.goal) * 100));
+  const completedMeals = meals.filter((m) => m.isCompleted).length;
+  const totalMeals = meals.length;
+  const mealCompletion = totalMeals ? Math.round((completedMeals / totalMeals) * 100) : 0;
 
   const meals = [
     {
@@ -321,16 +324,16 @@ const DayScreen = ({ navigation }) => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <LinearGradient
-          colors={[withAlpha(theme.colors.primary, 0.35), withAlpha(theme.colors.accent || theme.colors.primary, 0.2)]}
+          colors={[withAlpha(theme.colors.primary, 0.45), withAlpha(theme.colors.accent || theme.colors.primary, 0.3)]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
         >
-          <Text style={styles.heroTitle}>{language === 'en' ? 'Premium menu' : 'Menú premium'}</Text>
+          <Text style={styles.heroTitle}>{language === 'en' ? 'Chef-level menu' : 'Menú nivel chef'}</Text>
           <Text style={styles.heroSubtitle}>
             {language === 'en'
-              ? 'Glass cards, calmer spacing and inline chips to keep meals, water and extras at a glance.'
-              : 'Cartas tipo cristal, espacios calmados y chips en línea para ver comidas, agua y extras de un vistazo.'}
+              ? 'Curated glass cards, soft glows and richer stats so your day feels bespoke.'
+              : 'Tarjetas de cristal, brillos suaves y métricas ricas para que tu día se sienta hecho a medida.'}
           </Text>
           <View style={styles.heroRow}>
             <View style={[styles.heroChip, styles.heroChipPrimary]}>
@@ -338,12 +341,16 @@ const DayScreen = ({ navigation }) => {
               <Text style={styles.heroChipValue}>{dayData.dia}</Text>
             </View>
             <View style={styles.heroChip}>
-              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Calories' : 'Calorías'}</Text>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Calorie target' : 'Meta calórica'}</Text>
               <Text style={styles.heroChipValue}>{displayGoalKcal} kcal</Text>
             </View>
             <View style={styles.heroChip}>
-              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Water' : 'Agua'}</Text>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Hydration' : 'Hidratación'}</Text>
               <Text style={styles.heroChipValue}>{waterPercent}%</Text>
+            </View>
+            <View style={[styles.heroChip, styles.heroChipAccent]}>
+              <Text style={styles.heroChipLabel}>{language === 'en' ? 'Meals' : 'Comidas'}</Text>
+              <Text style={styles.heroChipValue}>{mealCompletion}%</Text>
             </View>
           </View>
         </LinearGradient>
@@ -429,7 +436,20 @@ const DayScreen = ({ navigation }) => {
         </View>
 
         {/* Calorie Bar */}
-        <CalorieBar consumed={calorieInfo.consumed} goal={calorieInfo.goal} />
+        <View style={styles.caloriePanel}>
+          <View style={styles.calorieHeader}>
+            <Text style={styles.calorieTitle}>{language === 'en' ? 'Energy flow' : 'Flujo de energía'}</Text>
+            <Text style={styles.calorieMetric}>
+              {calorieInfo.consumed} / {calorieInfo.goal} kcal
+            </Text>
+          </View>
+          <CalorieBar consumed={calorieInfo.consumed} goal={calorieInfo.goal} />
+          <Text style={styles.calorieHint}>
+            {language === 'en'
+              ? 'We auto-adjust after cheat meals and hydration boosts.'
+              : 'Ajustamos después de cheats y subidas de hidratación.'}
+          </Text>
+        </View>
 
         {/* Water */}
         <View style={styles.waterBox}>
@@ -542,7 +562,42 @@ const DayScreen = ({ navigation }) => {
 
         {/* Meals */}
         <View style={styles.mealsSection}>
-          <MealList meals={meals} />
+          <LinearGradient
+            colors={[withAlpha(theme.colors.card, 0.9), withAlpha(theme.colors.accent || theme.colors.primary, 0.08)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.mealPanel}
+          >
+            <View style={styles.mealPanelHeader}>
+              <View style={styles.mealPanelTitleRow}>
+                <Text style={styles.mealPanelTitle}>{language === 'en' ? 'Meals of the day' : 'Comidas del día'}</Text>
+                <View style={styles.mealPill}>
+                  <Text style={styles.mealPillText}>{completedMeals}/{totalMeals}</Text>
+                </View>
+              </View>
+              <Text style={styles.mealPanelSubtitle}>
+                {language === 'en'
+                  ? 'Tap to check, swipe to scan ingredients; manual items show up with a bold badge.'
+                  : 'Marca para completar, desliza mentalmente los ingredientes; las entradas manuales lucen su badge.'}
+              </Text>
+              <View style={styles.mealChipsRow}>
+                <View style={[styles.mealChip, styles.mealChipPrimary]}>
+                  <Text style={styles.mealChipLabel}>{language === 'en' ? 'Completion' : 'Completado'}</Text>
+                  <Text style={styles.mealChipValue}>{mealCompletion}%</Text>
+                </View>
+                <View style={styles.mealChip}>
+                  <Text style={styles.mealChipLabel}>{language === 'en' ? 'Hydration' : 'Hidratación'}</Text>
+                  <Text style={styles.mealChipValue}>{waterPercent}%</Text>
+                </View>
+                <View style={styles.mealChip}>
+                  <Text style={styles.mealChipLabel}>{language === 'en' ? 'Cheat status' : 'Estado cheat'}</Text>
+                  <Text style={styles.mealChipValue}>{cheatMeal ? '⚡' : '—'}</Text>
+                </View>
+              </View>
+            </View>
+
+            <MealList meals={meals} style={styles.mealList} />
+          </LinearGradient>
         </View>
 
         {/* Complete Day Button */}
@@ -610,6 +665,10 @@ const getStyles = (theme) => StyleSheet.create({
   heroChipPrimary: {
     backgroundColor: withAlpha(theme.colors.primary, 0.16),
     borderColor: withAlpha(theme.colors.primary, 0.45)
+  },
+  heroChipAccent: {
+    backgroundColor: withAlpha(theme.colors.accent || theme.colors.primary, 0.14),
+    borderColor: withAlpha(theme.colors.accent || theme.colors.primary, 0.4)
   },
   glassGrid: {
     flexDirection: 'row',
@@ -691,6 +750,40 @@ const getStyles = (theme) => StyleSheet.create({
   inlineCheatTextActive: {
     color: theme.colors.primary
   },
+  caloriePanel: {
+    backgroundColor: withAlpha(theme.colors.card, 0.92),
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.primary, 0.35),
+    marginBottom: theme.spacing.lg,
+    shadowColor: theme.colors.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6
+  },
+  calorieHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm
+  },
+  calorieTitle: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  calorieMetric: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    fontWeight: '700'
+  },
+  calorieHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.xs
+  },
   toolsRow: {
     marginBottom: theme.spacing.lg,
     gap: theme.spacing.xs
@@ -718,6 +811,85 @@ const getStyles = (theme) => StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textMuted,
     textAlign: 'center'
+  },
+  mealsSection: {
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.lg
+  },
+  mealPanel: {
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.7),
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+    overflow: 'hidden'
+  },
+  mealPanelHeader: {
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.md
+  },
+  mealPanelTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  mealPanelTitle: {
+    ...theme.typography.h4,
+    color: theme.colors.text,
+    letterSpacing: 0.2
+  },
+  mealPanelSubtitle: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    lineHeight: 18
+  },
+  mealPill: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.16),
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.primary, 0.45)
+  },
+  mealPillText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.primary,
+    fontWeight: '700'
+  },
+  mealChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs
+  },
+  mealChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.card, 0.8),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.7)
+  },
+  mealChipPrimary: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.16),
+    borderColor: withAlpha(theme.colors.primary, 0.4)
+  },
+  mealChipLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: 2
+  },
+  mealChipValue: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  mealList: {
+    gap: theme.spacing.sm
   },
   dayTitle: {
     ...theme.typography.h1,

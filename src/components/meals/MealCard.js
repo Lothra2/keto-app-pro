@@ -27,6 +27,11 @@ const MealCard = ({
     mealData?.sourceType ||
     mealData?.logSource ||
     mealData?.inputSource ||
+    mealData?.entryType ||
+    mealData?.entrySource ||
+    mealData?.type ||
+    mealData?.via ||
+    mealData?.createdFrom ||
     mealData?.provider ||
     ''
   )
@@ -37,13 +42,19 @@ const MealCard = ({
     normalizedSource.includes('manual') ||
       normalizedSource.includes('user') ||
       normalizedSource.includes('custom') ||
+      normalizedSource.includes('offline') ||
+      normalizedSource === 'plan' ||
+      normalizedSource === 'log' ||
       mealData?.isManual ||
       mealData?.manual === true ||
       mealData?.manual === 'true' ||
       mealData?.manualEntry ||
       mealData?.loggedManually ||
       mealData?.manualKcal ||
-      mealData?.createdBy === 'user'
+      mealData?.createdBy === 'user' ||
+      mealData?.createdBy === 'cliente' ||
+      mealData?.createdBy === 'cliente_manual' ||
+      mealData?.entryType === 'manual'
   );
   const ingredientLines = useMemo(() => {
     if (!mealData?.qty) return [];
