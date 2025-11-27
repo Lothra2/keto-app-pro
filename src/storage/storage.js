@@ -191,6 +191,23 @@ export async function findCheatInWeek(dayIndex, weekLength = 7) {
   return null;
 }
 
+export async function getExtraIntakes(dayIndex) {
+  const storage = new Storage();
+  const stored = await storage.getJSON(DYNAMIC_KEYS.EXTRA + dayIndex, null);
+  return Array.isArray(stored) ? stored : [];
+}
+
+export async function saveExtraIntakes(dayIndex, extras = []) {
+  const storage = new Storage();
+  const normalized = Array.isArray(extras) ? extras : [];
+  return await storage.setJSON(DYNAMIC_KEYS.EXTRA + dayIndex, normalized);
+}
+
+export async function clearExtraIntakes(dayIndex) {
+  const storage = new Storage();
+  return await storage.remove(DYNAMIC_KEYS.EXTRA + dayIndex);
+}
+
 // Marcar comida como completada
 export async function saveMealCompletion(dayIndex, mealKey, completed) {
   const state = await getCalorieState(dayIndex);

@@ -29,6 +29,7 @@ export const DYNAMIC_KEYS = {
   AI_REVIEW: `${STORAGE_PREFIX}ai-review-`,
   CAL: `${STORAGE_PREFIX}cal-`,
   CHEAT: `${STORAGE_PREFIX}cheat-`,
+  EXTRA: `${STORAGE_PREFIX}extra-`,
   PROGRESS: `${STORAGE_PREFIX}prog-`,
   WATER: `${STORAGE_PREFIX}water-`,
   DONE: `${STORAGE_PREFIX}done-`,
