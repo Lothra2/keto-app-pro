@@ -21,9 +21,10 @@ const ScreenBanner = ({
 
   const computedGradient =
     gradientColors ||
+    theme.colors.primaryGradient ||
     (theme.mode === 'dark'
-      ? ['#5ad4ff', theme.colors.primary, '#0b1224']
-      : ['#5ad4ff', theme.colors.primary, '#b7dcff']);
+      ? ['#67e8f9', theme.colors.primary, '#0b1224']
+      : ['#67e8f9', theme.colors.primary, '#b7dcff']);
 
   const toneMap = {
     success: {
@@ -113,12 +114,19 @@ const getStyles = (theme) =>
   StyleSheet.create({
     container: {
       borderRadius: theme.radius.xl,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: withAlpha(theme.colors.glassBorder, 0.4),
+      shadowColor: theme.colors.glow || theme.colors.primary,
+      shadowOpacity: 0.35,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 16 },
+      elevation: 10,
     },
     overlay: {
-      padding: theme.spacing.lg,
-      gap: theme.spacing.sm,
-      backgroundColor: theme.mode === 'dark' ? 'rgba(15,23,42,0.18)' : 'rgba(255,255,255,0.32)'
+      padding: theme.spacing.xl,
+      gap: theme.spacing.md,
+      backgroundColor: theme.mode === 'dark' ? 'rgba(4,7,18,0.45)' : 'rgba(255,255,255,0.4)'
     },
     headerRow: {
       flexDirection: 'row',
@@ -127,22 +135,23 @@ const getStyles = (theme) =>
     },
     titleColumn: {
       flex: 1,
-      gap: 4
+      gap: theme.spacing.xs
     },
     title: {
-      ...theme.typography.h2,
+      ...theme.typography.h1,
       color: 'rgba(248,250,252,0.98)',
-      fontWeight: '700',
-      letterSpacing: -0.2
+      fontWeight: '800',
+      letterSpacing: -0.3
     },
     subtitle: {
-      ...theme.typography.body,
-      color: 'rgba(226,232,240,0.88)'
+      ...theme.typography.h3,
+      color: 'rgba(226,232,240,0.94)',
+      letterSpacing: -0.1
     },
     description: {
-      ...theme.typography.caption,
-      color: 'rgba(226,232,240,0.76)',
-      lineHeight: 18
+      ...theme.typography.body,
+      color: 'rgba(226,232,240,0.9)',
+      lineHeight: 22
     },
     rightColumn: {
       alignItems: 'flex-end',
@@ -150,10 +159,11 @@ const getStyles = (theme) =>
     },
     badge: {
       paddingHorizontal: theme.spacing.sm,
-      paddingVertical: 6,
+      paddingVertical: 8,
       borderRadius: theme.radius.full,
       borderWidth: 1,
-      maxWidth: 140
+      maxWidth: 180,
+      backgroundColor: withAlpha(theme.colors.glassBg, 0.9)
     },
     badgeText: {
       ...theme.typography.caption,
@@ -164,11 +174,11 @@ const getStyles = (theme) =>
       alignSelf: 'flex-end'
     },
     children: {
-      gap: theme.spacing.sm
+      gap: theme.spacing.md
     },
     footnote: {
       ...theme.typography.caption,
-      color: 'rgba(241,245,249,0.8)'
+      color: 'rgba(241,245,249,0.86)'
     }
   });
 

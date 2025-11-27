@@ -1,32 +1,37 @@
 export const typography = {
   h1: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: '800',
+    letterSpacing: -0.6
   },
   h2: {
-    fontSize: 22,
-    fontWeight: '600',
-    letterSpacing: -0.3
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: '700',
+    letterSpacing: -0.35
   },
   h3: {
     fontSize: 18,
-    fontWeight: '600'
+    lineHeight: 26,
+    fontWeight: '700',
+    letterSpacing: -0.15
   },
   body: {
-    fontSize: 15,
-    fontWeight: '400',
-    lineHeight: 22
+    fontSize: 16,
+    fontWeight: '500',
+    lineHeight: 24
   },
   bodySmall: {
-    fontSize: 13,
-    fontWeight: '400',
-    lineHeight: 18
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20
   },
   caption: {
-    fontSize: 11,
-    fontWeight: '400',
-    opacity: 0.7
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+    opacity: 0.74
   }
 };
 

@@ -55,21 +55,28 @@ const getStyles = (theme) => StyleSheet.create({
     paddingHorizontal: 4
   },
   pill: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.glassBg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.glassBorder,
     borderRadius: theme.radius.full,
     paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md
+    paddingHorizontal: theme.spacing.lg,
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3
   },
   pillActive: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary
+    borderColor: theme.colors.primary,
+    shadowOpacity: 0.2,
+    shadowColor: theme.colors.glow,
   },
   pillText: {
     ...theme.typography.bodySmall,
     color: theme.colors.text,
-    fontWeight: '500'
+    fontWeight: '600'
   },
   pillTextActive: {
     color: '#fff',
