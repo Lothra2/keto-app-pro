@@ -330,6 +330,76 @@ Responde SOLO en JSON:
     throw lastErr || new Error('Cheat kcal estimation failed')
   }
 
+  async estimateExtraCalories({ description = '', portion = '', language = 'es', credentials, dayKcal, consumedKcal }) {
+    const { user, pass } = credentials || {}
+
+    const prompt =
+      language === 'en'
+        ? `You are estimating an extra food eaten outside the planned meals. Give a realistic kcal guess using keto-friendly assumptions. Reply ONLY as JSON {"kcal": number, "note": "short reason"}. If unclear, guess between 40 and 600 kcal.\n\nFood: ${
+            description || 'not provided'
+          }\nPortion: ${portion || 'not provided'}\nPlanned day kcal: ${dayKcal || 'n/a'}\nMeals consumed so far: ${consumedKcal || 0} kcal.`
+        : `Estás estimando un bocado o comida extra fuera del plan. Da una cifra realista en kcal con supuestos keto. Responde SOLO en JSON {"kcal": número, "note": "razón breve"}. Si no hay datos claros, estima entre 40 y 600 kcal.\n\nComida: ${
+            description || 'no informada'
+          }\nPorción: ${portion || 'no informada'}\nKcal del día: ${dayKcal || 'n/d'}\nCalorías consumidas: ${consumedKcal || 0} kcal.`
+
+    const candidates = ['snack-kcal', 'nutrition-kcal', 'meal-kcal', 'chat']
+    let lastErr = null
+
+    const normalizeNote = (rawNote) => {
+      if (!rawNote) return ''
+      const raw = String(rawNote).trim()
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+      const inner = fenced ? fenced[1].trim() : raw
+      try {
+        const parsed = JSON.parse(inner)
+        if (parsed?.note) return String(parsed.note).trim()
+      } catch (_) {
+        // ignore
+      }
+      return inner.replace(/^json\s*/i, '').trim()
+    }
+
+    for (const mode of candidates) {
+      try {
+        const data = await callNetlifyAI({
+          mode,
+          user,
+          pass,
+          lang: language,
+          prompt,
+        })
+
+        const raw = data?.text || ''
+        try {
+          const parsed = JSON.parse(raw)
+          const kcal = Number(parsed?.kcal)
+          if (Number.isFinite(kcal) && kcal > 0) {
+            return { kcalEstimate: Math.round(kcal), note: normalizeNote(parsed?.note || '') }
+          }
+        } catch (jsonErr) {
+          const match = raw.match(/(\d{2,4})/) || []
+          const kcal = Number(match[1])
+          if (Number.isFinite(kcal) && kcal > 0) {
+            return { kcalEstimate: Math.round(kcal), note: normalizeNote(raw) }
+          }
+          lastErr = jsonErr
+          continue
+        }
+      } catch (error) {
+        const status = error?.response?.status
+        if (status === 401 || status === 400 || status === 404) {
+          lastErr = error
+          continue
+        }
+        lastErr = error
+        break
+      }
+    }
+
+    console.error('Error estimating extra kcal:', lastErr)
+    throw lastErr || new Error('Extra kcal estimation failed')
+  }
+
   async estimateMealCalories({
     mealKey = 'cena',
     description = '',

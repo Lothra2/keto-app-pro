@@ -30,11 +30,14 @@ import {
   getCheatMeal,
   saveCheatMeal,
   clearCheatMeal,
-  findCheatInWeek
+  findCheatInWeek,
+  getDayExtras,
+  saveDayExtras
 } from '../../storage/storage';
 import { calculateConsumedCalories, calculateDynamicDailyKcal } from '../../utils/calculations';
 import { getDayDisplayName } from '../../utils/labels';
 import { exportWeekPlanPdf } from '../../utils/pdf';
+import aiService from '../../api/aiService';
 
 const DayScreen = ({ navigation }) => {
   const {
@@ -48,7 +51,8 @@ const DayScreen = ({ navigation }) => {
     notifyProgressUpdate,
     gender,
     metrics,
-    user
+    user,
+    apiCredentials
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -62,6 +66,9 @@ const DayScreen = ({ navigation }) => {
   const [cheatMeal, setCheatMeal] = useState(null);
   const [cheatForm, setCheatForm] = useState({ mealKey: 'cena', description: '', kcal: '' });
   const [cheatConflict, setCheatConflict] = useState(null);
+  const [extras, setExtras] = useState([]);
+  const [extraForm, setExtraForm] = useState({ description: '', portion: '', kcal: '', note: '' });
+  const [extraEstimating, setExtraEstimating] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
 
@@ -99,6 +106,10 @@ const DayScreen = ({ navigation }) => {
       kcal: cheat?.kcalEstimate ? String(cheat.kcalEstimate) : ''
     }));
 
+    const storedExtras = await getDayExtras(currentDay);
+    setExtras(storedExtras);
+    const extrasKcal = storedExtras.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
+
     const dynamicGoal = calculateDynamicDailyKcal({
       baseKcal: baseDay.kcal,
       gender,
@@ -116,7 +127,7 @@ const DayScreen = ({ navigation }) => {
     };
     setMealStates(mealsState);
 
-    const consumed = calculateConsumedCalories(mealsState, calState.goal || dynamicGoal, gender);
+    const consumed = calculateConsumedCalories(mealsState, calState.goal || dynamicGoal, gender, extrasKcal);
     const normalizedGoal = calState.goal !== dynamicGoal ? dynamicGoal : calState.goal;
     if (normalizedGoal !== calState.goal) {
       await saveCalorieState(currentDay, { ...calState, goal: normalizedGoal });
@@ -141,7 +152,8 @@ const DayScreen = ({ navigation }) => {
     const newConsumed = calculateConsumedCalories(
       { ...mealStates, [mealKey]: newState },
       calorieInfo.goal,
-      gender
+      gender,
+      extras.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0)
     );
     setCalorieInfo(prev => ({ ...prev, consumed: newConsumed }));
   };
@@ -207,6 +219,108 @@ const DayScreen = ({ navigation }) => {
     setCalorieInfo((prev) => ({ ...prev, goal: updatedGoal }));
     setCheatMeal(null);
     setCheatConflict(await findCheatInWeek(currentDay));
+  };
+
+  const runExtraAiEstimation = async () => {
+    if (!apiCredentials?.user || !apiCredentials?.pass) {
+      Alert.alert(
+        language === 'en' ? 'Missing credentials' : 'Faltan credenciales',
+        language === 'en'
+          ? 'Add your Grok credentials in settings to estimate calories automatically.'
+          : 'Agrega tus credenciales de Grok en ajustes para estimar calorías automáticamente.'
+      );
+      return null;
+    }
+
+    if (!extraForm.description.trim()) {
+      Alert.alert(
+        language === 'en' ? 'Add what you ate' : 'Agrega lo que comiste',
+        language === 'en'
+          ? 'Describe the extra snack so we can estimate it.'
+          : 'Describe el extra para poder estimarlo.'
+      );
+      return null;
+    }
+
+    setExtraEstimating(true);
+    try {
+      const estimate = await aiService.estimateExtraCalories({
+        description: extraForm.description.trim(),
+        portion: extraForm.portion.trim(),
+        language,
+        credentials: apiCredentials,
+        dayKcal: calorieInfo.goal,
+        consumedKcal: calorieInfo.consumed
+      });
+
+      if (estimate?.kcalEstimate) {
+        setExtraForm((prev) => ({ ...prev, kcal: String(estimate.kcalEstimate), note: estimate.note || '' }));
+        Alert.alert(
+          language === 'en' ? 'Calories estimated' : 'Calorías estimadas',
+          language === 'en'
+            ? `We estimated ~${estimate.kcalEstimate} kcal for this extra.`
+            : `Estimamos ~${estimate.kcalEstimate} kcal para este extra.`
+        );
+      }
+
+      return estimate;
+    } catch (error) {
+      console.error('Error estimating extra kcal:', error);
+      Alert.alert(
+        language === 'en' ? 'Could not estimate' : 'No se pudo estimar',
+        language === 'en'
+          ? 'Try again or enter the calories manually.'
+          : 'Intenta de nuevo o ingresa las calorías manualmente.'
+      );
+      return null;
+    } finally {
+      setExtraEstimating(false);
+    }
+  };
+
+  const handleSaveExtra = async () => {
+    const kcalNumber = Number(extraForm.kcal);
+    if (!extraForm.description.trim()) {
+      Alert.alert(
+        language === 'en' ? 'Add what you ate' : 'Agrega lo que comiste',
+        language === 'en'
+          ? 'Tell us what you ate between meals.'
+          : 'Cuéntanos qué comiste entre comidas.'
+      );
+      return;
+    }
+
+    if (!Number.isFinite(kcalNumber) || kcalNumber <= 0) {
+      const aiResult = await runExtraAiEstimation();
+      if (!aiResult?.kcalEstimate) return;
+    }
+
+    const payload = {
+      id: `${Date.now()}`,
+      description: extraForm.description.trim(),
+      portion: extraForm.portion.trim(),
+      kcalEstimate: Number(extraForm.kcal) || 0,
+      note: extraForm.note || '',
+      estimatedByAI: Boolean(extraForm.note)
+    };
+
+    const updated = [...extras, payload];
+    setExtras(updated);
+    await saveDayExtras(currentDay, updated);
+
+    const extrasKcal = updated.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
+    const newConsumed = calculateConsumedCalories(mealStates, calorieInfo.goal, gender, extrasKcal);
+    setCalorieInfo((prev) => ({ ...prev, consumed: newConsumed }));
+    setExtraForm({ description: '', portion: '', kcal: '', note: '' });
+  };
+
+  const handleRemoveExtra = async (id) => {
+    const filtered = extras.filter((item) => item.id !== id);
+    setExtras(filtered);
+    await saveDayExtras(currentDay, filtered);
+    const extrasKcal = filtered.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
+    const newConsumed = calculateConsumedCalories(mealStates, calorieInfo.goal, gender, extrasKcal);
+    setCalorieInfo((prev) => ({ ...prev, consumed: newConsumed }));
   };
 
   const handleToggleDayComplete = async () => {
@@ -310,6 +424,7 @@ const DayScreen = ({ navigation }) => {
   const completedMeals = meals.filter((m) => m.isCompleted).length;
   const totalMeals = meals.length;
   const mealCompletion = totalMeals ? Math.round((completedMeals / totalMeals) * 100) : 0;
+  const extrasKcal = extras.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
 
   const displayGoalKcal = calorieInfo.goal || dayData?.dynamicKcal || dayData?.kcal;
   const cheatLabel = cheatMeal
@@ -453,14 +568,14 @@ const DayScreen = ({ navigation }) => {
 
         {/* Water */}
         <View style={styles.waterBox}>
-          <View style={styles.waterHead}>
-            <Text style={styles.waterText}>
-              💧 {language === 'en' ? 'Water today' : 'Agua de hoy'}
-            </Text>
-            <Text style={styles.waterValue}>
-              {waterInfo.ml} / {waterInfo.goal} ml
-            </Text>
-          </View>
+        <View style={styles.waterHead}>
+          <Text style={styles.waterText}>
+            💧 {language === 'en' ? 'Water today' : 'Agua de hoy'}
+          </Text>
+          <Text style={styles.waterValue}>
+            {waterInfo.ml} / {waterInfo.goal} ml
+          </Text>
+        </View>
           <View style={styles.progressLine}>
             <View style={[styles.progressFill, { width: `${waterPercent}%` }]} />
           </View>
@@ -477,6 +592,95 @@ const DayScreen = ({ navigation }) => {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Extras */}
+        <View style={styles.extraBox}>
+          <View style={styles.extraHeader}>
+            <Text style={styles.extraTitle}>
+              🧃 {language === 'en' ? 'Extras fuera de plan' : 'Extras fuera del plan'}
+            </Text>
+            {extrasKcal ? <Text style={styles.extraBadge}>{extrasKcal} kcal</Text> : null}
+          </View>
+          <Text style={styles.extraHint}>
+            {language === 'en'
+              ? 'Use this for cravings or extra protein between meals. It will not modify your planned meals.'
+              : 'Usa esto para antojos o proteína extra entre comidas. No toca tus meals planificadas.'}
+          </Text>
+
+          <TextInput
+            style={styles.cheatInput}
+            placeholder={language === 'en' ? '¿Qué comiste?' : '¿Qué comiste?'}
+            placeholderTextColor={theme.colors.textMuted}
+            value={extraForm.description}
+            onChangeText={(text) => setExtraForm((prev) => ({ ...prev, description: text }))}
+            multiline
+          />
+
+          <TextInput
+            style={[styles.cheatInput, styles.extraInput]}
+            placeholder={language === 'en' ? 'Porción / cantidad' : 'Porción / cantidad'}
+            placeholderTextColor={theme.colors.textMuted}
+            value={extraForm.portion}
+            onChangeText={(text) => setExtraForm((prev) => ({ ...prev, portion: text }))}
+          />
+
+          <View style={styles.cheatKcalRow}>
+            <Text style={styles.cheatKcalLabel}>
+              {language === 'en' ? 'Kcal estimadas' : 'Kcal estimadas'}
+            </Text>
+            <TextInput
+              style={styles.cheatKcalInput}
+              keyboardType="numeric"
+              value={extraForm.kcal}
+              onChangeText={(text) => setExtraForm((prev) => ({ ...prev, kcal: text }))}
+              placeholder="120"
+              placeholderTextColor={theme.colors.textMuted}
+            />
+          </View>
+
+          <View style={styles.extraActions}>
+            <TouchableOpacity
+              style={[styles.cheatButton, extraEstimating && styles.cheatButtonDisabled]}
+              onPress={runExtraAiEstimation}
+              disabled={extraEstimating}
+            >
+              <Text style={styles.cheatButtonText}>
+                {extraEstimating
+                  ? language === 'en'
+                    ? 'Estimando...'
+                    : 'Estimando...'
+                  : language === 'en'
+                  ? 'IA kcal'
+                  : 'Kcal IA'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cheatButton} onPress={handleSaveExtra}>
+              <Text style={styles.cheatButtonText}>
+                {language === 'en' ? 'Guardar extra' : 'Guardar extra'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {extras.length ? (
+            <View style={styles.extraList}>
+              {extras.map((item) => (
+                <View key={item.id} style={styles.extraRow}>
+                  <View style={styles.extraTextWrap}>
+                    <Text style={styles.extraName}>{item.description}</Text>
+                    {item.portion ? <Text style={styles.extraMeta}>{item.portion}</Text> : null}
+                    {item.note ? <Text style={styles.extraMetaNote}>{item.note}</Text> : null}
+                  </View>
+                  <View style={styles.extraActionsRow}>
+                    <Text style={styles.extraKcal}>{item.kcalEstimate} kcal</Text>
+                    <TouchableOpacity onPress={() => handleRemoveExtra(item.id)} style={styles.extraRemove}>
+                      <Text style={styles.extraRemoveText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {/* Cheat meal planner */}
@@ -959,6 +1163,100 @@ const getStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.xs,
     marginTop: theme.spacing.sm
+  },
+  extraBox: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.xs,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2
+  },
+  extraHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  extraTitle: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  extraBadge: {
+    ...theme.typography.caption,
+    color: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    fontWeight: '700'
+  },
+  extraHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.xs
+  },
+  extraInput: {
+    minHeight: 44
+  },
+  extraActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs
+  },
+  extraList: {
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.sm
+  },
+  extraRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.cardSoft
+  },
+  extraTextWrap: {
+    flex: 1,
+    gap: 2
+  },
+  extraName: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  extraMeta: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted
+  },
+  extraMetaNote: {
+    ...theme.typography.caption,
+    color: theme.colors.primary
+  },
+  extraActionsRow: {
+    alignItems: 'flex-end',
+    gap: 6
+  },
+  extraKcal: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  extraRemove: {
+    padding: 6,
+    alignItems: 'center'
+  },
+  extraRemoveText: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted
   },
   waterButton: {
     flex: 1,
