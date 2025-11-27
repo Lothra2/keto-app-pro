@@ -178,6 +178,16 @@ export async function clearCheatMeal(dayIndex) {
   return await storage.remove(DYNAMIC_KEYS.CHEAT + dayIndex);
 }
 
+export async function getExtraIntakes(dayIndex) {
+  const storage = new Storage();
+  return (await storage.getJSON(DYNAMIC_KEYS.EXTRAS + dayIndex, [])) || [];
+}
+
+export async function saveExtraIntakes(dayIndex, extras) {
+  const storage = new Storage();
+  return await storage.setJSON(DYNAMIC_KEYS.EXTRAS + dayIndex, extras || []);
+}
+
 export async function findCheatInWeek(dayIndex, weekLength = 7) {
   const start = Math.floor(dayIndex / weekLength) * weekLength;
   const end = start + weekLength;

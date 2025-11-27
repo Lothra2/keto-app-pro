@@ -30,8 +30,11 @@ import {
   getCheatMeal,
   saveCheatMeal,
   clearCheatMeal,
-  findCheatInWeek
+  findCheatInWeek,
+  getExtraIntakes,
+  saveExtraIntakes
 } from '../../storage/storage';
+import aiService from '../../api/aiService';
 import { calculateConsumedCalories, calculateDynamicDailyKcal } from '../../utils/calculations';
 import { getDayDisplayName } from '../../utils/labels';
 import { exportWeekPlanPdf } from '../../utils/pdf';
@@ -48,7 +51,8 @@ const DayScreen = ({ navigation }) => {
     notifyProgressUpdate,
     gender,
     metrics,
-    user
+    user,
+    apiCredentials
   } = useApp();
 
   const theme = getTheme(themeMode);
@@ -62,8 +66,15 @@ const DayScreen = ({ navigation }) => {
   const [cheatMeal, setCheatMeal] = useState(null);
   const [cheatForm, setCheatForm] = useState({ mealKey: 'cena', description: '', kcal: '' });
   const [cheatConflict, setCheatConflict] = useState(null);
+  const [extras, setExtras] = useState([]);
+  const [extraForm, setExtraForm] = useState({ description: '', portion: '', kcal: '', note: '' });
+  const [extraEstimatedByAI, setExtraEstimatedByAI] = useState(false);
+  const [extraEstimating, setExtraEstimating] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+
+  const calculateExtrasKcal = (items = extras) =>
+    (Array.isArray(items) ? items : []).reduce((sum, item) => sum + (Number(item?.kcalEstimate) || 0), 0);
 
   useEffect(() => {
     loadDayData();
@@ -99,6 +110,11 @@ const DayScreen = ({ navigation }) => {
       kcal: cheat?.kcalEstimate ? String(cheat.kcalEstimate) : ''
     }));
 
+    const storedExtras = await getExtraIntakes(currentDay);
+    setExtras(storedExtras || []);
+    setExtraEstimatedByAI(false);
+    setExtraForm({ description: '', portion: '', kcal: '', note: '' });
+
     const dynamicGoal = calculateDynamicDailyKcal({
       baseKcal: baseDay.kcal,
       gender,
@@ -117,11 +133,12 @@ const DayScreen = ({ navigation }) => {
     setMealStates(mealsState);
 
     const consumed = calculateConsumedCalories(mealsState, calState.goal || dynamicGoal, gender);
+    const extrasKcal = calculateExtrasKcal(storedExtras);
     const normalizedGoal = calState.goal !== dynamicGoal ? dynamicGoal : calState.goal;
     if (normalizedGoal !== calState.goal) {
       await saveCalorieState(currentDay, { ...calState, goal: normalizedGoal });
     }
-    setCalorieInfo({ consumed, goal: normalizedGoal });
+    setCalorieInfo({ consumed: consumed + extrasKcal, goal: normalizedGoal, extrasKcal });
 
     const water = await getWaterState(currentDay, baseWaterGoal);
     setWaterInfo(water);
@@ -143,7 +160,8 @@ const DayScreen = ({ navigation }) => {
       calorieInfo.goal,
       gender
     );
-    setCalorieInfo(prev => ({ ...prev, consumed: newConsumed }));
+    const extrasKcal = calculateExtrasKcal();
+    setCalorieInfo(prev => ({ ...prev, consumed: newConsumed + extrasKcal, extrasKcal }));
   };
 
   const handleAddWater = async (ml) => {
@@ -158,6 +176,110 @@ const DayScreen = ({ navigation }) => {
     const water = await getWaterState(currentDay, baseWaterGoal);
     setWaterInfo(water);
     notifyProgressUpdate();
+  };
+
+  const handleEstimateExtra = async () => {
+    if (!extraForm.description.trim()) {
+      Alert.alert(
+        language === 'en' ? 'Describe what you ate' : 'Describe lo que comiste',
+        language === 'en'
+          ? 'Tell us what you had between meals so we can estimate kcal.'
+          : 'Cuéntanos qué tomaste entre comidas para estimar las kcal.'
+      );
+      return;
+    }
+
+    if (!apiCredentials?.user || !apiCredentials?.pass) {
+      Alert.alert(
+        language === 'en' ? 'Missing credentials' : 'Faltan credenciales',
+        language === 'en'
+          ? 'Add your Grok credentials in settings to ask AI for calories.'
+          : 'Agrega tus credenciales de Grok en ajustes para pedir calorías a la IA.'
+      );
+      return;
+    }
+
+    setExtraEstimating(true);
+    try {
+      const dayGoal = calorieInfo.goal || dayData?.kcal || derivedPlan?.[currentDay]?.kcal || 1600;
+      const mealConsumed = calculateConsumedCalories(mealStates, dayGoal, gender);
+      const extrasKcal = calculateExtrasKcal();
+      const estimate = await aiService.estimateMealCalories({
+        mealKey: 'extra',
+        description: extraForm.description.trim(),
+        portion: extraForm.portion.trim(),
+        language,
+        credentials: apiCredentials,
+        dayKcal: dayGoal,
+        consumedKcal: mealConsumed + extrasKcal,
+      });
+
+      if (estimate?.kcalEstimate) {
+        setExtraForm((prev) => ({ ...prev, kcal: String(estimate.kcalEstimate), note: estimate.note || prev.note }));
+        setExtraEstimatedByAI(true);
+      }
+    } catch (error) {
+      console.error('Error estimating extra kcal:', error);
+      Alert.alert(
+        language === 'en' ? 'AI not available' : 'IA no disponible',
+        language === 'en'
+          ? 'We could not estimate those calories. Try again or enter them manually.'
+          : 'No pudimos estimar las calorías. Intenta nuevamente o ingrésalas manualmente.'
+      );
+    } finally {
+      setExtraEstimating(false);
+    }
+  };
+
+  const handleAddExtra = async () => {
+    const cleanDescription = extraForm.description.trim();
+    const parsedKcal = Number(extraForm.kcal);
+    const cleanPortion = extraForm.portion.trim();
+    const cleanNote = extraForm.note.trim();
+
+    if (!cleanDescription) {
+      Alert.alert(
+        language === 'en' ? 'Add what you had' : 'Agrega qué tomaste',
+        language === 'en' ? 'Describe the snack or protein you added.' : 'Describe el snack o proteína que sumaste.'
+      );
+      return;
+    }
+
+    if (!Number.isFinite(parsedKcal) || parsedKcal <= 0) {
+      Alert.alert(
+        language === 'en' ? 'Calories needed' : 'Faltan calorías',
+        language === 'en' ? 'Add the estimated kcal so we can count them.' : 'Agrega las kcal estimadas para contarlas.'
+      );
+      return;
+    }
+
+    const payload = {
+      id: Date.now(),
+      description: cleanDescription,
+      portion: cleanPortion,
+      kcalEstimate: Math.round(parsedKcal),
+      note: cleanNote,
+      estimatedByAI: extraEstimatedByAI,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedExtras = [...extras, payload];
+    await saveExtraIntakes(currentDay, updatedExtras);
+    const extrasKcal = calculateExtrasKcal(updatedExtras);
+    const consumed = calculateConsumedCalories(mealStates, calorieInfo.goal, gender);
+    setExtras(updatedExtras);
+    setCalorieInfo((prev) => ({ ...prev, consumed: consumed + extrasKcal, extrasKcal }));
+    setExtraForm({ description: '', portion: '', kcal: '', note: '' });
+    setExtraEstimatedByAI(false);
+  };
+
+  const handleRemoveExtra = async (id) => {
+    const updatedExtras = extras.filter((item) => item.id !== id);
+    await saveExtraIntakes(currentDay, updatedExtras);
+    const extrasKcal = calculateExtrasKcal(updatedExtras);
+    const consumed = calculateConsumedCalories(mealStates, calorieInfo.goal, gender);
+    setExtras(updatedExtras);
+    setCalorieInfo((prev) => ({ ...prev, consumed: consumed + extrasKcal, extrasKcal }));
   };
 
   const handleSaveCheat = async () => {
@@ -188,7 +310,9 @@ const DayScreen = ({ navigation }) => {
     });
     const currentCalState = await getCalorieState(currentDay, updatedGoal);
     await saveCalorieState(currentDay, { ...currentCalState, goal: updatedGoal });
-    setCalorieInfo((prev) => ({ ...prev, goal: updatedGoal }));
+    const extrasKcal = calculateExtrasKcal();
+    const consumed = calculateConsumedCalories(mealStates, updatedGoal, gender);
+    setCalorieInfo((prev) => ({ ...prev, goal: updatedGoal, consumed: consumed + extrasKcal, extrasKcal }));
     setCheatMeal(payload);
     const conflict = await findCheatInWeek(currentDay);
     setCheatConflict(conflict);
@@ -204,7 +328,9 @@ const DayScreen = ({ navigation }) => {
     });
     const currentCalState = await getCalorieState(currentDay, updatedGoal);
     await saveCalorieState(currentDay, { ...currentCalState, goal: updatedGoal });
-    setCalorieInfo((prev) => ({ ...prev, goal: updatedGoal }));
+    const extrasKcal = calculateExtrasKcal();
+    const consumed = calculateConsumedCalories(mealStates, updatedGoal, gender);
+    setCalorieInfo((prev) => ({ ...prev, goal: updatedGoal, consumed: consumed + extrasKcal, extrasKcal }));
     setCheatMeal(null);
     setCheatConflict(await findCheatInWeek(currentDay));
   };
@@ -446,8 +572,8 @@ const DayScreen = ({ navigation }) => {
           <CalorieBar consumed={calorieInfo.consumed} goal={calorieInfo.goal} />
           <Text style={styles.calorieHint}>
             {language === 'en'
-              ? 'We auto-adjust after cheat meals and hydration boosts.'
-              : 'Ajustamos después de cheats y subidas de hidratación.'}
+              ? 'We add extra bites, cheat meals and hydration boosts to your tally.'
+              : 'Sumamos extras, cheats y subidas de hidratación a tu cuenta.'}
           </Text>
         </View>
 
@@ -477,6 +603,99 @@ const DayScreen = ({ navigation }) => {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Extra intakes */}
+        <View style={styles.extraBox}>
+          <View style={styles.extraHeader}>
+            <View>
+              <Text style={styles.extraTitle}>
+                🧃 {language === 'en' ? 'Extras between meals' : 'Extras entre comidas'}
+              </Text>
+              <Text style={styles.extraHint}>
+                {language === 'en'
+                  ? 'Log proteins or snacks outside the plan. They won’t change the cards, but we count the kcal.'
+                  : 'Anota proteínas o snacks fuera del plan. No alteran las tarjetas, pero sí suman kcal.'}
+              </Text>
+            </View>
+            <View style={styles.extraBadge}>
+              <Text style={styles.extraBadgeText}>
+                +{calorieInfo.extrasKcal || 0} kcal
+              </Text>
+            </View>
+          </View>
+
+          <TextInput
+            style={styles.extraInput}
+            placeholder={language === 'en' ? 'What did you add?' : '¿Qué agregaste?'}
+            placeholderTextColor={theme.colors.textMuted}
+            value={extraForm.description}
+            onChangeText={(text) => setExtraForm((prev) => ({ ...prev, description: text }))}
+            multiline
+          />
+
+          <View style={styles.extraRow}>
+            <TextInput
+              style={[styles.extraInput, styles.extraInputHalf]}
+              placeholder={language === 'en' ? 'Portion / qty' : 'Porción / qty'}
+              placeholderTextColor={theme.colors.textMuted}
+              value={extraForm.portion}
+              onChangeText={(text) => setExtraForm((prev) => ({ ...prev, portion: text }))}
+            />
+            <View style={styles.extraKcalGroup}>
+              <TextInput
+                style={[styles.extraInput, styles.extraInputKcal]}
+                placeholder="220"
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                value={extraForm.kcal}
+                onChangeText={(text) => setExtraForm((prev) => ({ ...prev, kcal: text }))}
+              />
+              <TouchableOpacity
+                style={[styles.extraAIButton, extraEstimating && styles.extraAIButtonDisabled]}
+                onPress={handleEstimateExtra}
+                disabled={extraEstimating}
+              >
+                {extraEstimating ? (
+                  <ActivityIndicator color={theme.colors.onPrimary} size="small" />
+                ) : (
+                  <Text style={styles.extraAIText}>{language === 'en' ? 'Ask AI' : 'Pedir a IA'}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {extraForm.note ? (
+            <Text style={styles.extraNote}>🧠 {extraForm.note}</Text>
+          ) : null}
+
+          <View style={styles.extraActions}>
+            <TouchableOpacity style={styles.extraButton} onPress={handleAddExtra}>
+              <Text style={styles.extraButtonText}>
+                {language === 'en' ? 'Add extra intake' : 'Sumar extra'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {extras.length ? (
+            <View style={styles.extraList}>
+              {extras.map((item) => (
+                <View key={item.id} style={styles.extraItem}>
+                  <View style={styles.extraItemTextBox}>
+                    <Text style={styles.extraItemTitle}>{item.description}</Text>
+                    <Text style={styles.extraItemMeta}>
+                      {item.portion ? `${item.portion} · ` : ''}{item.kcalEstimate} kcal
+                      {item.estimatedByAI ? ' · IA' : ''}
+                    </Text>
+                    {item.note ? <Text style={styles.extraItemNote}>{item.note}</Text> : null}
+                  </View>
+                  <TouchableOpacity style={styles.extraRemove} onPress={() => handleRemoveExtra(item.id)}>
+                    <Text style={styles.extraRemoveText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {/* Cheat meal planner */}
@@ -984,6 +1203,160 @@ const getStyles = (theme) => StyleSheet.create({
   },
   waterButtonTextGhost: {
     color: theme.colors.text
+  },
+  extraBox: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3
+  },
+  extraHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm
+  },
+  extraTitle: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  extraHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    marginTop: 4
+  },
+  extraBadge: {
+    backgroundColor: withAlpha(theme.colors.primary, 0.12),
+    borderColor: withAlpha(theme.colors.primary, 0.4),
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: theme.radius.full
+  },
+  extraBadgeText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.primary,
+    fontWeight: '700'
+  },
+  extraInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.cardSoft
+  },
+  extraRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs
+  },
+  extraInputHalf: {
+    flex: 1
+  },
+  extraKcalGroup: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
+    flex: 1,
+    alignItems: 'center'
+  },
+  extraInputKcal: {
+    width: 90
+  },
+  extraAIButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: theme.radius.sm,
+    shadowColor: theme.colors.primary,
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+    minWidth: 90,
+    alignItems: 'center'
+  },
+  extraAIButtonDisabled: {
+    opacity: 0.6
+  },
+  extraAIText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.onPrimary,
+    fontWeight: '700'
+  },
+  extraNote: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    fontStyle: 'italic'
+  },
+  extraActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end'
+  },
+  extraButton: {
+    backgroundColor: withAlpha(theme.colors.success, 0.18),
+    borderRadius: theme.radius.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.success, 0.5)
+  },
+  extraButtonText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  extraList: {
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm
+  },
+  extraItem: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    alignItems: 'center',
+    backgroundColor: theme.colors.cardSoft,
+    borderRadius: theme.radius.sm,
+    padding: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border
+  },
+  extraItemTextBox: {
+    flex: 1,
+    gap: 4
+  },
+  extraItemTitle: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    fontWeight: '700'
+  },
+  extraItemMeta: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted
+  },
+  extraItemNote: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
+    fontStyle: 'italic'
+  },
+  extraRemove: {
+    padding: 6,
+    borderRadius: theme.radius.full,
+    backgroundColor: withAlpha(theme.colors.textMuted, 0.12),
+    borderWidth: 1,
+    borderColor: withAlpha(theme.colors.border, 0.7)
+  },
+  extraRemoveText: {
+    color: theme.colors.text,
+    fontWeight: '700',
+    fontSize: 12
   },
   cheatBox: {
     backgroundColor: theme.colors.surface,
