@@ -41,7 +41,9 @@ import {
   getCheatMeal,
   saveCheatMeal,
   clearCheatMeal,
-  findCheatInWeek
+  findCheatInWeek,
+  getDayExtras,
+  saveDayExtras
 } from '../../storage/storage';
 import { getDailyTip, getMotivationalMessage } from '../../data/tips';
 import aiService from '../../api/aiService';
@@ -191,8 +193,11 @@ const HomeScreen = ({ navigation }) => {
   const [cheatEstimating, setCheatEstimating] = useState(false);
   const [cheatAiNote, setCheatAiNote] = useState('');
   const [cheatEstimatedByAI, setCheatEstimatedByAI] = useState(false);
-  const [extras, setExtras] = useState([]);
+  const [aiExtras, setAiExtras] = useState([]);
   const [extrasExpanded, setExtrasExpanded] = useState(false);
+  const [extraIntakes, setExtraIntakes] = useState([]);
+  const [extraForm, setExtraForm] = useState({ description: '', portion: '', kcal: '', note: '' });
+  const [extraEstimating, setExtraEstimating] = useState(false);
   const [dayReview, setDayReview] = useState(null);
   const [weekReview, setWeekReview] = useState(null);
   const [showWeekReview, setShowWeekReview] = useState(false);
@@ -210,7 +215,7 @@ const HomeScreen = ({ navigation }) => {
   const totalWeeks = Math.max(Math.ceil(totalDays / 7), 1);
   const safeWeek = Math.min(Math.max(currentWeek || 1, 1), totalWeeks);
 
-  const computeConsumedFromDay = (mergedDay, mealsStateObj, fallbackGoal) => {
+  const computeConsumedFromDay = (mergedDay, mealsStateObj, fallbackGoal, extrasKcal = 0) => {
     const mealKeys = ['desayuno', 'snackAM', 'almuerzo', 'snackPM', 'cena'];
     const dayKcal = mergedDay?.kcal ? Number(mergedDay.kcal) : fallbackGoal;
     const dist = getMealDistribution(gender);
@@ -224,6 +229,9 @@ const HomeScreen = ({ navigation }) => {
         : Math.round(dayKcal * (dist[key] || 0.2));
       consumed += kcal;
     });
+
+    const normalizedExtras = Number(extrasKcal) || 0;
+    consumed += Math.max(0, Math.round(normalizedExtras));
 
     return consumed;
   };
@@ -337,7 +345,8 @@ const HomeScreen = ({ navigation }) => {
 
       setCalorieGoal(normalizedGoal);
 
-      const consumed = computeConsumedFromDay(merged, mealsState, normalizedGoal);
+      const extrasKcal = storedExtras.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
+      const consumed = computeConsumedFromDay(merged, mealsState, normalizedGoal, extrasKcal);
       setCaloriesConsumed(consumed);
 
       // agua
@@ -358,10 +367,14 @@ const HomeScreen = ({ navigation }) => {
       const savedWeekReview = await getWeekReview(Math.floor(currentDay / 7) + 1);
       setWeekReview(normalizeWeekReview(savedWeekReview, language));
 
-      // extras de IA
+      // extras de IA del plan
       const extractedExtras = collectExtrasFromAI(stored);
-      setExtras(extractedExtras);
+      setAiExtras(extractedExtras);
       setExtrasExpanded(false);
+
+      // extras reales del usuario
+      const storedExtras = await getDayExtras(currentDay);
+      setExtraIntakes(storedExtras);
 
       // set final day
       setDayData({ ...merged, planKcal, dynamicKcal: dynamicGoal });
@@ -397,11 +410,12 @@ const HomeScreen = ({ navigation }) => {
     setMealStates(updatedMeals);
 
     await saveMealCompletion(currentDay, mealKey, newState);
+    const extrasKcal = extraIntakes.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
     if (dayData) {
-      const consumed = computeConsumedFromDay(dayData, updatedMeals, calorieGoal);
+      const consumed = computeConsumedFromDay(dayData, updatedMeals, calorieGoal, extrasKcal);
       setCaloriesConsumed(consumed);
     } else {
-      const consumed = calculateConsumedCalories(updatedMeals, calorieGoal, gender);
+      const consumed = calculateConsumedCalories(updatedMeals, calorieGoal, gender, extrasKcal);
       setCaloriesConsumed(consumed);
     }
     await saveCalorieState(currentDay, { goal: calorieGoal, meals: updatedMeals });
@@ -758,6 +772,121 @@ const HomeScreen = ({ navigation }) => {
       hasAiCheat,
       language,
     ]
+  );
+
+  const runExtraAiEstimation = useCallback(async () => {
+    if (!apiCredentials?.user || !apiCredentials?.pass) {
+      Alert.alert(
+        language === 'en' ? 'Missing credentials' : 'Faltan credenciales',
+        language === 'en'
+          ? 'Add your Grok credentials in settings to estimate calories.'
+          : 'Agrega tus credenciales de Grok en ajustes para estimar calorías.'
+      );
+      return null;
+    }
+
+    if (!extraForm.description.trim()) {
+      Alert.alert(
+        language === 'en' ? 'Add what you ate' : 'Agrega lo que comiste',
+        language === 'en'
+          ? 'Describe your extra snack so we can estimate it.'
+          : 'Describe el extra para poder estimarlo.'
+      );
+      return null;
+    }
+
+    setExtraEstimating(true);
+    try {
+      const estimate = await aiService.estimateExtraCalories({
+        description: extraForm.description.trim(),
+        portion: extraForm.portion.trim(),
+        language,
+        credentials: apiCredentials,
+        dayKcal: calorieGoal,
+        consumedKcal: caloriesConsumed,
+      });
+
+      if (estimate?.kcalEstimate) {
+        setExtraForm((prev) => ({ ...prev, kcal: String(estimate.kcalEstimate), note: estimate.note || '' }));
+        Alert.alert(
+          language === 'en' ? 'Calories estimated' : 'Calorías estimadas',
+          language === 'en'
+            ? `We estimated ~${estimate.kcalEstimate} kcal for this extra.`
+            : `Estimamos ~${estimate.kcalEstimate} kcal para este extra.`
+        );
+      }
+
+      return estimate;
+    } catch (error) {
+      console.error('Error estimating extra kcal:', error);
+      Alert.alert(
+        language === 'en' ? 'Could not estimate' : 'No se pudo estimar',
+        language === 'en'
+          ? 'Try again or enter the calories manually.'
+          : 'Intenta de nuevo o ingresa las calorías manualmente.'
+      );
+      return null;
+    } finally {
+      setExtraEstimating(false);
+    }
+  }, [apiCredentials, language, extraForm.description, extraForm.portion, calorieGoal, caloriesConsumed]);
+
+  const handleSaveExtra = useCallback(async () => {
+    const kcalNumber = Number(extraForm.kcal);
+    if (!extraForm.description.trim()) {
+      Alert.alert(
+        language === 'en' ? 'Add what you ate' : 'Agrega lo que comiste',
+        language === 'en'
+          ? 'Tell us what you ate between meals.'
+          : 'Cuéntanos qué comiste entre comidas.'
+      );
+      return;
+    }
+
+    if (!Number.isFinite(kcalNumber) || kcalNumber <= 0) {
+      const aiResult = await runExtraAiEstimation();
+      if (!aiResult?.kcalEstimate) return;
+    }
+
+    const payload = {
+      id: `${Date.now()}`,
+      description: extraForm.description.trim(),
+      portion: extraForm.portion.trim(),
+      kcalEstimate: Number(extraForm.kcal) || 0,
+      note: extraForm.note || '',
+      estimatedByAI: Boolean(extraForm.note),
+    };
+
+    const updated = [...extraIntakes, payload];
+    setExtraIntakes(updated);
+    await saveDayExtras(currentDay, updated);
+
+    const extrasKcal = updated.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
+    const consumed = computeConsumedFromDay(dayData || derivedPlan[currentDay], mealStates, calorieGoal, extrasKcal);
+    setCaloriesConsumed(consumed);
+    setExtraForm({ description: '', portion: '', kcal: '', note: '' });
+  }, [
+    extraForm,
+    runExtraAiEstimation,
+    extraIntakes,
+    currentDay,
+    mealStates,
+    calorieGoal,
+    dayData,
+    derivedPlan,
+    language,
+  ]);
+
+  const handleRemoveExtra = useCallback(
+    async (id) => {
+      const filtered = extraIntakes.filter((item) => item.id !== id);
+      setExtraIntakes(filtered);
+      await saveDayExtras(currentDay, filtered);
+      const extrasKcal = filtered.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0);
+      const consumed = computeConsumedFromDay(dayData || derivedPlan[currentDay], mealStates, calorieGoal, extrasKcal);
+      setCaloriesConsumed(consumed);
+    },
+    [extraIntakes, currentDay, dayData, derivedPlan, mealStates, calorieGoal]
   );
 
   const handleSaveCheat = useCallback(async () => {
@@ -1171,7 +1300,88 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Card>
 
-      {extras.length ? (
+      <Card style={styles.extraCard} outlined>
+        <View style={styles.extraHeaderRow}>
+          <View style={styles.extraHeaderText}>
+            <Text style={styles.sectionTitleSm}>
+              {language === 'en' ? 'Extras fuera de plan' : 'Extras fuera del plan'}
+            </Text>
+            <Text style={styles.extraHint}>
+              {language === 'en'
+                ? 'Usa esto para snacks o proteína extra entre meals. Se suman a tus calorías.'
+                : 'Úsalo para snacks o proteína extra entre meals. Se suman a tus calorías.'}
+            </Text>
+          </View>
+          {extraIntakes.length ? (
+            <View style={styles.extraCountPill}>
+              <Text style={styles.extraCountText}>
+                {extraIntakes.reduce((sum, item) => sum + (Number(item.kcalEstimate) || 0), 0)} kcal
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        <TextInput
+          style={styles.extraInput}
+          placeholder={language === 'en' ? '¿Qué comiste?' : '¿Qué comiste?'}
+          placeholderTextColor={theme.colors.textMuted}
+          value={extraForm.description}
+          onChangeText={(text) => setExtraForm((prev) => ({ ...prev, description: text }))}
+          multiline
+        />
+
+        <TextInput
+          style={[styles.extraInput, styles.extraInputAlt]}
+          placeholder={language === 'en' ? 'Porción / cantidad' : 'Porción / cantidad'}
+          placeholderTextColor={theme.colors.textMuted}
+          value={extraForm.portion}
+          onChangeText={(text) => setExtraForm((prev) => ({ ...prev, portion: text }))}
+        />
+
+        <View style={styles.extraKcalRow}>
+          <Text style={styles.extraKcalLabel}>{language === 'en' ? 'Kcal estimadas' : 'Kcal estimadas'}</Text>
+          <TextInput
+            style={styles.extraKcalInput}
+            keyboardType="numeric"
+            value={extraForm.kcal}
+            onChangeText={(text) => setExtraForm((prev) => ({ ...prev, kcal: text }))}
+            placeholder="120"
+            placeholderTextColor={theme.colors.textMuted}
+          />
+        </View>
+
+        <View style={styles.extraActionsRow}>
+          <Button
+            label={extraEstimating ? (language === 'en' ? 'Estimating...' : 'Estimando...') : 'IA kcal'}
+            onPress={runExtraAiEstimation}
+            style={[styles.extraButton, extraEstimating && styles.extraButtonDisabled]}
+            disabled={extraEstimating}
+          />
+          <Button label={language === 'en' ? 'Guardar extra' : 'Guardar extra'} onPress={handleSaveExtra} style={styles.extraButton} />
+        </View>
+
+        {extraIntakes.length ? (
+          <View style={styles.extraList}>
+            {extraIntakes.map((item) => (
+              <View key={item.id} style={styles.extraItemRow}>
+                <View style={styles.extraItemText}>
+                  <Text style={styles.extraItemTitle}>{item.description}</Text>
+                  {item.portion ? <Text style={styles.extraItemMeta}>{item.portion}</Text> : null}
+                  {item.note ? <Text style={styles.extraItemNote}>{item.note}</Text> : null}
+                </View>
+                <View style={styles.extraItemActions}>
+                  <Text style={styles.extraItemKcal}>{item.kcalEstimate} kcal</Text>
+                  <TouchableOpacity onPress={() => handleRemoveExtra(item.id)} style={styles.extraItemRemove}>
+                    <Text style={styles.extraItemRemoveText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </Card>
+
+      {aiExtras.length ? (
         <Card style={styles.extrasCard} outlined>
           <TouchableOpacity
             style={styles.extrasHeaderRow}
@@ -1190,13 +1400,13 @@ const HomeScreen = ({ navigation }) => {
             </View>
             <View style={styles.extrasCountPill}>
               <Text style={styles.extrasCountText}>
-                {extrasExpanded ? '−' : `+${extras.length}`}
+                {extrasExpanded ? '−' : `+${aiExtras.length}`}
               </Text>
             </View>
           </TouchableOpacity>
           {extrasExpanded ? (
             <View style={styles.extrasList}>
-              {extras.map((item, index) => (
+              {aiExtras.map((item, index) => (
                 <View key={`${item}-${index}`} style={styles.extraRow}>
                   <Text style={styles.extraBullet}>•</Text>
                   <Text style={styles.extraText}>{item}</Text>
@@ -2153,6 +2363,128 @@ const createStyles = (theme) =>
     },
     waterButtonTextGhost: {
       color: theme.colors.text
+    },
+    extraCard: {
+      gap: theme.spacing.sm,
+      marginHorizontal: theme.spacing.lg,
+      borderColor: `${theme.colors.primary}40`,
+    },
+    extraHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    extraHeaderText: {
+      flex: 1,
+      gap: 4,
+    },
+    extraHint: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+    },
+    extraCountPill: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 6,
+      backgroundColor: `${theme.colors.primary}15`,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}50`,
+    },
+    extraCountText: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.primary,
+      fontWeight: '700',
+    },
+    extraInput: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.sm,
+      minHeight: 52,
+      color: theme.colors.text,
+      backgroundColor: theme.colors.cardSoft,
+    },
+    extraInputAlt: {
+      minHeight: 44,
+    },
+    extraKcalRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    extraKcalLabel: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.text,
+    },
+    extraKcalInput: {
+      width: 90,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.sm,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      color: theme.colors.text,
+      backgroundColor: theme.colors.cardSoft,
+      textAlign: 'center',
+    },
+    extraActionsRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.xs,
+      marginTop: theme.spacing.xs,
+    },
+    extraButton: {
+      flex: 1,
+    },
+    extraButtonDisabled: {
+      opacity: 0.7,
+    },
+    extraList: {
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
+    },
+    extraItemRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: theme.spacing.sm,
+      padding: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.cardSoft,
+    },
+    extraItemText: {
+      flex: 1,
+      gap: 2,
+    },
+    extraItemTitle: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '700',
+    },
+    extraItemMeta: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+    },
+    extraItemNote: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+    },
+    extraItemActions: {
+      alignItems: 'flex-end',
+      gap: 6,
+    },
+    extraItemKcal: {
+      ...theme.typography.bodySmall,
+      color: theme.colors.text,
+      fontWeight: '700',
+    },
+    extraItemRemove: {
+      padding: 6,
+    },
+    extraItemRemoveText: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
     },
     extrasCard: {
       gap: theme.spacing.sm,
