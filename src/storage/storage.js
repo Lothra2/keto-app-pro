@@ -178,6 +178,38 @@ export async function clearCheatMeal(dayIndex) {
   return await storage.remove(DYNAMIC_KEYS.CHEAT + dayIndex);
 }
 
+export async function getExtraIntakes(dayIndex) {
+  const storage = new Storage();
+  const stored = await storage.getJSON(DYNAMIC_KEYS.EXTRAS + dayIndex, []);
+
+  if (!Array.isArray(stored)) return [];
+
+  return stored.map(item => ({
+    id: item.id || `${Date.now()}-${Math.random()}`,
+    description: item.description || '',
+    portion: item.portion || '',
+    kcalEstimate: Number(item.kcalEstimate) || 0,
+    note: item.note || '',
+    createdAt: item.createdAt || new Date().toISOString()
+  }));
+}
+
+export async function saveExtraIntakes(dayIndex, entries = []) {
+  const storage = new Storage();
+  const safeEntries = Array.isArray(entries)
+    ? entries.map(item => ({
+        id: item.id || `${Date.now()}-${Math.random()}`,
+        description: item.description || '',
+        portion: item.portion || '',
+        kcalEstimate: Number(item.kcalEstimate) || 0,
+        note: item.note || '',
+        createdAt: item.createdAt || new Date().toISOString()
+      }))
+    : [];
+
+  return await storage.setJSON(DYNAMIC_KEYS.EXTRAS + dayIndex, safeEntries);
+}
+
 export async function findCheatInWeek(dayIndex, weekLength = 7) {
   const start = Math.floor(dayIndex / weekLength) * weekLength;
   const end = start + weekLength;
