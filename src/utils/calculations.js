@@ -240,7 +240,7 @@ export function calculateEstimatedWorkoutKcal({
 /**
  * Calcular calorías consumidas según comidas marcadas
  */
-export function calculateConsumedCalories(mealStates, goalKcal = 1600, gender = 'male') {
+export function calculateConsumedCalories(mealStates, goalKcal = 1600, gender = 'male', extrasKcal = 0) {
   const mealPercents = getMealDistribution(gender);
 
   let consumed = 0;
@@ -250,6 +250,9 @@ export function calculateConsumedCalories(mealStates, goalKcal = 1600, gender = 
       consumed += Math.round(goalKcal * (mealPercents[mealKey] || 0));
     }
   });
+
+  const normalizedExtras = Number(extrasKcal) || 0;
+  consumed += Math.max(0, Math.round(normalizedExtras));
 
   return consumed;
 }
